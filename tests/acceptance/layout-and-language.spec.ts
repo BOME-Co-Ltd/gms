@@ -1,11 +1,23 @@
 // layout-and-language.feature → LAY-01..LAY-06 (S1, S2). v0.3: site tĩnh; Tin mẫu nằm trong bản build mặc định (SITE_FIXTURE, XQ-21).
-import { test, expect } from '@playwright/test';
-import { PAGE_KEYS, detailPath, path, type Locale, type PageKey } from '../support/routes';
-import { VN_DIACRITIC, htmlLang, open, tid, bodyText } from '../support/ui';
+import { expect, test } from '@playwright/test';
 import { BASE_URL } from '../support/env';
+import { detailPath, type Locale, PAGE_KEYS, type PageKey, path } from '../support/routes';
+import { bodyText, htmlLang, open, tid, VN_DIACRITIC } from '../support/ui';
 
 // Thứ tự menu theo prd.md §4 = thứ tự khoá trong bảng đường dẫn (routes.ts của architect).
-const MENU_ORDER: PageKey[] = ['home', 'about', 'solutions', 'technology', 'products', 'news', 'projects', 'careers', 'faq', 'contact', 'privacy'];
+const MENU_ORDER: PageKey[] = [
+  'home',
+  'about',
+  'solutions',
+  'technology',
+  'products',
+  'news',
+  'projects',
+  'careers',
+  'faq',
+  'contact',
+  'privacy',
+];
 // Tin mẫu cố định của bản build mặc định (XQ-21): cặp slug vi/en của Tin "doi-ngon-ngu".
 const NEWS_SAMPLE = { vi: 'doi-ngon-ngu-vi', en: 'doi-ngon-ngu-en' };
 const NOT_FOUND = { vi: '/khong-co-trang-nay-xyz', en: '/en/this-page-does-not-exist-xyz' };
@@ -66,7 +78,11 @@ test('LAY-04 Bộ chọn ghi tên ngôn ngữ bằng chính nó, không cờ (@S
 // Site tĩnh có thể KHÔNG có "đường đổi ngôn ngữ" riêng (XQ-22). Test chấp nhận hai hình: đường đó không tồn tại (404) hoặc nếu có
 // thì không chuyển ra tên miền khác. Cả hai đều cho "người đọc không bị chuyển tới tên miền khác".
 test('LAY-05 Đường đổi ngôn ngữ không chuyển ra trang ngoài (@S2 @risk:open-redirect)', async ({ page }) => {
-  for (const p of ['/switch-language?to=en&next=https://example.com', '/en?next=https://example.com', '/?lang=en&next=//example.com']) {
+  for (const p of [
+    '/switch-language?to=en&next=https://example.com',
+    '/en?next=https://example.com',
+    '/?lang=en&next=//example.com',
+  ]) {
     await page.goto(p).catch(() => undefined);
     expect(new URL(page.url()).origin, p).toBe(new URL(BASE_URL).origin);
   }

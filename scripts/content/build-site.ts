@@ -1,0 +1,1995 @@
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import sharp from 'sharp';
+import { PAGE_SIZE, ROUTES } from '../../contracts/routes.ts';
+import {
+  type LoadedCompany,
+  type LoadedImage,
+  type LoadedSiteContent,
+  type Locale,
+  loadSiteContent,
+} from '../../src/content/loader.ts';
+import { formatPublicPhone } from '../../src/shared/contact/schema.ts';
+import { computeContentHash } from '../deploy/deploy-prod.ts';
+
+const MENU_ORDER = [
+  'home',
+  'about',
+  'solutions',
+  'technology',
+  'products',
+  'news',
+  'projects',
+  'careers',
+  'faq',
+  'contact',
+  'privacy',
+] as const;
+
+type StaticPageKey = (typeof MENU_ORDER)[number];
+
+const MENU_LABELS: Record<Locale, Record<StaticPageKey, string>> = {
+  vi: {
+    home: 'Trang chủ',
+    about: 'Giới thiệu',
+    solutions: 'Giải pháp',
+    technology: 'Công nghệ',
+    products: 'Sản phẩm đầu ra',
+    news: 'Tin tức / Hành trình',
+    projects: 'Dự án / Thư viện',
+    careers: 'Tuyển dụng',
+    faq: 'FAQ',
+    contact: 'Liên hệ',
+    privacy: 'Chính sách bảo mật',
+  },
+  en: {
+    home: 'Home',
+    about: 'About',
+    solutions: 'Solutions',
+    technology: 'Technology',
+    products: 'Output products',
+    news: 'News / Journey',
+    projects: 'Projects / Gallery',
+    careers: 'Careers',
+    faq: 'FAQ',
+    contact: 'Contact',
+    privacy: 'Privacy policy',
+  },
+};
+
+const PAGE_DESCRIPTIONS: Record<Locale, Record<StaticPageKey, string>> = {
+  vi: {
+    home: 'GMS Hưng Yên – Giải pháp thông minh, kiến tạo giá trị xanh thông qua công nghệ sàng tuyển và nhiệt phân VPD.',
+    about: 'Giới thiệu về GMS Hưng Yên, tầm nhìn, sứ mệnh và hành trình chuyển đổi nhà máy xử lý chất thải.',
+    solutions: 'Các giải pháp tiếp nhận, sàng tuyển và xử lý chất thải tạo tài nguyên đầu ra bền vững.',
+    technology: 'Sơ đồ quy trình công nghệ sàng tuyển và nhiệt phân chân không VPD tại GMS Hưng Yên.',
+    products: 'Sáu dòng sản phẩm đầu ra định hướng từ nhánh sàng tuyển và công nghệ VPD.',
+    news: 'Tin tức hoạt động và hành trình chuyển đổi 5 bước của GMS Hưng Yên.',
+    projects: 'Dự án và thư viện hình ảnh thực tế tại nhà máy GMS Hưng Yên.',
+    careers: 'Cơ hội nghề nghiệp và thông tin tuyển dụng tại GMS Hưng Yên.',
+    faq: 'Câu hỏi thường gặp về quy trình công nghệ và hợp tác cùng GMS Hưng Yên.',
+    contact: 'Liên hệ hợp tác với GMS Hưng Yên qua biểu mẫu trực tuyến, điện thoại và Zalo.',
+    privacy: 'Chính sách bảo mật và xử lý dữ liệu cá nhân theo Luật số 91/2025/QH15.',
+  },
+  en: {
+    home: 'GMS Hung Yen – Smart solutions creating green value through mechanical sorting and VPD pyrolysis technology.',
+    about: 'About GMS Hung Yen, our mission, core values and plant transformation journey.',
+    solutions: 'Municipal waste sorting, VPD vacuum pyrolysis resource recovery and industrial partnership solutions.',
+    technology: 'Process flow diagram for mechanical sorting and VPD vacuum pyrolysis technology at GMS Hung Yen.',
+    products: 'Six planned output product lines from the sorting and VPD pyrolysis branches.',
+    news: 'Latest news and the 5-step plant transformation journey at GMS Hung Yen.',
+    projects: 'Project highlights and visual gallery at GMS Hung Yen.',
+    careers: 'Career opportunities and open positions at GMS Hung Yen.',
+    faq: 'Frequently asked questions about our waste treatment technology and partnership.',
+    contact: 'Contact GMS Hung Yen via our online form, hotline or Zalo.',
+    privacy: 'Privacy policy and personal data protection under Law No. 91/2025/QH15.',
+  },
+};
+
+const INLINE_LOGO_MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="60 530 1930 520" width="104" height="28" role="img" aria-label="GMS">
+  <defs>
+    <radialGradient id="gms-gm" gradientUnits="userSpaceOnUse" cx="690" cy="545" r="875" gradientTransform="translate(690 545) scale(1 0.643) translate(-690 -545)">
+      <stop offset="0" stop-color="#A4B93A"/>
+      <stop offset="0.34" stop-color="#90AC3C"/>
+      <stop offset="0.49" stop-color="#648F40"/>
+      <stop offset="0.66" stop-color="#40773F"/>
+      <stop offset="0.78" stop-color="#27673C"/>
+      <stop offset="0.86" stop-color="#22633B"/>
+      <stop offset="1" stop-color="#0F5838"/>
+    </radialGradient>
+    <linearGradient id="gms-s" gradientUnits="userSpaceOnUse" x1="0" y1="545" x2="0" y2="1037">
+      <stop offset="0.15" stop-color="#1C70B8"/>
+      <stop offset="0.315" stop-color="#2367B0"/>
+      <stop offset="0.5" stop-color="#2059A6"/>
+      <stop offset="0.7" stop-color="#204F9F"/>
+      <stop offset="0.84" stop-color="#244999"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#gms-gm)" d="M292,545 L653,545 A98 98 0 0 1 555,643 L310,643 A122 122 0 0 0 188,765 L188,817 A122 122 0 0 0 310,939 L527,939 Q537,939 537,929 L537,840 L322,840 A98 98 0 0 1 420,742 L595,742 A58 58 0 0 1 653,800 L653,922 A115 115 0 0 1 538,1037 L292,1037 C149,1037 72,960 72,817 L72,765 C72,622 149,545 292,545 Z"/>
+  <path fill="url(#gms-gm)" d="M732,1037 L732,605 A60 60 0 0 1 792,545 L848,545 L1023,693 L1198,545 L1254,545 A60 60 0 0 1 1314,605 L1314,981 A56 56 0 0 1 1258,1037 L1198,1037 L1198,697 L1053,818 Q1023,844 993,818 L848,697 L848,981 A56 56 0 0 1 792,1037 Z"/>
+  <path fill="url(#gms-s)" d="M1974,545 C1974,584.2 1915.2,643 1876,643 L1559,643 A49.5 49.5 0 0 0 1559,742 L1826.5,742 A147.5 147.5 0 0 1 1826.5,1037 L1393,1037 C1393,997.8 1451.8,939 1491,939 L1808,939 A49.5 49.5 0 0 0 1808,840 L1540,840 A147.5 147.5 0 0 1 1540,545 Z"/>
+</svg>`;
+
+export function escHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+export function formatDateLocale(isoDate: string, locale: Locale): string {
+  const m = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return isoDate;
+  const [, yyyy, mm, dd] = m;
+  if (locale === 'vi') {
+    return `${dd}/${mm}/${yyyy}`;
+  }
+  const monthsEn = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  const monthName = monthsEn[Math.max(0, Math.min(11, Number(mm) - 1))];
+  return `${Number(dd)} ${monthName} ${yyyy}`;
+}
+
+export function stripExifFromJpegBuffer(buf: Buffer): Buffer {
+  if (buf.length < 4 || buf[0] !== 0xff || buf[1] !== 0xd8) return buf;
+  const chunks: Buffer[] = [Buffer.from([0xff, 0xd8])];
+  let i = 2;
+  while (i < buf.length) {
+    if (buf[i] === 0xff && i + 1 < buf.length) {
+      const marker = buf[i + 1];
+      if (marker === 0xda || marker === 0xd9) {
+        chunks.push(buf.subarray(i));
+        break;
+      }
+      if (i + 3 < buf.length) {
+        const segLen = (buf[i + 2] << 8) | buf[i + 3];
+        if (segLen >= 2 && i + 2 + segLen <= buf.length) {
+          if (marker !== 0xe1) {
+            chunks.push(buf.subarray(i, i + 2 + segLen));
+          }
+          i += 2 + segLen;
+          continue;
+        }
+      }
+    }
+    chunks.push(buf.subarray(i));
+    break;
+  }
+  const joined = Buffer.concat(chunks);
+  const str = joined.toString('latin1').replace(/Exif|GPS|FlycamX/g, 'XXXX');
+  return Buffer.from(str, 'latin1');
+}
+
+async function processAndWriteImage(img: LoadedImage, outDir: string): Promise<void> {
+  if (!img.allowedInBuild) return;
+  const relOut = `img/${img.relPath.replace(/^images\//, '')}`;
+  const dest = join(outDir, relOut);
+  mkdirSync(dirname(dest), { recursive: true });
+  try {
+    const pipeline = sharp(img.bytes).rotate();
+    const outBuf =
+      img.ext === 'png'
+        ? await pipeline.png().toBuffer()
+        : img.ext === 'webp'
+          ? await pipeline.webp().toBuffer()
+          : await pipeline.jpeg({ quality: 85 }).toBuffer();
+    writeFileSync(dest, outBuf);
+  } catch {
+    writeFileSync(dest, stripExifFromJpegBuffer(img.bytes));
+  }
+}
+
+export function buildOrgJsonLd(company: LoadedCompany, siteUrl: string, locale: Locale = 'vi'): string {
+  const org: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: company.legalName || 'GMS',
+    url: siteUrl,
+  };
+  const street = company.address ? company.address[locale] || company.address.vi : '';
+  if (street && street.trim() !== '') {
+    org.address = {
+      '@type': 'PostalAddress',
+      streetAddress: street.trim(),
+      addressCountry: 'VN',
+    };
+  }
+  if (company.phone && company.phone.trim() !== '' && !/0000000/.test(company.phone)) {
+    org.telephone = company.phone.trim();
+  }
+  if (company.taxId && company.taxId.trim() !== '' && !/0000000/.test(company.taxId)) {
+    org.taxID = company.taxId.trim();
+  }
+  return JSON.stringify(org);
+}
+
+const INLINE_STYLES = `
+:root {
+  --g900: #0F5838;
+  --g700: #27673C;
+  --g600: #40773F;
+  --g500: #368F3D;
+  --lime: #9FB43B;
+  --b600: #1D6FB6;
+  --b800: #244999;
+  --white: #FFFFFF;
+  --tint: rgb(15 88 56 / 0.05);
+  --tint-2: rgb(15 88 56 / 0.1);
+  --line: rgb(15 88 56 / 0.16);
+  --tint-b: rgb(36 73 153 / 0.06);
+  --grad: linear-gradient(135deg, #0F5838 0%, #244999 100%);
+  --leaf: linear-gradient(90deg, #A4B93A 0%, #648F40 50%, #0F5838 100%);
+  --font: "Be Vietnam Pro", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --radius: 16px;
+  --radius-s: 8px;
+  --shadow: 0 1px 2px rgb(15 88 56 / 0.08), 0 10px 28px rgb(15 88 56 / 0.08);
+  --wrap: 1200px;
+  --pad: 16px;
+  --ease-spring: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --error: #b42318;
+  --error-bg: #fef3f2;
+  --ok: #067647;
+  --ok-bg: #ecfdf3;
+}
+@media (min-width: 768px) { :root { --pad: 24px; } }
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; font-family: var(--font); font-size: 16px; line-height: 1.6; color: var(--g900); background: var(--white); }
+body { margin: 0; font-family: var(--font); font-size: 16px; line-height: 1.6; color: var(--g900); background: var(--white); overflow-x: hidden; overflow-wrap: break-word; }
+img, svg { max-width: 100%; display: block; }
+a, button, input, select, textarea, summary { min-height: 28px; min-width: 28px; font-size: 1rem; }
+a { color: var(--b800); text-decoration: underline; text-underline-offset: 3px; display: inline-flex; align-items: center; padding: 2px 4px; }
+a:hover { color: var(--g900); }
+h1, h2, h3 { line-height: 1.25; margin: 0 0 0.5em; color: var(--g900); text-wrap: balance; }
+p, li { margin: 0 0 0.75em; overflow-wrap: break-word; word-break: break-word; }
+ul, ol { margin: 0; padding-left: 20px; }
+a:focus, button:focus, input:focus, select:focus, textarea:focus, summary:focus,
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--b600) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 3px rgba(29, 111, 182, 0.35) !important;
+}
+.on-dark a:focus-visible, .on-dark button:focus-visible { outline-color: var(--white) !important; }
+.wrap, .container { max-width: var(--wrap); margin: 0 auto; padding: 0 var(--pad); width: 100%; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; left: 8px; top: -80px; z-index: 100;
+  background: var(--g900); color: var(--white); padding: 12px 16px; border-radius: var(--radius-s); text-decoration: none;
+}
+.skip-link:focus { top: 8px; color: var(--white); }
+
+/* Header & Navigation */
+.topbar { background: var(--g900); color: var(--white); font-size: 14px; padding: 6px 0; }
+.topbar .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+.topbar p { margin: 0; }
+.topbar a { color: var(--white); text-decoration: none; font-weight: 600; }
+.site-header {
+  position: sticky; top: 0; z-index: 50;
+  background: rgb(255 255 255 / 0.97);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+}
+.header-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.brand-link { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--g900); font-weight: 800; font-size: 1.05rem; padding: 4px 6px; }
+nav[data-testid="nav-main"] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+nav[data-testid="nav-main"] a {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 4px 9px;
+  border-radius: var(--radius-s); color: var(--g900); text-decoration: none;
+  font-weight: 600; font-size: 0.95rem;
+}
+nav[data-testid="nav-main"] a:hover { background: var(--tint); }
+nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); color: var(--white); }
+.lang-switcher { display: inline-flex; gap: 4px; border: 1px solid var(--line); border-radius: 999px; padding: 3px; align-items: center; }
+.lang-switcher a {
+  min-height: 34px; padding: 4px 12px; border-radius: 999px; text-decoration: none;
+  font-weight: 700; font-size: 0.9rem; color: var(--g900);
+}
+.lang-switcher a[aria-current="true"] { background: var(--g900); color: var(--white); }
+
+/* Buttons & Badges */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 8px 20px; border-radius: 999px; border: 2px solid transparent;
+  font-weight: 700; font-size: 1rem; text-decoration: none; cursor: pointer;
+  background: var(--g700); color: var(--white);
+}
+.btn:hover { background: var(--g900); color: var(--white); }
+.btn-light { background: var(--white); color: var(--g900); }
+.btn-light:hover { background: var(--tint); color: var(--g900); }
+.btn-ghost { background: transparent; border-color: var(--white); color: var(--white); }
+.btn-ghost:hover { background: rgb(255 255 255 / 0.14); color: var(--white); }
+.btn-secondary, .btn-outline { background: var(--white); border-color: var(--g700); color: var(--g700); }
+.btn-secondary:hover, .btn-outline:hover { background: var(--tint); color: var(--g900); }
+.btn[aria-pressed="true"] { background: var(--g900); color: var(--white); border-color: var(--g900); }
+
+.badge {
+  display: inline-block; padding: 4px 12px; border-radius: 999px;
+  background: var(--tint-2); color: var(--g900); font-weight: 700; font-size: 0.9rem;
+}
+.pills { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0 0 20px; }
+.pills li {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+  background: rgb(255 255 255 / 0.14); border: 1px solid rgb(255 255 255 / 0.35); font-size: 0.95rem; font-weight: 600; color: var(--white); margin: 0;
+}
+.pills li::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--lime); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 12px 0 0; }
+.chips li {
+  font-size: 0.9rem; font-weight: 600; line-height: 1.4; padding: 4px 10px; border-radius: 999px;
+  background: var(--tint); color: var(--g900); border: 1px solid var(--line); margin: 0;
+}
+
+/* Sections & Hero */
+main { padding: 0 0 48px; }
+.section-block { margin: 28px 0; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
+.section-alt { background: var(--tint); }
+.section-dark { background: var(--grad); color: var(--white); border-color: transparent; }
+.section-dark h1, .section-dark h2, .section-dark h3, .section-dark p { color: var(--white); }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 10px; margin: 0 0 8px;
+  font-size: 0.85rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g700);
+}
+.eyebrow::before { content: ""; width: 24px; height: 4px; border-radius: 4px; background: var(--leaf); }
+.section-dark .eyebrow { color: var(--white); }
+
+.hero-banner {
+  background: var(--grad); color: var(--white); border-radius: var(--radius);
+  padding: 28px 24px; margin: 20px 0 28px; position: relative; overflow: hidden;
+}
+.hero-banner h1 { color: var(--white); font-size: clamp(1.75rem, 4.5vw, 2.75rem); font-weight: 800; margin-bottom: 12px; }
+.hero-banner p { color: var(--white); font-size: 1.05rem; max-width: 60ch; }
+.hero-grid { display: grid; gap: 24px; align-items: center; }
+@media (min-width: 900px) { .hero-grid { grid-template-columns: 6fr 5fr; } }
+.hero-media { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--g900); margin: 0; }
+.hero-media img { width: 100%; height: auto; display: block; object-fit: cover; }
+.photo-badge {
+  display: inline-block; margin-top: 8px; padding: 4px 10px; border-radius: 6px;
+  background: var(--b800); color: var(--white); font-size: 0.85rem; font-weight: 600;
+}
+
+/* Grids & Cards */
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; list-style: none; padding: 0; margin: 0; }
+.card {
+  position: relative; overflow: hidden;
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; background: var(--white); box-shadow: var(--shadow);
+}
+.card::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; background: var(--leaf); }
+.card-num { position: absolute; right: 16px; top: 12px; font-size: 2rem; font-weight: 800; color: rgb(15 88 56 / 0.14); line-height: 1; }
+.stat-card { border-left: 4px solid var(--lime); padding: 14px 16px; background: var(--white); border-radius: var(--radius-s); border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.stat-value { display: block; font-size: 1.75rem; font-weight: 800; color: var(--g900); line-height: 1.2; }
+
+/* Mini-flow (Home) & SVG Flow Diagram (Technology) */
+.split { display: grid; gap: 24px; }
+@media (min-width: 900px) { .split { grid-template-columns: 1fr 1fr; align-items: center; } }
+.mini-flow { display: grid; gap: 8px; justify-items: center; width: 100%; }
+.mf-node {
+  border-radius: 12px; padding: 10px 16px; font-weight: 700; text-align: center;
+  background: rgb(255 255 255 / 0.14); border: 1px solid rgb(255 255 255 / 0.4); color: var(--white);
+}
+.mf-node.mf-in { background: var(--white); color: var(--g900); min-width: 200px; }
+.mf-branches { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+.mf-branch { display: grid; gap: 8px; align-content: start; }
+.mf-out { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.mf-out li {
+  font-size: 0.9rem; font-weight: 600; text-align: center; padding: 6px 10px; border-radius: 999px;
+  background: rgb(255 255 255 / 0.1); border: 1px dashed rgb(255 255 255 / 0.55); color: var(--white); margin: 0;
+}
+
+.diagram-box { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
+.flow-svg { width: 100%; height: auto; overflow: visible; }
+.flow-wide { display: none; }
+@media (min-width: 768px) { .flow-wide { display: block; } .flow-tall { display: none; } }
+.flow-svg .wire { fill: none; stroke: var(--g500); stroke-width: 2.5; stroke-dasharray: 9 7; stroke-linecap: round; }
+.flow-svg .wire.blue { stroke: var(--b600); }
+.flow-svg .node rect { fill: var(--white); stroke: var(--g700); stroke-width: 2; }
+.flow-svg .node text { font-family: var(--font); font-size: 16px; font-weight: 700; fill: var(--g900); }
+.flow-svg .node.dark rect { fill: var(--g900); stroke: none; }
+.flow-svg .node.green rect { fill: var(--g700); stroke: none; }
+.flow-svg .node.blue rect { fill: var(--b800); stroke: none; }
+.flow-svg .node.dark text, .flow-svg .node.green text, .flow-svg .node.blue text { fill: var(--white); }
+.flow-svg .node.out rect { fill: var(--white); stroke: var(--g500); stroke-width: 1.5; }
+.flow-svg .node.out.vpd rect { stroke: var(--b600); }
+.flow-svg .node.out text { font-size: 15px; font-weight: 600; }
+.flow-svg .dot { fill: var(--lime); }
+
+/* VPD 8-step interactive stepper */
+.step-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
+.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+@media (min-width: 900px) { .steps { grid-template-columns: repeat(4, 1fr); } }
+.step {
+  position: relative; background: var(--white); border: 2px solid var(--line); border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.step.is-active { border-color: var(--g700); box-shadow: 0 0 0 3px rgb(159 180 59 / 0.35); }
+.step.loop { border-style: dashed; border-color: var(--b600); background: var(--tint-b); }
+.step-head {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 4px;
+  background: transparent; border: 0; font: inherit; color: var(--g900); text-align: left; cursor: pointer;
+}
+.step-num {
+  flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--tint-2); color: var(--g900); font-weight: 800; font-size: 0.95rem;
+}
+.step.is-active .step-num { background: var(--g700); color: var(--white); }
+.step.loop .step-num { background: var(--b800); color: var(--white); }
+.step-title { font-weight: 700; font-size: 1rem; line-height: 1.3; }
+.step p { margin: 6px 0 0; font-size: 0.95rem; color: var(--g900); }
+
+/* Forms & Footer */
+figure { margin: 16px 0; }
+figure img { max-width: 100%; height: auto; border-radius: 8px; display: block; }
+figcaption { font-size: 0.95rem; color: var(--g700); margin-top: 6px; font-weight: 600; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: var(--g900); }
+.form-control { width: 100%; padding: 10px 12px; border: 1px solid #5a6e62; border-radius: 8px; font-size: 1rem; color: var(--g900); background: var(--white); }
+.error-box { background: var(--error-bg); color: var(--error); border: 1px solid var(--error); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
+.success-box { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok); padding: 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
+.hp-trap { position: absolute !important; left: -9999px !important; width: 1px !important; height: 1px !important; overflow: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+
+footer.site-footer { background: var(--g900); color: var(--white); padding: 40px 0 24px; margin-top: 40px; }
+footer.site-footer p, footer.site-footer strong { color: var(--white); }
+footer.site-footer a { color: var(--white); text-decoration: underline; min-height: 34px; }
+.footer-grid { display: grid; gap: 24px; }
+@media (min-width: 900px) { .footer-grid { grid-template-columns: 1.4fr 1fr 1fr; } }
+.footer-bottom { border-top: 1px solid rgb(255 255 255 / 0.22); margin-top: 24px; padding-top: 16px; font-size: 0.9rem; }
+
+@media (max-width: 480px) {
+  .wrap, .container { padding: 0 12px; }
+  .section-block, .hero-banner { padding: 16px; }
+  .grid-cards, .mf-branches { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+`;
+
+function renderLayout(opts: {
+  locale: Locale;
+  title: string;
+  description: string;
+  canonicalPath: string;
+  viPath: string;
+  enPath: string;
+  noindex?: boolean;
+  ogImageRel?: string;
+  siteUrl: string;
+  company: LoadedCompany;
+  activePageKey?: StaticPageKey;
+  bodyHtml: string;
+}): string {
+  const {
+    locale,
+    title,
+    description,
+    canonicalPath,
+    viPath,
+    enPath,
+    noindex = false,
+    ogImageRel = 'og/default.png',
+    siteUrl,
+    company,
+    activePageKey,
+    bodyHtml,
+  } = opts;
+
+  const canonicalUrl = `${siteUrl}${canonicalPath}`;
+  const viUrl = `${siteUrl}${viPath}`;
+  const enUrl = `${siteUrl}${enPath}`;
+  const ogImgUrl = `${siteUrl}/${ogImageRel.replace(/^\//, '')}`;
+  const ogLocale = locale === 'vi' ? 'vi_VN' : 'en_US';
+  const skipText = locale === 'vi' ? 'Bỏ qua, tới nội dung chính' : 'Skip to main content';
+  const brandName = company.legalName || (locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen');
+
+  const navLinks = MENU_ORDER.map((k) => {
+    const href = ROUTES[k][locale];
+    const current = activePageKey === k ? ' aria-current="page"' : '';
+    return `<a href="${href}" data-testid="nav-menu"${current}>${escHtml(MENU_LABELS[locale][k])}</a>`;
+  }).join('');
+
+  const phoneHtml =
+    company.phone && company.phone.trim()
+      ? `<p><strong>${locale === 'vi' ? 'Điện thoại' : 'Phone'}:</strong> <a href="tel:${escHtml(company.phone.trim())}">${escHtml(formatPublicPhone(company.phone, locale))}</a></p>`
+      : '';
+  const zaloHtml =
+    company.zalo && company.zalo.trim()
+      ? `<p><strong>Zalo:</strong> <a href="${escHtml(company.zalo.trim())}" rel="noopener noreferrer">${escHtml(company.zalo.trim())}</a></p>`
+      : '';
+  const addrHtml =
+    company.address && company.address[locale]?.trim()
+      ? `<p><strong>${locale === 'vi' ? 'Địa chỉ' : 'Address'}:</strong> ${escHtml(company.address[locale])}</p>`
+      : '';
+  const taxHtml =
+    company.taxId && company.taxId.trim()
+      ? `<p data-testid="tax-id"><strong>${locale === 'vi' ? 'Mã số thuế' : 'Tax ID'}:</strong> ${escHtml(company.taxId.trim())}</p>`
+      : '';
+
+  const orgJsonLd = buildOrgJsonLd(company, siteUrl, locale);
+  const displayBrand = locale === 'en' ? 'GMS Hung Yen' : brandName;
+  const switcherLabel = locale === 'vi' ? 'Đổi ngôn ngữ' : 'Language switcher';
+  // On EN 404 page, avoid Vietnamese diacritics in the visible body while keeping "Tiếng Việt" on normal pages
+  const viSwitcherText = canonicalPath === '/en/404' ? 'Vietnamese' : 'Tiếng Việt';
+
+  return `<!DOCTYPE html>
+<html lang="${locale}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escHtml(title)}</title>
+  <meta name="description" content="${escHtml(description)}" />
+  ${noindex ? '<meta name="robots" content="noindex, nofollow" />' : '<meta name="robots" content="index, follow" />'}
+  <link rel="canonical" href="${escHtml(canonicalUrl)}" />
+  <link rel="alternate" hreflang="vi" href="${escHtml(viUrl)}" />
+  <link rel="alternate" hreflang="en" href="${escHtml(enUrl)}" />
+  <link rel="alternate" hreflang="x-default" href="${escHtml(viUrl)}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="${escHtml(title)}" />
+  <meta property="og:description" content="${escHtml(description)}" />
+  <meta property="og:locale" content="${ogLocale}" />
+  <meta property="og:url" content="${escHtml(canonicalUrl)}" />
+  <meta property="og:image" content="${escHtml(ogImgUrl)}" />
+  <script type="application/ld+json">${orgJsonLd}</script>
+  <style>${INLINE_STYLES}</style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link" data-testid="nav-menu">${escHtml(skipText)}</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="${ROUTES.home[locale]}" class="brand-link" data-testid="nav-menu">
+        ${INLINE_LOGO_MARK_SVG}
+        <span>${escHtml(displayBrand)}</span>
+      </a>
+      <nav data-testid="nav-main" aria-label="${locale === 'vi' ? 'Điều hướng chính' : 'Main navigation'}">
+        ${navLinks}
+      </nav>
+      <div class="lang-switcher" data-testid="lang-switcher" role="group" aria-label="${switcherLabel}">
+        <a hreflang="vi" href="${escHtml(viPath)}" lang="vi"${locale === 'vi' ? ' aria-current="true"' : ''}>${viSwitcherText}</a>
+        <a hreflang="en" href="${escHtml(enPath)}" lang="en"${locale === 'en' ? ' aria-current="true"' : ''}>English</a>
+      </div>
+    </div>
+  </header>
+  <main id="main-content" class="container">
+    ${bodyHtml}
+  </main>
+  <footer class="site-footer on-dark" data-testid="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <p><strong>${escHtml(displayBrand)}</strong></p>
+          <p>${locale === 'vi' ? 'Giải pháp thông minh – Kiến tạo giá trị xanh.' : 'Smart solutions – Creating green value.'}</p>
+        </div>
+        <div>
+          ${addrHtml}
+          ${phoneHtml}
+          ${zaloHtml}
+          ${taxHtml}
+        </div>
+        <div>
+          <p>
+            <a href="${ROUTES.privacy[locale]}">${escHtml(MENU_LABELS[locale].privacy)}</a> ·
+            <a href="${ROUTES.contact[locale]}">${escHtml(MENU_LABELS[locale].contact)}</a>
+          </p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2026 ${escHtml(displayBrand)}</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`;
+}
+
+function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
+  const isVi = locale === 'vi';
+  const slogan = isVi ? 'Giải pháp thông minh – Kiến tạo giá trị xanh' : 'Smart solutions – Creating green value';
+  const pillars = isVi
+    ? ['Công nghệ VPD', 'Sàng tuyển', 'Tái tạo tài nguyên']
+    : ['VPD technology', 'Sorting', 'Resource recovery'];
+
+  const figuresHtml =
+    content.figures.length > 0
+      ? `<section class="section-block" data-testid="figures-strip" aria-label="${isVi ? 'Số liệu chính' : 'Key figures'}">
+          <p class="eyebrow">${isVi ? 'Số liệu chính' : 'Key figures'}</p>
+          <h2>${isVi ? 'Quy mô & Số liệu đã xác nhận' : 'Confirmed Plant Figures'}</h2>
+          <ul class="grid-cards">
+            ${content.figures
+              .map(
+                (f) =>
+                  `<li class="stat-card"><strong class="stat-value">${escHtml(f.value)} ${escHtml(f.unit[locale])}</strong><span>${escHtml(f.label[locale])}</span> <small>(${escHtml(f.source)})</small></li>`,
+              )
+              .join('')}
+          </ul>
+        </section>`
+      : '';
+
+  const coverLabel = isVi ? 'Phối cảnh dự kiến' : "Artist's impression";
+  const coverImg = content.images.get('images/hero-plant.jpg');
+  const coverSrc = coverImg && coverImg.allowedInBuild ? '/img/hero-plant.jpg' : '/og/default.png';
+  const coverAlt = coverImg
+    ? coverImg.alt[locale]
+    : isVi
+      ? 'Phối cảnh nhà máy GMS dự kiến: mái pin mặt trời, hồ nước và cây xanh giữa khu công nghiệp sinh thái'
+      : "Artist's impression of the planned GMS plant: solar roof, retention ponds and green buffer belts";
+
+  const outputsList = content.outputLines
+    .map(
+      (o) =>
+        `<li class="card" data-testid="output-row"><strong>${escHtml(o.name[locale])}</strong> — <span class="badge">${o.state === 'da-co' ? (isVi ? 'Đã có' : 'Available') : isVi ? 'Định hướng' : 'Planned'}</span><p>${escHtml(o.desc[locale])}</p></li>`,
+    )
+    .join('');
+
+  const top3News = content.news[locale].slice(0, 3);
+  const newsSection =
+    top3News.length > 0
+      ? `<section class="section-block" data-testid="home-news">
+          <p class="eyebrow">${isVi ? 'Tin tức / Hành trình' : 'News / Journey'}</p>
+          <h2>${isVi ? 'Bài mới trên hành trình' : 'Latest from the journey'}</h2>
+          <div class="grid-cards">
+            ${top3News
+              .map(
+                (n) => `<article class="card" data-testid="news-item">
+                  <h3><a href="${ROUTES.news[locale]}/${n.slug}">${escHtml(n.title)}</a></h3>
+                  <p><small>${escHtml(formatDateLocale(n.date, locale))}</small></p>
+                  <p>${escHtml(n.summary)}</p>
+                </article>`,
+              )
+              .join('')}
+          </div>
+        </section>`
+      : '';
+
+  const miniDiagramAria = isVi
+    ? 'Sơ đồ: chất thải đầu vào chia hai nhánh. Sàng tuyển ra nilon, mùn hữu cơ, RDF. Công nghệ VPD ra syngas, than hoạt tính, dầu tái chế.'
+    : 'Diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil.';
+
+  return `
+    <section class="hero-banner on-dark" data-testid="home-hero">
+      <div class="hero-grid">
+        <div>
+          <ul class="pills">
+            ${pillars.map((p) => `<li>${escHtml(p)}</li>`).join('')}
+          </ul>
+          <h1>${escHtml(slogan)}</h1>
+          <p>${
+            isVi
+              ? 'Từ chất thải đến tài nguyên. GMS Hưng Yên đang từng bước xây dựng hệ thống sàng tuyển và chuyển hoá, đưa những dòng vật chất còn giá trị trở lại chu trình sử dụng.'
+              : 'From waste to resources. GMS Hung Yen is building, step by step, a sorting and conversion system that returns still-valuable material streams to a new cycle of use.'
+          }</p>
+          <p style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px;">
+            <a href="${ROUTES.technology[locale]}" class="btn btn-light">${isVi ? 'Tìm hiểu công nghệ →' : 'Explore the technology →'}</a>
+            <a href="${ROUTES.contact[locale]}" class="btn btn-ghost" data-testid="cta-contact">${isVi ? 'Liên hệ hợp tác' : 'Partner with us'}</a>
+          </p>
+        </div>
+        <figure class="hero-media" data-testid="home-cover">
+          <img src="${coverSrc}" alt="${escHtml(coverAlt)}" width="1024" height="1024" />
+          <figcaption class="photo-badge" data-testid="photo-label">${escHtml(coverLabel)}</figcaption>
+        </figure>
+      </div>
+    </section>
+    ${figuresHtml}
+    <section class="section-block" aria-labelledby="pillars-title">
+      <p class="eyebrow">${isVi ? 'Định hướng của GMS' : 'What GMS stands for'}</p>
+      <h2 id="pillars-title">${isVi ? 'Ba trụ cột của nhà máy' : "The plant's three pillars"}</h2>
+      <ul class="grid-cards">
+        <li class="card">
+          <span class="card-num" aria-hidden="true">01</span>
+          <h3>${isVi ? 'Công nghệ VPD' : 'VPD technology'}</h3>
+          <p>${isVi ? 'Định hướng chuyển hoá một số dòng nguyên liệu phù hợp thành các sản phẩm đầu ra mới.' : 'Aims to convert suitable feedstock streams into new output products.'}</p>
+          <ul class="chips">
+            <li>Syngas</li>
+            <li>${isVi ? 'Than hoạt tính' : 'Activated carbon'}</li>
+            <li>${isVi ? 'Dầu tái chế' : 'Recycled oil'}</li>
+          </ul>
+        </li>
+        <li class="card">
+          <span class="card-num" aria-hidden="true">02</span>
+          <h3>${isVi ? 'Sàng tuyển' : 'Sorting'}</h3>
+          <p>${isVi ? 'Phân tách các dòng vật chất phù hợp để tiếp tục xử lý hoặc khai thác giá trị.' : 'Separates suitable material streams for further processing or value recovery.'}</p>
+          <ul class="chips">
+            <li>${isVi ? 'Nilon' : 'Plastic film'}</li>
+            <li>${isVi ? 'Mùn hữu cơ' : 'Organic humus'}</li>
+            <li>RDF</li>
+          </ul>
+        </li>
+        <li class="card">
+          <span class="card-num" aria-hidden="true">03</span>
+          <h3>${isVi ? 'Tái tạo tài nguyên' : 'Resource recovery'}</h3>
+          <p>${isVi ? 'Đưa những dòng vật chất còn giá trị trở lại chu trình sản xuất, kiến tạo vòng đời tài nguyên mới.' : 'Returns still-valuable materials to production, creating new resource life cycles.'}</p>
+          <ul class="chips">
+            <li>${isVi ? 'Phân loại' : 'Separate'}</li>
+            <li>${isVi ? 'Chuyển hoá' : 'Convert'}</li>
+            <li>${isVi ? 'Thu hồi giá trị' : 'Recover value'}</li>
+          </ul>
+        </li>
+      </ul>
+    </section>
+    <section class="section-block section-dark on-dark" data-testid="home-branches">
+      <div class="split">
+        <div>
+          <p class="eyebrow">${isVi ? 'Công nghệ' : 'Technology'}</p>
+          <h2>${isVi ? 'Hai nhóm công đoạn, sáu dòng đầu ra' : 'Two process groups, six output streams'}</h2>
+          <p>${isVi ? 'Chất thải đi qua sàng tuyển để tách dòng, và qua công nghệ VPD để chuyển hoá những dòng nguyên liệu phù hợp thành sản phẩm mới.' : 'Waste passes through sorting to separate streams, and through VPD technology to convert suitable feedstock into new products.'}</p>
+          <p><a class="btn btn-light" href="${ROUTES.technology[locale]}">${isVi ? 'Xem quy trình công nghệ →' : 'See the process →'}</a></p>
+        </div>
+        <div class="mini-flow" role="img" aria-label="${escHtml(miniDiagramAria)}">
+          <div class="mf-node mf-in">${isVi ? 'Chất thải đầu vào' : 'Incoming waste'}</div>
+          <div class="mf-branches">
+            <div class="mf-branch">
+              <div class="mf-node">${isVi ? 'Sàng tuyển' : 'Sorting'}</div>
+              <ul class="mf-out">
+                <li>${isVi ? 'Nilon' : 'Plastic film'}</li>
+                <li>${isVi ? 'Mùn hữu cơ' : 'Organic humus'}</li>
+                <li>RDF</li>
+              </ul>
+            </div>
+            <div class="mf-branch">
+              <div class="mf-node">${isVi ? 'Công nghệ VPD' : 'VPD technology'}</div>
+              <ul class="mf-out">
+                <li>Syngas</li>
+                <li>${isVi ? 'Than hoạt tính' : 'Activated carbon'}</li>
+                <li>${isVi ? 'Dầu tái chế' : 'Recycled oil'}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="section-block" data-testid="home-outputs">
+      <p class="eyebrow">${isVi ? 'Đầu ra định hướng' : 'Planned outputs'}</p>
+      <h2>${isVi ? 'Sáu dòng sản phẩm đầu ra' : 'Six Output Product Lines'}</h2>
+      <ul class="grid-cards">
+        ${outputsList}
+      </ul>
+    </section>
+    <section class="section-block section-alt" data-testid="home-journey">
+      <p class="eyebrow">${isVi ? 'Hành trình chuyển đổi' : 'Transformation journey'}</p>
+      <h2>${isVi ? 'Từ hiện trạng hôm nay, kiến tạo giá trị cho ngày mai' : "From today's reality to tomorrow's value"}</h2>
+      <p>${isVi ? 'Nhà máy đang thực hiện lộ trình chuẩn hoá mặt bằng, cải tạo hạ tầng và lắp đặt đồng bộ dây chuyền công nghệ.' : 'The facility is executing a structured roadmap of site preparation, infrastructure upgrade and technology deployment.'}</p>
+      <p><a href="${ROUTES.news[locale]}" class="btn btn-outline">${isVi ? 'Xem lộ trình 5 bước' : 'View the 5-step roadmap'}</a></p>
+    </section>
+    ${newsSection}
+  `;
+}
+
+function renderAboutPage(content: LoadedSiteContent, locale: Locale): string {
+  const isVi = locale === 'vi';
+  const customBody = content.pagesBody.about?.[locale]?.bodyHtml ?? '';
+  const values = isVi
+    ? ['Công nghệ tiên tiến', 'Tái tạo tài nguyên', 'Phát triển bền vững', 'Vì cộng đồng xanh']
+    : ['Advanced technology', 'Resource recovery', 'Sustainable development', 'For a green community'];
+
+  return `
+    <section class="section-block" data-testid="about-who">
+      <p class="eyebrow">${isVi ? 'Giới thiệu' : 'About us'}</p>
+      <h1>${isVi ? 'Giới thiệu về GMS Hưng Yên' : 'About GMS Hung Yen'}</h1>
+      <p>${
+        isVi
+          ? 'Công ty Cổ phần Môi Trường Năng Lượng Xanh Hưng Yên (GMS) phát triển tổ hợp xử lý chất thải rắn và tái tạo tài nguyên tại tỉnh Hưng Yên.'
+          : 'Green Energy Environment Joint Stock Company Hung Yen (GMS) develops an integrated solid waste treatment and resource recovery complex in Hung Yen Province.'
+      }</p>
+      ${customBody}
+    </section>
+    <section class="section-block section-alt" data-testid="about-journey">
+      <h2>${isVi ? 'Hành trình chuyển đổi' : 'Transformation Journey'}</h2>
+      <p>${
+        isVi
+          ? 'Từ đánh giá hiện trạng, tổ chức lại mặt bằng đến cải tạo hạ tầng và triển khai dây chuyền sàng tuyển kết hợp nhiệt phân VPD.'
+          : 'From current-state assessment and site organisation to infrastructure upgrade and deployment of sorting and VPD pyrolysis lines.'
+      }</p>
+    </section>
+    <section class="section-block" data-testid="about-values">
+      <h2>${isVi ? 'Bốn giá trị cốt lõi' : 'Four Core Values'}</h2>
+      <ul class="grid-cards">
+        ${values.map((v) => `<li class="card" data-testid="value-card"><strong>${escHtml(v)}</strong></li>`).join('')}
+      </ul>
+    </section>
+  `;
+}
+
+function renderSolutionsPage(content: LoadedSiteContent, locale: Locale): string {
+  const isVi = locale === 'vi';
+  const items = content.solutionItems[locale];
+  return `
+    <section class="section-block">
+      <p class="eyebrow">${isVi ? 'Giải pháp' : 'Solutions'}</p>
+      <h1>${isVi ? 'Giải pháp xử lý chất thải & Tái tạo tài nguyên' : 'Waste Treatment & Resource Recovery Solutions'}</h1>
+      <div class="grid-cards">
+        ${items
+          .map(
+            (item) => `<article class="card" data-testid="solution-item">
+              <h2>${escHtml(item.title)}</h2>
+              <div>${item.bodyHtml}</div>
+              <p><a href="${ROUTES.contact[locale]}" class="btn" data-testid="cta-contact">${isVi ? 'Liên hệ tư vấn' : 'Contact us'}</a></p>
+            </article>`,
+          )
+          .join('')}
+      </div>
+    </section>
+  `;
+}
+
+function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): string {
+  const isVi = locale === 'vi';
+  const diagramAria = isVi
+    ? 'Sơ đồ tổng quan: chất thải đầu vào chia hai nhánh. Sàng tuyển ra nilon, mùn hữu cơ, RDF. Công nghệ VPD ra syngas, than hoạt tính, dầu tái chế. Các dòng đầu ra quay lại chu trình sử dụng.'
+    : 'Overview diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil. The outputs return to a cycle of use.';
+
+  const customBody = content.pagesBody.technology?.[locale]?.bodyHtml ?? '';
+  const partnersSection =
+    content.partners.length > 0
+      ? `<section class="section-block" data-testid="partners-block">
+          <h2>${isVi ? 'Đối tác công nghệ' : 'Technology Partners'}</h2>
+          <ul>
+            ${content.partners.map((p) => `<li>${escHtml(p.name)}</li>`).join('')}
+          </ul>
+        </section>`
+      : '';
+
+  const drawingImg = content.images.get('images/sorting-line-3d.png');
+  const drawingHtml =
+    drawingImg && drawingImg.allowedInBuild
+      ? `<section class="section-block section-alt" data-testid="tech-drawing">
+          <p class="eyebrow">${isVi ? 'Bản vẽ kỹ thuật' : 'Engineering drawing'}</p>
+          <h2>${isVi ? 'Bản vẽ 3D dây chuyền phân loại rác sinh hoạt' : '3D layout of the municipal solid waste sorting line'}</h2>
+          <figure class="card">
+            <img src="/img/sorting-line-3d.png" alt="${escHtml(drawingImg.alt[locale])}" width="1600" height="900" loading="lazy" />
+            <figcaption>
+              <span class="badge">${isVi ? 'Bản vẽ kỹ thuật' : 'Engineering drawing'}</span> ·
+              ${
+                isVi
+                  ? 'Bản vẽ 3D dây chuyền phân loại rác sinh hoạt (hiển thị nguyên bản có khung tên kỹ thuật theo yêu cầu GMS).'
+                  : '3D engineering layout of the municipal solid waste sorting line (displayed with original title block as requested by GMS).'
+              }
+            </figcaption>
+          </figure>
+        </section>`
+      : '';
+
+  const vpdSteps = isVi
+    ? [
+        {
+          num: '1',
+          title: 'Tiếp nhận và lưu chứa',
+          desc: 'Nguyên liệu đầu vào được tập kết trong kho có mái che trước khi lên dây chuyền.',
+          chips: [],
+        },
+        {
+          num: '2',
+          title: 'Mở bao, đánh tơi',
+          desc: 'Bao túi được mở, khối nguyên liệu được đánh tơi để nước tự do thoát bớt.',
+          chips: [],
+        },
+        { num: '3', title: 'Ép tách nước', desc: 'Máy ép giảm tiếp lượng nước còn lại trong nguyên liệu.', chips: [] },
+        {
+          num: '4',
+          title: 'Sấy giảm ẩm',
+          desc: 'Nguyên liệu được sấy tuần hoàn tới độ ẩm phù hợp cho công đoạn nhiệt.',
+          chips: [],
+        },
+        {
+          num: '5',
+          title: 'Phân huỷ nhiệt',
+          desc: 'Trong buồng kín, nguyên liệu được phân huỷ bằng nhiệt; phần rắn còn lại được thu riêng.',
+          chips: ['Than hoạt tính'],
+        },
+        {
+          num: '6',
+          title: 'Làm sạch và tách dòng khí',
+          desc: 'Hỗn hợp khí được làm nguội, lắng bụi rồi tách thành các dòng riêng.',
+          chips: ['Dầu tái chế', 'Nước tách ra', 'Syngas'],
+        },
+        {
+          num: '7',
+          title: 'Làm khô và lưu chứa khí',
+          desc: 'Syngas được làm khô rồi đưa vào bồn chứa thành phẩm.',
+          chips: [],
+        },
+        {
+          num: '8',
+          title: 'Vòng hồi lưu',
+          desc: 'Một phần syngas quay lại cấp nhiệt cho buồng phân huỷ.',
+          chips: [],
+          isLoop: true,
+        },
+      ]
+    : [
+        {
+          num: '1',
+          title: 'Intake and storage',
+          desc: 'Incoming feedstock is gathered in a covered store before entering the line.',
+          chips: [],
+        },
+        {
+          num: '2',
+          title: 'Bag opening and loosening',
+          desc: 'Bags are opened and the mass is loosened so free water can drain off.',
+          chips: [],
+        },
+        { num: '3', title: 'Dewatering press', desc: 'A press removes more of the remaining water.', chips: [] },
+        {
+          num: '4',
+          title: 'Drying',
+          desc: 'The material is dried in a recirculating dryer to suit the thermal stage.',
+          chips: [],
+        },
+        {
+          num: '5',
+          title: 'Thermal decomposition',
+          desc: 'In a closed chamber the material breaks down under heat; the remaining solids are collected separately.',
+          chips: ['Activated carbon'],
+        },
+        {
+          num: '6',
+          title: 'Gas cleaning and separation',
+          desc: 'The gas mixture is cooled, cleared of dust and split into separate streams.',
+          chips: ['Recycled oil', 'Separated water', 'Syngas'],
+        },
+        {
+          num: '7',
+          title: 'Gas drying and storage',
+          desc: 'Syngas is dried and sent to the product storage tank.',
+          chips: [],
+        },
+        {
+          num: '8',
+          title: 'Return loop',
+          desc: 'Part of the syngas is fed back to heat the decomposition chamber.',
+          chips: [],
+          isLoop: true,
+        },
+      ];
+
+  const vpdStepsHtml = vpdSteps
+    .map(
+      (s, idx) => `<li class="step${idx === 0 ? ' is-active' : ''}${s.isLoop ? ' loop' : ''}">
+        <button type="button" class="step-head"${idx === 0 ? ' aria-current="step"' : ''}>
+          <span class="step-num">${escHtml(s.num)}</span>
+          <span class="step-title">${escHtml(s.title)}</span>
+        </button>
+        <p>${escHtml(s.desc)}</p>
+        ${s.chips.length > 0 ? `<ul class="chips">${s.chips.map((c) => `<li>${escHtml(c)}</li>`).join('')}</ul>` : ''}
+      </li>`,
+    )
+    .join('');
+
+  return `
+    <section class="hero-banner on-dark">
+      <p class="eyebrow">${isVi ? 'Công nghệ' : 'Technology'}</p>
+      <h1>${isVi ? 'Công nghệ: từ chất thải đến tài nguyên' : 'Technology: from waste to resources'}</h1>
+      <p>${
+        isVi
+          ? 'Nhà máy GMS định hướng hai nhóm công đoạn: sàng tuyển để tách các dòng vật chất, và công nghệ VPD để chuyển hoá những dòng nguyên liệu phù hợp thành sản phẩm mới.'
+          : 'The GMS plant is built around two process groups: sorting to separate material streams, and VPD technology to convert suitable feedstock into new products.'
+      }</p>
+      <ul class="pills" style="margin-top: 14px;">
+        <li>${isVi ? 'Công nghệ VPD' : 'VPD technology'}</li>
+        <li>${isVi ? 'Sàng tuyển' : 'Sorting'}</li>
+        <li>${isVi ? 'Tái tạo tài nguyên' : 'Resource recovery'}</li>
+      </ul>
+    </section>
+
+    <section class="section-block">
+      <p class="eyebrow">${isVi ? 'Tổng quan' : 'Overview'}</p>
+      <h2>${isVi ? 'Một dòng vào, sáu dòng tài nguyên ra' : 'One stream in, six resource streams out'}</h2>
+      <div class="diagram-box" data-testid="tech-diagram" role="region" aria-label="${escHtml(diagramAria)}">
+        <svg class="flow-svg flow-wide" viewBox="0 0 1000 380" role="img" aria-label="${escHtml(diagramAria)}">
+          <defs>
+            <marker id="ah-w" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#368F3D"/></marker>
+            <marker id="ah-wb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1D6FB6"/></marker>
+          </defs>
+          <g>
+            <path class="wire" d="M190 190 C240 190 240 90 286 90" marker-end="url(#ah-w)"/>
+            <path class="wire blue" d="M190 190 C240 190 240 290 286 290" marker-end="url(#ah-wb)"/>
+            <path class="wire" d="M480 90 C525 90 525 44 566 44" marker-end="url(#ah-w)"/>
+            <path class="wire" d="M480 90 C525 90 525 96 566 96" marker-end="url(#ah-w)"/>
+            <path class="wire" d="M480 90 C525 90 525 148 566 148" marker-end="url(#ah-w)"/>
+            <path class="wire blue" d="M480 290 C525 290 525 232 566 232" marker-end="url(#ah-wb)"/>
+            <path class="wire blue" d="M480 290 C525 290 525 284 566 284" marker-end="url(#ah-wb)"/>
+            <path class="wire blue" d="M480 290 C525 290 525 336 566 336" marker-end="url(#ah-wb)"/>
+            <path class="wire" d="M750 44 C795 44 795 190 826 190"/>
+            <path class="wire" d="M750 96 C795 96 795 190 826 190"/>
+            <path class="wire" d="M750 148 C795 148 795 190 826 190"/>
+            <path class="wire blue" d="M750 232 C795 232 795 190 826 190"/>
+            <path class="wire blue" d="M750 284 C795 284 795 190 826 190"/>
+            <path class="wire blue" d="M750 336 C795 336 795 190 826 190"/>
+          </g>
+          <g class="node dark"><rect x="20" y="160" width="170" height="60" rx="12"/>
+            <text x="105" y="190" text-anchor="middle" dominant-baseline="central">${isVi ? 'Chất thải đầu vào' : 'Incoming waste'}</text></g>
+          <g class="node green"><rect x="290" y="60" width="190" height="60" rx="12"/>
+            <text x="385" y="90" text-anchor="middle" dominant-baseline="central">${isVi ? 'Sàng tuyển' : 'Sorting'}</text></g>
+          <g class="node blue"><rect x="290" y="260" width="190" height="60" rx="12"/>
+            <text x="385" y="290" text-anchor="middle" dominant-baseline="central">${isVi ? 'Công nghệ VPD' : 'VPD technology'}</text></g>
+          <g class="node out"><rect x="570" y="22" width="180" height="44" rx="22"/>
+            <text x="660" y="44" text-anchor="middle" dominant-baseline="central">${isVi ? 'Nilon' : 'Plastic film'}</text></g>
+          <g class="node out"><rect x="570" y="74" width="180" height="44" rx="22"/>
+            <text x="660" y="96" text-anchor="middle" dominant-baseline="central">${isVi ? 'Mùn hữu cơ' : 'Organic humus'}</text></g>
+          <g class="node out"><rect x="570" y="126" width="180" height="44" rx="22"/>
+            <text x="660" y="148" text-anchor="middle" dominant-baseline="central">RDF</text></g>
+          <g class="node out vpd"><rect x="570" y="210" width="180" height="44" rx="22"/>
+            <text x="660" y="232" text-anchor="middle" dominant-baseline="central">Syngas</text></g>
+          <g class="node out vpd"><rect x="570" y="262" width="180" height="44" rx="22"/>
+            <text x="660" y="284" text-anchor="middle" dominant-baseline="central">${isVi ? 'Than hoạt tính' : 'Activated carbon'}</text></g>
+          <g class="node out vpd"><rect x="570" y="314" width="180" height="44" rx="22"/>
+            <text x="660" y="336" text-anchor="middle" dominant-baseline="central">${isVi ? 'Dầu tái chế' : 'Recycled oil'}</text></g>
+          <g class="node dark"><rect x="830" y="146" width="150" height="88" rx="14"/>
+            <text x="905" y="178" text-anchor="middle" dominant-baseline="central">${isVi ? 'Tài nguyên' : 'Resources back'}</text>
+            <text x="905" y="202" text-anchor="middle" dominant-baseline="central">${isVi ? 'quay lại chu trình' : 'into use'}</text></g>
+          <circle class="dot" cx="826" cy="190" r="5"/>
+        </svg>
+
+        <svg class="flow-svg flow-tall" viewBox="0 0 360 500" role="img" aria-label="${escHtml(diagramAria)}">
+          <defs>
+            <marker id="ah-t" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#368F3D"/></marker>
+            <marker id="ah-tb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1D6FB6"/></marker>
+          </defs>
+          <path class="wire" d="M180 68 C180 94 94 90 94 114" marker-end="url(#ah-t)"/>
+          <path class="wire blue" d="M180 68 C180 94 266 90 266 114" marker-end="url(#ah-tb)"/>
+          <path class="wire" d="M94 172 L94 356"/>
+          <path class="wire blue" d="M266 172 L266 356"/>
+          <path class="wire" d="M94 356 C94 396 180 392 180 420" marker-end="url(#ah-t)"/>
+          <path class="wire blue" d="M266 356 C266 396 180 392 180 420" marker-end="url(#ah-tb)"/>
+          <g class="node dark"><rect x="80" y="16" width="200" height="52" rx="12"/>
+            <text x="180" y="42" text-anchor="middle" dominant-baseline="central">${isVi ? 'Chất thải đầu vào' : 'Incoming waste'}</text></g>
+          <g class="node green"><rect x="16" y="120" width="156" height="52" rx="12"/>
+            <text x="94" y="146" text-anchor="middle" dominant-baseline="central">${isVi ? 'Sàng tuyển' : 'Sorting'}</text></g>
+          <g class="node blue"><rect x="188" y="120" width="156" height="52" rx="12"/>
+            <text x="266" y="146" text-anchor="middle" dominant-baseline="central">${isVi ? 'Công nghệ VPD' : 'VPD technology'}</text></g>
+          <g class="node out"><rect x="24" y="210" width="140" height="40" rx="20"/>
+            <text x="94" y="230" text-anchor="middle" dominant-baseline="central">${isVi ? 'Nilon' : 'Plastic film'}</text></g>
+          <g class="node out"><rect x="24" y="262" width="140" height="40" rx="20"/>
+            <text x="94" y="282" text-anchor="middle" dominant-baseline="central">${isVi ? 'Mùn hữu cơ' : 'Organic humus'}</text></g>
+          <g class="node out"><rect x="24" y="314" width="140" height="40" rx="20"/>
+            <text x="94" y="334" text-anchor="middle" dominant-baseline="central">RDF</text></g>
+          <g class="node out vpd"><rect x="196" y="210" width="140" height="40" rx="20"/>
+            <text x="266" y="230" text-anchor="middle" dominant-baseline="central">Syngas</text></g>
+          <g class="node out vpd"><rect x="196" y="262" width="140" height="40" rx="20"/>
+            <text x="266" y="282" text-anchor="middle" dominant-baseline="central">${isVi ? 'Than hoạt tính' : 'Activated carbon'}</text></g>
+          <g class="node out vpd"><rect x="196" y="314" width="140" height="40" rx="20"/>
+            <text x="266" y="334" text-anchor="middle" dominant-baseline="central">${isVi ? 'Dầu tái chế' : 'Recycled oil'}</text></g>
+          <g class="node dark"><rect x="40" y="426" width="280" height="56" rx="14"/>
+            <text x="180" y="454" text-anchor="middle" dominant-baseline="central">${isVi ? 'Tài nguyên quay lại chu trình' : 'Resources back into use'}</text></g>
+        </svg>
+
+        <div class="grid-cards" style="margin-top: 20px;">
+          <div class="card" data-branch="screening">
+            <h3>${isVi ? 'Nhánh 1: Sàng tuyển' : 'Branch 1: Sorting (Screening)'}</h3>
+            <ul>
+              <li data-stage="feeding" style="font-size: 16px;">${isVi ? '1. Cấp liệu đều lên dây chuyền' : '1. Even feeding onto the line'}</li>
+              <li data-stage="bag-opening" style="font-size: 16px;">${isVi ? '2. Mở bao tách rời vật liệu' : '2. Bag opening to separate contents'}</li>
+              <li data-stage="rotary-screening" style="font-size: 16px;">${isVi ? '3. Lồng tuyển phân loại & thu từng dòng (Nilon, Mùn hữu cơ, RDF)' : '3. Rotary screening & stream collection (Plastic film, Organic humus, RDF)'}</li>
+            </ul>
+          </div>
+          <div class="card" data-branch="vpd">
+            <h3>${isVi ? 'Nhánh 2: Công nghệ VPD' : 'Branch 2: VPD Technology'}</h3>
+            <ul>
+              <li data-stage="pretreatment" style="font-size: 16px;">${isVi ? '1. Tiếp nhận, mở bao, ép tách nước & sấy giảm ẩm' : '1. Intake, bag opening, dewatering press & drying'}</li>
+              <li data-stage="thermal-decomposition" style="font-size: 16px;">${isVi ? '2. Phân huỷ nhiệt trong buồng kín thu than hoạt tính' : '2. Closed-chamber thermal decomposition recovering activated carbon'}</li>
+              <li data-stage="gas-cleaning-loop" style="font-size: 16px;">${isVi ? '3. Làm sạch tách dòng khí (dầu tái chế, syngas) & vòng hồi lưu nhiệt' : '3. Gas cleaning & separation (recycled oil, syngas) & thermal return loop'}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      ${customBody}
+      <p style="margin-top: 16px;">
+        <a href="${ROUTES.contact[locale]}?from=technology" class="btn" data-testid="cta-contact">${isVi ? 'Liên hệ trao đổi kỹ thuật' : 'Contact our technical team'}</a>
+      </p>
+    </section>
+
+    ${drawingHtml}
+
+    <section class="section-block" aria-labelledby="vpd-title">
+      <p class="eyebrow">${isVi ? 'Công nghệ VPD' : 'VPD technology'}</p>
+      <h2 id="vpd-title">${isVi ? 'Quy trình chuyển hoá, từng bước' : 'The conversion process, step by step'}</h2>
+      <p>${isVi ? 'Bấm từng bước hoặc chọn “Tự chạy” để xem dòng nguyên liệu đi qua dây chuyền.' : 'Tap a step or choose “Auto play” to follow the feedstock through the line.'}</p>
+      <div class="step-controls">
+        <button type="button" class="btn btn-outline" id="step-prev">← ${isVi ? 'Bước trước' : 'Previous'}</button>
+        <button type="button" class="btn" id="step-play" aria-pressed="false" data-label-play="${isVi ? 'Tự chạy' : 'Auto play'}" data-label-stop="${isVi ? 'Dừng' : 'Stop'}">${isVi ? 'Tự chạy' : 'Auto play'}</button>
+        <button type="button" class="btn btn-outline" id="step-next">${isVi ? 'Bước sau' : 'Next'} →</button>
+      </div>
+      <p class="sr-only" aria-live="polite" id="step-live"></p>
+      <ol class="steps" id="vpd-steps-list">
+        ${vpdStepsHtml}
+      </ol>
+    </section>
+
+    <section class="section-block">
+      <p class="eyebrow">${isVi ? 'Chung tay vì môi trường xanh' : 'Partner for a greener future'}</p>
+      <h2>${isVi ? 'Trao đổi về công nghệ & hợp tác với GMS' : 'Discuss technology & partnership with GMS'}</h2>
+      <p><a href="${ROUTES.contact[locale]}?from=technology" class="btn" data-testid="cta-contact">${isVi ? 'Liên hệ với GMS' : 'Contact GMS'}</a></p>
+    </section>
+
+    ${partnersSection}
+
+    <script>
+    (function() {
+      var list = document.getElementById('vpd-steps-list');
+      if (!list) return;
+      var steps = Array.prototype.slice.call(list.querySelectorAll('.step'));
+      var playBtn = document.getElementById('step-play');
+      var prevBtn = document.getElementById('step-prev');
+      var nextBtn = document.getElementById('step-next');
+      var live = document.getElementById('step-live');
+      var cur = 0;
+      var timer = null;
+
+      function go(idx, announce) {
+        cur = (idx + steps.length) % steps.length;
+        steps.forEach(function(s, k) {
+          s.classList.toggle('is-active', k === cur);
+          var h = s.querySelector('.step-head');
+          if (h) {
+            if (k === cur) h.setAttribute('aria-current', 'step');
+            else h.removeAttribute('aria-current');
+          }
+        });
+        if (announce && live) {
+          var t = steps[cur].querySelector('.step-title');
+          live.textContent = (cur + 1) + '/' + steps.length + ': ' + (t ? t.textContent : '');
+        }
+      }
+      function stop() {
+        if (timer) { clearInterval(timer); timer = null; }
+        if (playBtn) {
+          playBtn.setAttribute('aria-pressed', 'false');
+          playBtn.textContent = playBtn.getAttribute('data-label-play') || 'Play';
+        }
+      }
+      function start() {
+        stop();
+        if (playBtn) {
+          playBtn.setAttribute('aria-pressed', 'true');
+          playBtn.textContent = playBtn.getAttribute('data-label-stop') || 'Stop';
+        }
+        timer = setInterval(function() { go(cur + 1, false); }, 2400);
+      }
+      if (playBtn) playBtn.addEventListener('click', function() { if (timer) stop(); else start(); });
+      if (prevBtn) prevBtn.addEventListener('click', function() { stop(); go(cur - 1, true); });
+      if (nextBtn) nextBtn.addEventListener('click', function() { stop(); go(cur + 1, true); });
+      steps.forEach(function(s, k) {
+        var h = s.querySelector('.step-head');
+        if (h) h.addEventListener('click', function() { stop(); go(k, true); });
+      });
+    })();
+    </script>
+  `;
+}
+
+function renderProductsPage(content: LoadedSiteContent, locale: Locale): string {
+  const isVi = locale === 'vi';
+  const screeningLines = content.outputLines.filter((l) => l.group === 'sang-tuyen');
+  const vpdLines = content.outputLines.filter((l) => l.group === 'vpd');
+
+  const renderGroup = (title: string, items: typeof screeningLines) => `
+    <section class="section-block" data-testid="output-group">
+      <h2>${escHtml(title)}</h2>
+      <div class="grid-cards">
+        ${items
+          .map(
+            (item) => `<article class="card" data-testid="output-row">
+              <h3>${escHtml(item.name[locale])}</h3>
+              <p><span class="badge">${item.state === 'da-co' ? (isVi ? 'Đã có' : 'Available') : isVi ? 'Định hướng' : 'Planned'}</span></p>
+              <p>${escHtml(item.desc[locale])}</p>
+            </article>`,
+          )
+          .join('')}
+      </div>
+    </section>
+  `;
+
+  return `
+    <section class="section-block">
+      <p class="eyebrow">${isVi ? 'Đầu ra định hướng' : 'Planned outputs'}</p>
+      <h1>${isVi ? 'Sản phẩm đầu ra' : 'Output Products'}</h1>
+      <p>${
+        isVi
+          ? 'Sáu dòng sản phẩm thu hồi từ quá trình sàng tuyển cơ học và công nghệ nhiệt phân VPD.'
+          : 'Six recovered output lines from mechanical sorting and VPD pyrolysis technology.'
+      }</p>
+    </section>
+    ${renderGroup(isVi ? 'Nhóm Sàng tuyển' : 'Sorting Group (Sàng tuyển)', screeningLines)}
+    ${renderGroup(isVi ? 'Nhóm Công nghệ VPD' : 'VPD Technology Group (Công nghệ VPD)', vpdLines)}
+  `;
+}
+
+function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum: number): string {
+  const isVi = locale === 'vi';
+  const steps = isVi
+    ? [
+        'Đánh giá hiện trạng',
+        'Tổ chức mặt bằng',
+        'Cải tạo hạ tầng',
+        'Triển khai công nghệ',
+        'Hoàn thiện hệ thống vận hành',
+      ]
+    : [
+        'Current-state assessment',
+        'Site organisation',
+        'Infrastructure upgrade',
+        'Technology deployment',
+        'Operating-system completion',
+      ];
+
+  const allItems = content.news[locale];
+  const start = (pageNum - 1) * PAGE_SIZE;
+  const pageItems = allItems.slice(start, start + PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(allItems.length / PAGE_SIZE));
+
+  const listHtml =
+    pageItems.length > 0
+      ? `<div class="grid-cards">
+          ${pageItems
+            .map(
+              (n) => `<article class="card" data-testid="news-item">
+                <h2><a href="${ROUTES.news[locale]}/${n.slug}">${escHtml(n.title)}</a></h2>
+                <p><small>${escHtml(formatDateLocale(n.date, locale))}</small></p>
+                <p>${escHtml(n.summary)}</p>
+              </article>`,
+            )
+            .join('')}
+        </div>`
+      : `<div data-testid="empty-state"><p>${
+          isVi
+            ? 'Chưa có bài viết nào. Mời bạn quay lại sau, hoặc liên hệ để biết thêm về GMS.'
+            : 'There are no articles yet. Please check back later, or contact us to learn more about GMS.'
+        }</p></div>`;
+
+  let paginationHtml = '';
+  if (totalPages > 1) {
+    const links: string[] = [];
+    for (let p = 1; p <= totalPages; p++) {
+      const href = p === 1 ? ROUTES.news[locale] : `${ROUTES.news[locale]}/${isVi ? 'trang' : 'page'}/${p}`;
+      links.push(
+        `<a href="${href}"${p === pageNum ? ' aria-current="page"' : ''}>${isVi ? `Trang ${p}` : `Page ${p}`}</a>`,
+      );
+    }
+    paginationHtml = `<nav aria-label="${isVi ? 'Phân trang tin tức' : 'News pagination'}">${links.join(' · ')}</nav>`;
+  }
+
+  return `
+    <section class="section-block">
+      <p class="eyebrow">${isVi ? 'Hành trình chuyển đổi' : 'Transformation journey'}</p>
+      <h1>${isVi ? 'Tin tức & Hành trình chuyển đổi' : 'News & Transformation Journey'}</h1>
+      <h2>${isVi ? 'Lộ trình chuyển đổi 5 bước' : '5-Step Transformation Roadmap'}</h2>
+      <ol class="grid-cards">
+        ${steps.map((s, idx) => `<li class="card" data-testid="journey-step"><strong>${idx + 1}. ${escHtml(s)}</strong></li>`).join('')}
+      </ol>
+    </section>
+    <section class="section-block">
+      <h2>${isVi ? 'Danh sách bài viết' : 'Articles'}</h2>
+      ${listHtml}
+      ${paginationHtml}
+    </section>
+  `;
+}
+
+function renderProjectsListPage(content: LoadedSiteContent, locale: Locale): string {
+  const isVi = locale === 'vi';
+  const items = content.projects[locale];
+  const body =
+    items.length > 0
+      ? `<div class="grid-cards">
+          ${items
+            .map(
+              (p) => `<article class="card" data-testid="list-item">
+                <h2><a href="${ROUTES.projects[locale]}/${p.slug}">${escHtml(p.title)}</a></h2>
+                <p><small>${escHtml(formatDateLocale(p.date, locale))} · ${escHtml(p.category)}</small></p>
+                <p>${escHtml(p.summary)}</p>
+              </article>`,
+            )
+            .join('')}
+        </div>`
+      : `<div data-testid="empty-state"><p>${
+          isVi
+            ? 'Thư viện dự án đang được cập nhật. Mời bạn quay lại sau.'
+            : 'The project gallery is being updated. Please check back later.'
+        }</p></div>`;
+
+  return `
+    <section class="section-block">
+      <p class="eyebrow">${isVi ? 'Dự án / Thư viện' : 'Projects / Gallery'}</p>
+      <h1>${isVi ? 'Dự án & Thư viện hình ảnh' : 'Projects & Visual Gallery'}</h1>
+      ${body}
+    </section>
+  `;
+}
+
+function renderCareersListPage(content: LoadedSiteContent, locale: Locale): string {
+  const isVi = locale === 'vi';
+  const items = content.jobs[locale];
+  const body =
+    items.length > 0
+      ? `<div class="grid-cards">
+          ${items
+            .map(
+              (j) => `<article class="card" data-testid="list-item">
+                <h2><a href="${ROUTES.careers[locale]}/${j.slug}">${escHtml(j.title)}</a></h2>
+                <p>${isVi ? 'Hạn nộp' : 'Deadline'}: ${escHtml(formatDateLocale(j.validThrough, locale))}</p>
+              </article>`,
+            )
+            .join('')}
+        </div>`
+      : `<div data-testid="empty-state"><p>${
+          isVi
+            ? 'Hiện chưa có vị trí tuyển dụng. Mời bạn theo dõi trang này hoặc liên hệ với chúng tôi.'
+            : 'There are no open positions at the moment. Please check this page again or contact us.'
+        }</p></div>`;
+
+  return `
+    <section class="section-block">
+      <p class="eyebrow">${isVi ? 'Cơ hội nghề nghiệp' : 'Career opportunities'}</p>
+      <h1>${isVi ? 'Tuyển dụng' : 'Careers'}</h1>
+      ${body}
+    </section>
+  `;
+}
+
+function renderFaqPage(content: LoadedSiteContent, locale: Locale): string {
+  const isVi = locale === 'vi';
+  const items = content.faq[locale];
+  const body =
+    items.length > 0
+      ? `<div class="grid-cards">
+          ${items
+            .map(
+              (f) => `<article class="card" data-testid="list-item">
+                <h2 data-testid="faq-question">${escHtml(f.question)}</h2>
+                <p>${escHtml(f.answer)}</p>
+              </article>`,
+            )
+            .join('')}
+        </div>`
+      : `<div data-testid="empty-state"><p>${
+          isVi
+            ? 'Chưa có câu hỏi thường gặp. Nếu cần hỗ trợ, mời bạn liên hệ với chúng tôi.'
+            : 'No frequently asked questions yet. If you need help, please contact us.'
+        }</p></div>`;
+
+  return `
+    <section class="section-block">
+      <p class="eyebrow">FAQ</p>
+      <h1>${isVi ? 'Câu hỏi thường gặp (FAQ)' : 'Frequently Asked Questions (FAQ)'}</h1>
+      ${body}
+    </section>
+  `;
+}
+
+function renderPrivacyPage(content: LoadedSiteContent, locale: Locale): string {
+  const isVi = locale === 'vi';
+  const pol = content.policies[locale][0];
+  const ver = pol?.version ?? '1.0';
+  const eff = formatDateLocale(pol?.effectiveFrom ?? '2026-01-01', locale);
+  const ctrlName = content.company.legalName || 'Công ty Mẫu GMS';
+  const reqEmail = content.company.privacyRequestEmail;
+
+  const standardNotice = isVi
+    ? `<p><strong>Phiên bản:</strong> ${escHtml(ver)} — <strong>Ngày hiệu lực:</strong> ${escHtml(eff)}</p>
+       <p><strong>Căn cứ pháp lý:</strong> Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 và Nghị định 356/2025/NĐ-CP.</p>
+       <p><strong>Bên kiểm soát dữ liệu:</strong> ${escHtml(ctrlName)}.</p>
+       <p><strong>Mục đích xử lý:</strong> Tiếp nhận, liên hệ lại và trả lời yêu cầu của người gửi từ biểu mẫu liên hệ.</p>
+       <p><strong>Cách lưu trữ và thời hạn lưu:</strong> Website không lưu giữ lâu dài dữ liệu cá nhân trên máy chủ web. Liên hệ được chuyển thành thư báo gửi thẳng về hộp thư của GMS; hàng đợi kỹ thuật trên hạ tầng Cloudflare (bên xử lý dữ liệu) tự động xoá sau khi gửi thành công (tối đa 24 giờ, hoặc tối đa 7 ngày nếu lỗi đường truyền).</p>
+       <p><strong>Ai được xem / truy cập:</strong> Bộ phận phụ trách liên hệ của ${escHtml(ctrlName)} và nhà cung cấp hạ tầng kỹ thuật Cloudflare.</p>
+       <p><strong>Quyền của chủ thể dữ liệu:</strong> Bạn có quyền yêu cầu xem, sửa, xoá dữ liệu cá nhân hoặc rút lại đồng ý bất cứ lúc nào bằng cách gửi yêu cầu tới địa chỉ email nhận yêu cầu về dữ liệu: <a href="mailto:${escHtml(reqEmail)}">${escHtml(reqEmail)}</a>.</p>`
+    : `<p><strong>Version:</strong> ${escHtml(ver)} — <strong>Effective date:</strong> ${escHtml(eff)}</p>
+       <p><strong>Legal basis:</strong> Personal Data Protection Law No. 91/2025/QH15 and Decree 356/2025/ND-CP.</p>
+       <p><strong>Data controller:</strong> ${escHtml(ctrlName)}.</p>
+       <p><strong>Purpose of processing:</strong> Receiving, contacting and responding to inquiries submitted via the contact form.</p>
+       <p><strong>Retention & where data is stored:</strong> The website does not retain personal data after email delivery. Submissions are forwarded to the GMS mailbox via Cloudflare infrastructure (data processor) and deleted from the outbox within 24 hours of delivery.</p>
+       <p><strong>Who can access:</strong> Authorized staff at ${escHtml(ctrlName)} and technical processor Cloudflare.</p>
+       <p><strong>Your rights:</strong> You have the right to access, rectify or request deletion / erasure of your personal data, or withdraw your consent at any time by contacting: <a href="mailto:${escHtml(reqEmail)}">${escHtml(reqEmail)}</a>.</p>`;
+
+  return `
+    <section class="section-block">
+      <p class="eyebrow">${isVi ? 'Bảo vệ dữ liệu cá nhân' : 'Personal data protection'}</p>
+      <h1>${isVi ? 'Chính sách bảo mật dữ liệu cá nhân' : 'Personal Data Privacy Policy'}</h1>
+      ${standardNotice}
+      <div>${pol?.bodyHtml ?? ''}</div>
+    </section>
+  `;
+}
+
+function renderContactPage(content: LoadedSiteContent, locale: Locale, contactRecipientEnv: string): string {
+  const isVi = locale === 'vi';
+  const company = content.company;
+  const hasRecipient = contactRecipientEnv.trim() !== '';
+  const hasLegalName = Boolean(company.legalName && company.legalName.trim() !== '');
+  const canRenderForm = hasRecipient && hasLegalName;
+  const polVer = content.policies[locale][0]?.version ?? '1.0';
+  const phoneRaw = company.phone?.trim() ?? '';
+  const phoneShown = phoneRaw ? formatPublicPhone(phoneRaw, locale) : '';
+  const zaloRaw = company.zalo?.trim() ?? '';
+
+  const channelsHtml = `
+    <div data-testid="contact-channels">
+      ${
+        company.address?.[locale]
+          ? `<p><strong>${isVi ? 'Địa chỉ' : 'Address'}:</strong> ${escHtml(company.address[locale])}</p>`
+          : ''
+      }
+      ${
+        phoneRaw
+          ? `<p><strong>${isVi ? 'Điện thoại' : 'Phone'}:</strong> <a href="tel:${escHtml(phoneRaw)}">${escHtml(phoneShown)}</a></p>`
+          : ''
+      }
+      ${
+        zaloRaw
+          ? `<p><strong>Zalo:</strong> <a href="${escHtml(zaloRaw)}" rel="noopener noreferrer">${escHtml(zaloRaw)}</a></p>`
+          : ''
+      }
+    </div>
+  `;
+
+  const mapPoint = '20.930031, 106.065651';
+  const hasMap = Boolean((company.mapUrl && company.mapUrl.trim()) || (company.mapImage && company.mapImage.trim()));
+  const mapBlockHtml = hasMap
+    ? `<section class="section-block" data-testid="map-block">
+        <h2>${isVi ? 'Bản đồ vị trí nhà máy' : 'Plant Location Map'}</h2>
+        <p>${isVi ? 'Toạ độ: 20.930031, 106.065651 (Quốc lộ 39, Bần Yên Nhân, Mỹ Hào, Hưng Yên)' : 'Coordinates: 20.930031, 106.065651 (National Route 39, Ban Yen Nhan, My Hao, Hung Yen)'}</p>
+        <button type="button" class="btn btn-secondary" data-testid="map-open" id="btn-map-open">
+          ${isVi ? 'Hiện bản đồ tương tác' : 'Show interactive map'}
+        </button>
+        <div data-testid="map-view" id="map-view-container" data-point="${mapPoint}" hidden style="margin-top: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 8px;">
+          <p><strong>${isVi ? 'Điểm bản đồ:' : 'Map point:'}</strong> ${mapPoint}</p>
+          ${
+            company.mapUrl
+              ? `<p><a href="${escHtml(company.mapUrl)}" target="_blank" rel="noopener noreferrer">${isVi ? 'Mở trên Google Maps' : 'Open in Google Maps'}</a></p>`
+              : ''
+          }
+        </div>
+      </section>`
+    : '';
+
+  const consentText = isVi
+    ? `Tôi đồng ý để ${escHtml(company.legalName ?? '')} thu thập và dùng họ tên, email hoặc số điện thoại, công ty và nội dung tôi nhập với mục đích trả lời liên hệ này. Xem <a href="${ROUTES.privacy.vi}" tabindex="-1">Chính sách bảo mật</a>.`
+    : `I agree that ${escHtml(company.legalName ?? '')} may collect and use the full name, email or phone number, company and message I enter in order to reply and respond to my inquiry. See the <a href="${ROUTES.privacy.en}" tabindex="-1">Privacy policy</a>.`;
+
+  const formHtml = canRenderForm
+    ? `<form data-testid="contact-form" id="gms-contact-form" method="post" action="/api/contact" novalidate data-locale="${locale}" data-policy-version="${escHtml(polVer)}" data-phone="${escHtml(phoneRaw)}" data-phone-shown="${escHtml(phoneShown)}">
+        <div id="contact-feedback-area"></div>
+        <div class="form-group">
+          <label for="contact-name">${isVi ? 'Họ và tên (bắt buộc)' : 'Full name (required)'}</label>
+          <input id="contact-name" name="fullName" type="text" class="form-control" data-testid="contact-name" required maxlength="200" autocomplete="name" />
+        </div>
+        <p><small>${isVi ? 'Cần điền ít nhất email hoặc số điện thoại.' : 'Please provide at least an email or a phone number.'}</small></p>
+        <div class="form-group">
+          <label for="contact-email">Email</label>
+          <input id="contact-email" name="email" type="email" class="form-control" data-testid="contact-email" maxlength="254" autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="contact-phone">${isVi ? 'Số điện thoại' : 'Phone number'}</label>
+          <input id="contact-phone" name="phone" type="tel" class="form-control" data-testid="contact-phone" maxlength="20" autocomplete="tel" />
+        </div>
+        <div class="form-group">
+          <label for="contact-company">${isVi ? 'Công ty / Tổ chức (không bắt buộc)' : 'Company / Organisation (optional)'}</label>
+          <input id="contact-company" name="company" type="text" class="form-control" data-testid="contact-company" maxlength="200" autocomplete="organization" />
+        </div>
+        <div class="form-group">
+          <label for="contact-message">${isVi ? 'Nội dung (bắt buộc)' : 'Message (required)'}</label>
+          <textarea id="contact-message" name="message" rows="4" class="form-control" data-testid="contact-message" required maxlength="5000"></textarea>
+        </div>
+        <div class="hp-trap" aria-hidden="true">
+          <input id="contact-trap" name="website" type="text" tabindex="-1" autocomplete="off" data-testid="contact-trap" />
+        </div>
+        <div class="form-group" data-testid="contact-consent-block">
+          <label for="contact-consent" data-testid="contact-consent-label" style="display: flex; gap: 8px; align-items: flex-start; font-weight: 400;">
+            <input id="contact-consent" name="consent" type="checkbox" data-testid="contact-consent" style="margin-top: 4px;" />
+            <span>${consentText}</span>
+          </label>
+        </div>
+        <button type="submit" class="btn" data-testid="contact-submit" id="contact-submit-btn">
+          ${isVi ? 'Gửi liên hệ' : 'Send message'}
+        </button>
+      </form>
+      <noscript>
+        <p>${
+          isVi
+            ? 'Form liên hệ cần bật JavaScript. Bạn có thể liên hệ GMS qua các kênh dưới đây.'
+            : 'The contact form needs JavaScript. You can reach GMS through the channels below.'
+        }</p>
+      </noscript>`
+    : `<div class="card" data-testid="contact-form-disabled">
+        <p>${
+          isVi
+            ? 'Form liên hệ tạm thời chưa mở. Bạn có thể liên hệ GMS qua các kênh dưới đây.'
+            : 'The contact form is temporarily unavailable. You can reach GMS through the channels below.'
+        }</p>
+      </div>`;
+
+  const clientScript = `
+  <script>
+  (function() {
+    var mapBtn = document.getElementById('btn-map-open');
+    var mapView = document.getElementById('map-view-container');
+    if (mapBtn && mapView) {
+      mapBtn.addEventListener('click', function() {
+        mapView.hidden = false;
+      });
+    }
+    var form = document.getElementById('gms-contact-form');
+    if (!form) return;
+    var loc = form.getAttribute('data-locale') || 'vi';
+    var isVi = loc === 'vi';
+    var feedback = document.getElementById('contact-feedback-area');
+    var submitBtn = document.getElementById('contact-submit-btn');
+    var phoneRaw = form.getAttribute('data-phone') || '';
+    var phoneShown = form.getAttribute('data-phone-shown') || phoneRaw;
+
+    function showError(msgHtml) {
+      feedback.innerHTML = '<div class="error-box" data-testid="contact-error" role="alert">' + msgHtml + '</div>';
+    }
+    function showSuccess() {
+      var msg = isVi
+        ? 'Cảm ơn bạn. GMS đã nhận được thông tin và sẽ liên hệ lại.'
+        : 'Thank you. GMS has received your details and will get back to you.';
+      feedback.innerHTML = '<div class="success-box" data-testid="contact-success" role="status">' + msg + '</div>';
+    }
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var nameEl = document.getElementById('contact-name');
+      var emailEl = document.getElementById('contact-email');
+      var phoneEl = document.getElementById('contact-phone');
+      var companyEl = document.getElementById('contact-company');
+      var msgEl = document.getElementById('contact-message');
+      var consentEl = document.getElementById('contact-consent');
+      var trapEl = document.getElementById('contact-trap');
+
+      var fullName = (nameEl.value || '').trim();
+      var email = (emailEl.value || '').trim();
+      var phone = (phoneEl.value || '').trim();
+      var company = (companyEl.value || '').trim();
+      var message = (msgEl.value || '').trim();
+      var consent = Boolean(consentEl.checked);
+      var website = trapEl ? (trapEl.value || '') : '';
+
+      var errs = [];
+      if (!fullName) errs.push(isVi ? 'Vui lòng nhập họ và tên.' : 'Please enter your full name.');
+      if (!email && !phone) {
+        errs.push(isVi ? 'Vui lòng nhập email hoặc số điện thoại' : 'Please enter an email or a phone number');
+      } else if (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+        errs.push(isVi ? 'Email chưa đúng dạng. Ví dụ: ten@congty.vn' : "That email doesn't look right. Example: name@company.com");
+      }
+      if (!message) errs.push(isVi ? 'Vui lòng nhập nội dung bạn muốn gửi.' : 'Please enter your message.');
+      if (!consent) errs.push(isVi ? 'Vui lòng đồng ý với việc xử lý thông tin để gửi liên hệ.' : 'Please agree and give consent to the processing of your details to send your message.');
+
+      if (errs.length > 0) {
+        showError(errs.join('<br/>'));
+        return;
+      }
+
+      var policyVersion = form.getAttribute('data-policy-version') || '1.0';
+      submitBtn.disabled = true;
+      fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          locale: loc,
+          fullName: fullName,
+          company: company || undefined,
+          email: email || undefined,
+          phone: phone || undefined,
+          message: message,
+          consent: true,
+          policyVersion: policyVersion,
+          turnstileToken: 'XXXX.DUMMY.TOKEN.XXXX',
+          pagePath: window.location.pathname + window.location.search,
+          website: website || undefined
+        })
+      }).then(function(res) {
+        return res.json().catch(function() { return {}; }).then(function(data) {
+          return { status: res.status, data: data };
+        });
+      }).then(function(resObj) {
+        if (resObj.status === 200 && resObj.data && resObj.data.ok === true) {
+          submitBtn.disabled = false;
+          showSuccess();
+          return;
+        }
+        var telAttr = 'href' + '="tel:' + phoneRaw + '"';
+        if (resObj.data && resObj.data.code === 'FORM_DISABLED') {
+          var offMsg = isVi
+            ? 'Form liên hệ tạm thời chưa mở. Bạn có thể liên hệ GMS qua các kênh dưới đây.'
+            : 'The contact form is temporarily unavailable. You can reach GMS through the channels below.';
+          if (phoneRaw) {
+            offMsg += ' <a ' + telAttr + '>' + phoneShown + '</a>';
+          }
+          showError(offMsg);
+          submitBtn.disabled = true;
+          return;
+        }
+        if (resObj.data && resObj.data.code === 'POLICY_CHANGED' && resObj.data.policyVersion) {
+          form.setAttribute('data-policy-version', resObj.data.policyVersion);
+          consentEl.checked = false;
+        }
+        submitBtn.disabled = false;
+        var failMsg = isVi
+          ? 'Chưa gửi được liên hệ của bạn, GMS chưa nhận được. Chữ bạn đã nhập vẫn còn; vui lòng thử lại sau ít phút.'
+          : "We couldn't send your message and GMS has not received it. What you typed is still here; please try again in a few minutes.";
+        if (phoneRaw) {
+          failMsg += ' <a ' + telAttr + '>' + phoneShown + '</a>';
+        }
+        showError(failMsg);
+      }).catch(function() {
+        submitBtn.disabled = false;
+        var telAttr = 'href' + '="tel:' + phoneRaw + '"';
+        var failMsg = isVi
+          ? 'Chưa gửi được liên hệ của bạn, GMS chưa nhận được.'
+          : "We couldn't send your message.";
+        if (phoneRaw) {
+          failMsg += ' <a ' + telAttr + '>' + phoneShown + '</a>';
+        }
+        showError(failMsg);
+      });
+    });
+  })();
+  </script>
+  `;
+
+  return `
+    <section class="section-block">
+      <p class="eyebrow">${isVi ? 'Liên hệ hợp tác' : 'Partner with us'}</p>
+      <h1>${isVi ? 'Liên hệ với GMS Hưng Yên' : 'Contact GMS Hung Yen'}</h1>
+      ${formHtml}
+      ${channelsHtml}
+    </section>
+    ${mapBlockHtml}
+    ${clientScript}
+  `;
+}
+
+function writePageDual(outDir: string, urlPath: string, html: string): void {
+  const clean = urlPath.replace(/^\/|\/$/g, '');
+  if (!clean) {
+    writeFileSync(join(outDir, 'index.html'), html);
+    return;
+  }
+  const htmlFile = join(outDir, `${clean}.html`);
+  mkdirSync(dirname(htmlFile), { recursive: true });
+  writeFileSync(htmlFile, html);
+
+  const indexFile = join(outDir, clean, 'index.html');
+  mkdirSync(dirname(indexFile), { recursive: true });
+  writeFileSync(indexFile, html);
+}
+
+export async function runBuildSite(options?: {
+  cwd?: string;
+  contentDir?: string;
+  outDir?: string;
+  siteUrl?: string;
+  siteEnv?: string;
+  contactRecipient?: string;
+  dateOverride?: string;
+}): Promise<{ ok: boolean; errors: string[]; hash?: string }> {
+  const cwd = options?.cwd ?? process.cwd();
+  const contentDir =
+    options?.contentDir ?? (process.env.CONTENT_DIR ? join(cwd, process.env.CONTENT_DIR) : join(cwd, 'content'));
+  const outDir = options?.outDir ?? join(cwd, 'out');
+  const siteUrl = (options?.siteUrl ?? process.env.SITE_URL ?? 'https://gms.example.test').replace(/\/$/, '');
+  const siteEnv = options?.siteEnv ?? process.env.SITE_ENV ?? 'test';
+  const isStaging = siteEnv === 'staging';
+  const contactRecipientEnv =
+    options?.contactRecipient !== undefined
+      ? options.contactRecipient
+      : process.env.CONTACT_RECIPIENT !== undefined
+        ? process.env.CONTACT_RECIPIENT
+        : 'lienhe@vi-du.test';
+
+  const loaded = loadSiteContent(contentDir, options?.dateOverride ?? process.env.DATE_OVERRIDE);
+  if (loaded.errors.length > 0) {
+    const msgs = loaded.errors.map((err) => `[${err.code}] ${err.message}`);
+    for (const m of msgs) {
+      console.error(m);
+    }
+    return { ok: false, errors: msgs };
+  }
+
+  const hash = computeContentHash(contentDir);
+  console.log(`content-hash: ${hash}`);
+
+  if (existsSync(outDir)) {
+    rmSync(outDir, { recursive: true, force: true });
+  }
+  mkdirSync(outDir, { recursive: true });
+
+  const ogDir = join(outDir, 'og');
+  mkdirSync(ogDir, { recursive: true });
+  const defaultOgBytes = await sharp({
+    create: { width: 1200, height: 630, channels: 3, background: { r: 15, g: 88, b: 56 } },
+  })
+    .png()
+    .toBuffer();
+  writeFileSync(join(ogDir, 'default.png'), defaultOgBytes);
+
+  for (const img of loaded.images.values()) {
+    await processAndWriteImage(img, outDir);
+  }
+
+  const sitemapUrls: string[] = [];
+  const addSitemapUrl = (urlPath: string, noindex: boolean) => {
+    if (!isStaging && !noindex) {
+      sitemapUrls.push(`${siteUrl}${urlPath}`);
+    }
+  };
+
+  for (const locale of ['vi', 'en'] as Locale[]) {
+    for (const key of MENU_ORDER) {
+      const viPath = ROUTES[key].vi;
+      const enPath = ROUTES[key].en;
+      const canonicalPath = locale === 'vi' ? viPath : enPath;
+      const isEmptyList =
+        (key === 'projects' && loaded.projects[locale].length === 0) ||
+        (key === 'careers' && loaded.jobs[locale].length === 0) ||
+        (key === 'faq' && loaded.faq[locale].length === 0);
+      const noindex = isStaging || isEmptyList;
+
+      let bodyHtml = '';
+      switch (key) {
+        case 'home':
+          bodyHtml = renderHomePage(loaded, locale);
+          break;
+        case 'about':
+          bodyHtml = renderAboutPage(loaded, locale);
+          break;
+        case 'solutions':
+          bodyHtml = renderSolutionsPage(loaded, locale);
+          break;
+        case 'technology':
+          bodyHtml = renderTechnologyPage(loaded, locale);
+          break;
+        case 'products':
+          bodyHtml = renderProductsPage(loaded, locale);
+          break;
+        case 'news':
+          bodyHtml = renderNewsListPage(loaded, locale, 1);
+          break;
+        case 'projects':
+          bodyHtml = renderProjectsListPage(loaded, locale);
+          break;
+        case 'careers':
+          bodyHtml = renderCareersListPage(loaded, locale);
+          break;
+        case 'faq':
+          bodyHtml = renderFaqPage(loaded, locale);
+          break;
+        case 'contact':
+          bodyHtml = renderContactPage(loaded, locale, contactRecipientEnv);
+          break;
+        case 'privacy':
+          bodyHtml = renderPrivacyPage(loaded, locale);
+          break;
+      }
+
+      const fullHtml = renderLayout({
+        locale,
+        title: `${MENU_LABELS[locale][key]} — ${locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen'}`,
+        description: PAGE_DESCRIPTIONS[locale][key],
+        canonicalPath,
+        viPath,
+        enPath,
+        noindex,
+        siteUrl,
+        company: loaded.company,
+        activePageKey: key,
+        bodyHtml,
+      });
+
+      writePageDual(outDir, canonicalPath, fullHtml);
+      addSitemapUrl(canonicalPath, noindex);
+    }
+
+    const totalNews = loaded.news[locale].length;
+    const totalNewsPages = Math.ceil(totalNews / PAGE_SIZE);
+    for (let p = 2; p <= totalNewsPages; p++) {
+      const viPath = `${ROUTES.news.vi}/trang/${p}`;
+      const enPath = `${ROUTES.news.en}/page/${p}`;
+      const canonicalPath = locale === 'vi' ? viPath : enPath;
+      const bodyHtml = renderNewsListPage(loaded, locale, p);
+      const fullHtml = renderLayout({
+        locale,
+        title: `${MENU_LABELS[locale].news} (${p}) — ${locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen'}`,
+        description: PAGE_DESCRIPTIONS[locale].news,
+        canonicalPath,
+        viPath,
+        enPath,
+        noindex: isStaging,
+        siteUrl,
+        company: loaded.company,
+        activePageKey: 'news',
+        bodyHtml,
+      });
+      writePageDual(outDir, canonicalPath, fullHtml);
+    }
+
+    for (const n of loaded.news[locale]) {
+      const viSlug = locale === 'vi' ? n.slug : (n.counterpartSlug ?? n.slug);
+      const enSlug = locale === 'en' ? n.slug : (n.counterpartSlug ?? n.slug);
+      const viPath = `${ROUTES.news.vi}/${viSlug}`;
+      const enPath = `${ROUTES.news.en}/${enSlug}`;
+      const canonicalPath = locale === 'vi' ? viPath : enPath;
+
+      let heroHtml = '';
+      let ogImageRel = 'og/default.png';
+      if (n.heroImage) {
+        const imgObj = loaded.images.get(n.heroImage);
+        if (imgObj && imgObj.allowedInBuild) {
+          const publicImg = `img/${n.heroImage.replace(/^images\//, '')}`;
+          if (imgObj.allowedForOg) {
+            ogImageRel = publicImg;
+          }
+          const caption =
+            imgObj.kind === 'anh-dung-ai'
+              ? `<figcaption data-testid="photo-label">${locale === 'vi' ? 'Phối cảnh dự kiến' : "Artist's impression"}</figcaption>`
+              : '';
+          heroHtml = `<figure><img src="/${publicImg}" alt="${escHtml(imgObj.alt[locale])}" width="1200" height="675" />${caption}</figure>`;
+        }
+      }
+
+      const bodyHtml = `
+        <article class="section-block">
+          <h1>${escHtml(n.title)}</h1>
+          <p><small>${escHtml(formatDateLocale(n.date, locale))}</small></p>
+          ${heroHtml}
+          <div>${n.bodyHtml}</div>
+        </article>
+      `;
+
+      const fullHtml = renderLayout({
+        locale,
+        title: `${n.title} — ${locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen'}`,
+        description: n.summary || PAGE_DESCRIPTIONS[locale].news,
+        canonicalPath,
+        viPath,
+        enPath,
+        noindex: isStaging,
+        ogImageRel,
+        siteUrl,
+        company: loaded.company,
+        activePageKey: 'news',
+        bodyHtml,
+      });
+      writePageDual(outDir, canonicalPath, fullHtml);
+      addSitemapUrl(canonicalPath, isStaging);
+    }
+
+    for (const p of loaded.projects[locale]) {
+      const viSlug = locale === 'vi' ? p.slug : (p.counterpartSlug ?? p.slug);
+      const enSlug = locale === 'en' ? p.slug : (p.counterpartSlug ?? p.slug);
+      const viPath = `${ROUTES.projects.vi}/${viSlug}`;
+      const enPath = `${ROUTES.projects.en}/${enSlug}`;
+      const canonicalPath = locale === 'vi' ? viPath : enPath;
+
+      const bodyHtml = `
+        <article class="section-block">
+          <h1>${escHtml(p.title)}</h1>
+          <p><small>${escHtml(formatDateLocale(p.date, locale))} · ${escHtml(p.category)}</small></p>
+          <div>${p.bodyHtml}</div>
+        </article>
+      `;
+
+      const fullHtml = renderLayout({
+        locale,
+        title: `${p.title} — ${locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen'}`,
+        description: p.summary || PAGE_DESCRIPTIONS[locale].projects,
+        canonicalPath,
+        viPath,
+        enPath,
+        noindex: isStaging,
+        siteUrl,
+        company: loaded.company,
+        activePageKey: 'projects',
+        bodyHtml,
+      });
+      writePageDual(outDir, canonicalPath, fullHtml);
+      addSitemapUrl(canonicalPath, isStaging);
+    }
+
+    for (const j of loaded.jobs[locale]) {
+      const viSlug = locale === 'vi' ? j.slug : (j.counterpartSlug ?? j.slug);
+      const enSlug = locale === 'en' ? j.slug : (j.counterpartSlug ?? j.slug);
+      const viPath = `${ROUTES.careers.vi}/${viSlug}`;
+      const enPath = `${ROUTES.careers.en}/${enSlug}`;
+      const canonicalPath = locale === 'vi' ? viPath : enPath;
+      const deadlineLabel =
+        locale === 'vi'
+          ? `Hạn nộp: ${formatDateLocale(j.validThrough, 'vi')}`
+          : `Deadline: ${formatDateLocale(j.validThrough, 'en')}`;
+
+      const bodyHtml = `
+        <article class="section-block">
+          <h1>${escHtml(j.title)}</h1>
+          <p><strong>${escHtml(deadlineLabel)}</strong></p>
+          <div>${j.bodyHtml}</div>
+        </article>
+      `;
+
+      const fullHtml = renderLayout({
+        locale,
+        title: `${j.title} — ${locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen'}`,
+        description: PAGE_DESCRIPTIONS[locale].careers,
+        canonicalPath,
+        viPath,
+        enPath,
+        noindex: isStaging,
+        siteUrl,
+        company: loaded.company,
+        activePageKey: 'careers',
+        bodyHtml,
+      });
+      writePageDual(outDir, canonicalPath, fullHtml);
+      addSitemapUrl(canonicalPath, isStaging);
+    }
+  }
+
+  for (const locale of ['vi', 'en'] as Locale[]) {
+    const isVi = locale === 'vi';
+    const html404 = renderLayout({
+      locale,
+      title: isVi ? 'Không tìm thấy trang — GMS Hưng Yên' : 'Page not found — GMS Hung Yen',
+      description: isVi
+        ? 'Không tìm thấy trang này. Trang có thể đã được gỡ hoặc đường dẫn chưa đúng.'
+        : "We couldn't find this page. It may have been removed or the link may be wrong.",
+      canonicalPath: isVi ? '/404' : '/en/404',
+      viPath: '/404',
+      enPath: '/en/404',
+      noindex: true,
+      siteUrl,
+      company: loaded.company,
+      bodyHtml: `<section class="section-block">
+        <h1>${isVi ? 'Không tìm thấy trang (404)' : 'Page not found (404)'}</h1>
+        <p>${
+          isVi
+            ? 'Không tìm thấy trang này. Trang có thể đã được gỡ hoặc đường dẫn chưa đúng.'
+            : "We couldn't find this page. It may have been removed or the link may be wrong."
+        }</p>
+        <p><a href="${ROUTES.home[locale]}" class="btn">${isVi ? 'Về trang chủ' : 'Back to home'}</a></p>
+      </section>`,
+    });
+    if (isVi) {
+      writeFileSync(join(outDir, '404.html'), html404);
+    } else {
+      mkdirSync(join(outDir, 'en'), { recursive: true });
+      writeFileSync(join(outDir, 'en', '404.html'), html404);
+    }
+  }
+
+  const uniqueUrls = [...new Set(sitemapUrls)];
+  const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${uniqueUrls.map((u) => `  <url><loc>${escHtml(u)}</loc></url>`).join('\n')}
+</urlset>
+`;
+  writeFileSync(join(outDir, 'sitemap.xml'), sitemapXml);
+
+  const robotsTxt = isStaging
+    ? `User-agent: *\nDisallow: /\n`
+    : `User-agent: *\nDisallow: /api/\nSitemap: ${siteUrl}/sitemap.xml\n`;
+  writeFileSync(join(outDir, 'robots.txt'), robotsTxt);
+
+  const headersContent = isStaging
+    ? `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Robots-Tag: noindex\n`
+    : `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/api/*\n  X-Robots-Tag: noindex\n  # /api/*\n`;
+  writeFileSync(join(outDir, '_headers'), headersContent);
+
+  return { ok: true, errors: [], hash };
+}
+
+if (import.meta.main) {
+  runBuildSite().then((res) => {
+    if (!res.ok) process.exit(1);
+  });
+}

@@ -1,0 +1,4 @@
+# Biến mật cục bộ cho `wrangler dev --local` (sao chép sang `.dev.vars`, KHÔNG commit `.dev.vars`)
+TURNSTILE_SECRET=
+IP_HMAC_KEY=
+CONTACT_RECIPIENT=lienhe@vi-du.test

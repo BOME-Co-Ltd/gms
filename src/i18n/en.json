@@ -1,0 +1,172 @@
+{
+  "brand": {
+    "legalName": "Công ty Mẫu GMS",
+    "shortName": "GMS Hung Yen",
+    "slogan": "Smart solutions – Creating green value",
+    "address": "National Route 39, Ban Yen Nhan Ward, My Hao Town, Hung Yen Province, Vietnam",
+    "phone": "+84987998370",
+    "phoneDisplay": "+84 98 799 83 70",
+    "zalo": "https://zalo.me/0987998370",
+    "coordinates": "20.930031, 106.065651",
+    "privacyEmail": "lienhe@gmshungyen.vn"
+  },
+  "nav": {
+    "skipToMain": "Skip to main content",
+    "mainAria": "Main navigation",
+    "langAria": "Language switcher",
+    "home": "Home",
+    "about": "About",
+    "solutions": "Solutions",
+    "technology": "Technology",
+    "products": "Output products",
+    "news": "News / Journey",
+    "projects": "Projects / Gallery",
+    "careers": "Careers",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "privacy": "Privacy policy"
+  },
+  "home": {
+    "kicker": "The transformation journey",
+    "heroTitle": "Smart solutions – Creating green value",
+    "heroSub": "From waste to resources. GMS Hung Yen is building, step by step, a sorting and conversion system that returns still-valuable material streams to a new cycle of use.",
+    "pillars": ["VPD technology", "Sorting", "Resource recovery"],
+    "ctaTech": "Explore the technology",
+    "ctaContact": "Partner with us",
+    "photoLabelAi": "Artist's impression",
+    "figuresTitle": "Confirmed Plant Figures",
+    "pillarsEyebrow": "What GMS stands for",
+    "pillarsHeading": "The plant's three pillars",
+    "pillarsLead": "Shifting from “disposing of waste” to “recovering and regenerating resource value”.",
+    "pillarCards": [
+      {
+        "num": "01",
+        "title": "VPD technology",
+        "desc": "Aims to convert suitable feedstock streams into new output products.",
+        "chips": ["Syngas", "Activated carbon", "Recycled oil"]
+      },
+      {
+        "num": "02",
+        "title": "Sorting",
+        "desc": "Separates suitable material streams for further processing or value recovery.",
+        "chips": ["Plastic film", "Organic humus", "RDF"]
+      },
+      {
+        "num": "03",
+        "title": "Resource recovery",
+        "desc": "Returns still-valuable materials to production, creating new resource life cycles.",
+        "chips": ["Separate", "Convert", "Recover value"]
+      }
+    ],
+    "techEyebrow": "Technology",
+    "techHeading": "Two process groups, six output streams",
+    "techLead": "Waste passes through sorting to separate streams, and through VPD technology to convert suitable feedstock into new products.",
+    "techBtn": "See the process",
+    "outputsEyebrow": "Planned outputs",
+    "outputsHeading": "Six Output Product Lines",
+    "statePlanned": "Planned",
+    "stateAvailable": "Available",
+    "journeyEyebrow": "Transformation journey",
+    "journeyHeading": "From today's reality to tomorrow's value",
+    "journeyDesc": "The facility is executing a structured roadmap of site preparation, infrastructure upgrade and technology deployment.",
+    "journeySteps": [
+      "Current-state assessment",
+      "Site organisation",
+      "Infrastructure upgrade",
+      "Technology deployment",
+      "Operating-system completion"
+    ]
+  },
+  "technology": {
+    "eyebrow": "Technology",
+    "title": "Technology: from waste to resources",
+    "sub": "The GMS plant is built around two process groups: sorting to separate material streams, and VPD technology to convert suitable feedstock into new products.",
+    "overviewEyebrow": "Overview",
+    "overviewTitle": "One stream in, six resource streams out",
+    "diagramAria": "Overview diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil. The outputs return to a cycle of use.",
+    "drawingBadge": "Engineering drawing",
+    "drawingTitle": "3D layout of the municipal solid waste sorting line",
+    "drawingAlt": "3D engineering drawing of the municipal solid waste sorting line (with title block)",
+    "drawingCaption": "3D engineering layout of the municipal solid waste sorting line (displayed with original title block as requested by GMS).",
+    "vpdEyebrow": "VPD technology",
+    "vpdTitle": "The conversion process, step by step",
+    "vpdLead": "Tap a step or choose “Auto play” to follow the feedstock through the line.",
+    "stepPrev": "Previous",
+    "stepPlay": "Auto play",
+    "stepStop": "Stop",
+    "stepNext": "Next",
+    "vpdSteps": [
+      {
+        "num": "1",
+        "title": "Intake and storage",
+        "desc": "Incoming feedstock is gathered in a covered store before entering the line.",
+        "chips": []
+      },
+      {
+        "num": "2",
+        "title": "Bag opening and loosening",
+        "desc": "Bags are opened and the mass is loosened so free water can drain off.",
+        "chips": []
+      },
+      {
+        "num": "3",
+        "title": "Dewatering press",
+        "desc": "A press removes more of the remaining water.",
+        "chips": []
+      },
+      {
+        "num": "4",
+        "title": "Drying",
+        "desc": "The material is dried in a recirculating dryer to suit the thermal stage.",
+        "chips": []
+      },
+      {
+        "num": "5",
+        "title": "Thermal decomposition",
+        "desc": "In a closed chamber the material breaks down under heat; the remaining solids are collected separately.",
+        "chips": ["Activated carbon"]
+      },
+      {
+        "num": "6",
+        "title": "Gas cleaning and separation",
+        "desc": "The gas mixture is cooled, cleared of dust and split into separate streams.",
+        "chips": ["Recycled oil", "Separated water", "Syngas"]
+      },
+      {
+        "num": "7",
+        "title": "Gas drying and storage",
+        "desc": "Syngas is dried and sent to the product storage tank.",
+        "chips": []
+      },
+      {
+        "num": "8",
+        "title": "Return loop",
+        "desc": "Part of the syngas is fed back to heat the decomposition chamber.",
+        "chips": [],
+        "isLoop": true
+      }
+    ]
+  },
+  "contact": {
+    "eyebrow": "Partner with us",
+    "title": "Contact GMS Hung Yen",
+    "nameLabel": "Full name (required)",
+    "contactHint": "Please provide at least an email or a phone number.",
+    "emailLabel": "Email",
+    "phoneLabel": "Phone number",
+    "companyLabel": "Company / Organisation (optional)",
+    "messageLabel": "Message (required)",
+    "consentPrefix": "I agree that Công ty Mẫu GMS may collect and use the full name, email or phone number, company and message I enter in order to reply and respond to my inquiry. See the ",
+    "consentLinkText": "Privacy policy",
+    "submitBtn": "Send message",
+    "successMsg": "Thank you. GMS has received your details and will get back to you.",
+    "errRequiredName": "Please enter your full name.",
+    "errRequiredContact": "Please enter an email or a phone number",
+    "errInvalidEmail": "That email doesn't look right. Example: name@company.com",
+    "errRequiredMessage": "Please enter your message.",
+    "errRequiredConsent": "Please agree and give consent to the processing of your details to send your message.",
+    "errSendFailed": "We couldn't send your message and GMS has not received it. What you typed is still here; please try again in a few minutes.",
+    "mapTitle": "Plant Location Map",
+    "mapOpenBtn": "Show interactive map"
+  }
+}

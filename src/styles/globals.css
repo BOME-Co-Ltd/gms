@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+:root {
+  --g900: #0f5838;
+  --g700: #27673c;
+  --g600: #40773f;
+  --g500: #368f3d;
+  --lime: #9fb43b;
+  --b600: #1d6fb6;
+  --b800: #244999;
+  --white: #ffffff;
+}
+
+html,
+body {
+  font-family: "Be Vietnam Pro", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--g900);
+  background: var(--white);
+}

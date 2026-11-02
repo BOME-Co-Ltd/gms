@@ -1,0 +1,430 @@
+import { CLIENT_IP_HEADER } from '../../contracts/api.ts';
+import type {
+  AppLogger,
+  ClientIp,
+  Clock,
+  ContactQueue,
+  D1Database,
+  HumanCheck,
+  IpKey,
+  Mailer,
+  MailSendInput,
+  MailSendResult,
+  OutboxRecord,
+  RateCounter,
+} from '../ports.ts';
+
+function normalizeIpOrPrefix(ipRaw: string): string {
+  const s = ipRaw.trim().toLowerCase();
+  if (!s) return '0.0.0.0';
+  if (!s.includes(':')) return s; // IPv4
+  // Expand IPv6 and take first 4 hextets (/64)
+  const parts = s.split('::');
+  const left = parts[0] ? parts[0].split(':') : [];
+  const right = parts.length > 1 && parts[1] ? parts[1].split(':') : [];
+  const missing = Math.max(0, 8 - (left.length + right.length));
+  const full = [...left, ...Array(missing).fill('0'), ...right].map((h) => h.padStart(4, '0'));
+  return `${full.slice(0, 4).join(':')}::/64`;
+}
+
+export class WebCryptoIpKey implements IpKey {
+  private secret: string;
+  constructor(secret: string) {
+    this.secret = secret || 'default-local-hmac-key-0123456789abcdef';
+  }
+  async key(ip: string): Promise<string> {
+    const normalized = normalizeIpOrPrefix(ip);
+    const enc = new TextEncoder();
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      enc.encode(this.secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign'],
+    );
+    const sig = await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(normalized));
+    return Array.from(new Uint8Array(sig))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+}
+
+export class CfClientIp implements ClientIp {
+  fromRequest(req: Request): string {
+    return req.headers.get(CLIENT_IP_HEADER)?.trim() || '127.0.0.1';
+  }
+}
+
+export class SystemClock implements Clock {
+  nowMs(): number {
+    return Date.now();
+  }
+  nowSec(): number {
+    return Math.floor(Date.now() / 1000);
+  }
+}
+
+export class ConsoleAppLogger implements AppLogger {
+  info(code: string, meta?: Record<string, string | number | boolean>): void {
+    console.log(JSON.stringify({ level: 'info', code, ...meta }));
+  }
+  error(code: string, meta?: Record<string, string | number | boolean>): void {
+    console.error(JSON.stringify({ level: 'error', code, ...meta }));
+  }
+}
+
+export class TurnstileHumanCheck implements HumanCheck {
+  private secret: string;
+  constructor(secret: string) {
+    this.secret = secret;
+  }
+  async verify(token: string, ip: string): Promise<{ ok: boolean; error?: boolean }> {
+    if (!this.secret) return { ok: false, error: true };
+    try {
+      const form = new URLSearchParams();
+      form.set('secret', this.secret);
+      form.set('response', token);
+      if (ip) form.set('remoteip', ip);
+      const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        body: form,
+      });
+      if (!res.ok) return { ok: false, error: true };
+      const data = (await res.json()) as { success?: boolean };
+      return { ok: Boolean(data.success) };
+    } catch {
+      return { ok: false, error: true };
+    }
+  }
+}
+
+export class CloudflareSendEmailMailer implements Mailer {
+  private binding?: { send(msg: unknown): Promise<void> };
+  constructor(binding?: { send(msg: unknown): Promise<void> }) {
+    this.binding = binding;
+  }
+  async send(msg: MailSendInput): Promise<MailSendResult> {
+    if (!this.binding) {
+      return { ok: false, temporary: true, code: 'MAIL_BINDING_MISSING' };
+    }
+    try {
+      await this.binding.send({
+        from: msg.from,
+        to: msg.to,
+        raw: msg.rawMime,
+      });
+      return { ok: true };
+    } catch {
+      return { ok: false, temporary: true, code: 'SEND_EMAIL_FAILED' };
+    }
+  }
+}
+
+type D1Row = Record<string, unknown>;
+
+function rowToOutbox(r: D1Row): OutboxRecord {
+  return {
+    id: String(r.id),
+    createdAt: Number(r.created_at),
+    locale: r.locale === 'en' ? 'en' : 'vi',
+    fullName: String(r.full_name),
+    company: r.company !== null && r.company !== undefined ? String(r.company) : null,
+    email: r.email !== null && r.email !== undefined ? String(r.email) : null,
+    phone: r.phone !== null && r.phone !== undefined ? String(r.phone) : null,
+    message: String(r.message),
+    pagePath: String(r.page_path),
+    utmJson: r.utm_json !== null && r.utm_json !== undefined ? String(r.utm_json) : null,
+    policyVersion: String(r.policy_version),
+    consentAt: Number(r.consent_at),
+    dedupeHash: String(r.dedupe_hash),
+    batch: r.batch === 'summary' ? 'summary' : 'single',
+    attempts: Number(r.attempts ?? 0),
+    nextAttemptAt: Number(r.next_attempt_at),
+    leaseUntil: r.lease_until !== null && r.lease_until !== undefined ? Number(r.lease_until) : null,
+    lastError: r.last_error !== null && r.last_error !== undefined ? String(r.last_error) : null,
+    alertedAt: r.alerted_at !== null && r.alerted_at !== undefined ? Number(r.alerted_at) : null,
+    sentAt: r.sent_at !== null && r.sent_at !== undefined ? Number(r.sent_at) : null,
+  };
+}
+
+export class D1ContactQueue implements ContactQueue {
+  private db: D1Database;
+  public shouldFailEnqueue = false;
+
+  constructor(db: D1Database) {
+    this.db = db;
+  }
+
+  async ensureSchema(): Promise<void> {
+    await this.db.batch([
+      this.db.prepare(`CREATE TABLE IF NOT EXISTS outbox (
+        id TEXT PRIMARY KEY,
+        created_at INTEGER NOT NULL,
+        locale TEXT NOT NULL CHECK (locale IN ('vi','en')),
+        full_name TEXT NOT NULL,
+        company TEXT,
+        email TEXT,
+        phone TEXT,
+        message TEXT NOT NULL,
+        page_path TEXT NOT NULL,
+        utm_json TEXT,
+        policy_version TEXT NOT NULL,
+        consent_at INTEGER NOT NULL,
+        dedupe_hash TEXT NOT NULL,
+        batch TEXT NOT NULL DEFAULT 'single' CHECK (batch IN ('single','summary')),
+        attempts INTEGER NOT NULL DEFAULT 0,
+        next_attempt_at INTEGER NOT NULL,
+        lease_until INTEGER,
+        last_error TEXT,
+        alerted_at INTEGER,
+        sent_at INTEGER,
+        CHECK (email IS NOT NULL OR phone IS NOT NULL)
+      )`),
+      this.db.prepare('CREATE INDEX IF NOT EXISTS outbox_due ON outbox (sent_at, next_attempt_at)'),
+      this.db.prepare('CREATE INDEX IF NOT EXISTS outbox_dedupe ON outbox (dedupe_hash, created_at)'),
+      this.db.prepare(`CREATE TABLE IF NOT EXISTS rate_counter (
+        key TEXT NOT NULL,
+        window_start INTEGER NOT NULL,
+        hits INTEGER NOT NULL,
+        PRIMARY KEY (key, window_start)
+      )`),
+      this.db.prepare(`CREATE TABLE IF NOT EXISTS dedupe (
+        hash TEXT PRIMARY KEY,
+        created_at INTEGER NOT NULL
+      )`),
+      this.db.prepare(`CREATE TABLE IF NOT EXISTS mail_log (
+        sent_at INTEGER NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('notify','summary','alert'))
+      )`),
+      this.db.prepare('CREATE INDEX IF NOT EXISTS mail_log_kind_time ON mail_log (kind, sent_at)'),
+      this.db.prepare(`CREATE TABLE IF NOT EXISTS heartbeat (
+        name TEXT PRIMARY KEY,
+        last_at INTEGER NOT NULL
+      )`),
+    ]);
+  }
+
+  async enqueue(
+    rec: Omit<OutboxRecord, 'attempts' | 'leaseUntil' | 'lastError' | 'alertedAt' | 'sentAt'>,
+  ): Promise<void> {
+    if (this.shouldFailEnqueue) {
+      throw new Error('D1_STORE_FAILED');
+    }
+    await this.db
+      .prepare(
+        `INSERT INTO outbox (
+          id, created_at, locale, full_name, company, email, phone, message,
+          page_path, utm_json, policy_version, consent_at, dedupe_hash, batch, attempts, next_attempt_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+      )
+      .bind(
+        rec.id,
+        rec.createdAt,
+        rec.locale,
+        rec.fullName,
+        rec.company ?? null,
+        rec.email ?? null,
+        rec.phone ?? null,
+        rec.message,
+        rec.pagePath,
+        rec.utmJson ?? null,
+        rec.policyVersion,
+        rec.consentAt,
+        rec.dedupeHash,
+        rec.batch,
+        rec.nextAttemptAt,
+      )
+      .run();
+  }
+
+  async hasDedupe(hash: string, sinceSec: number): Promise<boolean> {
+    const row = await this.db
+      .prepare('SELECT hash FROM dedupe WHERE hash = ? AND created_at >= ? LIMIT 1')
+      .bind(hash, sinceSec)
+      .first();
+    return Boolean(row);
+  }
+
+  async recordDedupe(hash: string, nowSec: number): Promise<void> {
+    await this.db.prepare('INSERT OR REPLACE INTO dedupe (hash, created_at) VALUES (?, ?)').bind(hash, nowSec).run();
+  }
+
+  async dueSingle(nowSec: number): Promise<OutboxRecord[]> {
+    const res = await this.db
+      .prepare(
+        `SELECT * FROM outbox
+         WHERE sent_at IS NULL AND batch = 'single' AND next_attempt_at <= ?
+           AND (lease_until IS NULL OR lease_until < ?)
+         ORDER BY created_at ASC`,
+      )
+      .bind(nowSec, nowSec)
+      .all<D1Row>();
+    return (res.results ?? []).map(rowToOutbox);
+  }
+
+  async dueSummary(nowSec: number): Promise<OutboxRecord[]> {
+    const res = await this.db
+      .prepare(
+        `SELECT * FROM outbox
+         WHERE sent_at IS NULL AND batch = 'summary'
+           AND (lease_until IS NULL OR lease_until < ?)
+         ORDER BY created_at ASC`,
+      )
+      .bind(nowSec)
+      .all<D1Row>();
+    return (res.results ?? []).map(rowToOutbox);
+  }
+
+  async acquireLease(id: string, nowSec: number, leaseSec: number): Promise<boolean> {
+    const res = await this.db
+      .prepare(
+        `UPDATE outbox SET lease_until = ?
+         WHERE id = ? AND sent_at IS NULL AND (lease_until IS NULL OR lease_until < ?)`,
+      )
+      .bind(nowSec + leaseSec, id, nowSec)
+      .run();
+    return (res.meta?.changes ?? 0) > 0;
+  }
+
+  async markSentAndDelete(id: string, nowSec: number): Promise<void> {
+    await this.db.prepare('UPDATE outbox SET sent_at = ? WHERE id = ?').bind(nowSec, id).run();
+    await this.db.prepare('DELETE FROM outbox WHERE id = ?').bind(id).run();
+  }
+
+  async markFailed(id: string, attempts: number, nextAttemptAt: number, errorCode: string): Promise<void> {
+    await this.db
+      .prepare('UPDATE outbox SET attempts = ?, next_attempt_at = ?, lease_until = NULL, last_error = ? WHERE id = ?')
+      .bind(attempts, nextAttemptAt, errorCode, id)
+      .run();
+  }
+
+  async overdueForAlert(nowSec: number, alertAfterSec: number, alertRepeatSec: number): Promise<OutboxRecord[]> {
+    const res = await this.db
+      .prepare(
+        `SELECT * FROM outbox
+         WHERE sent_at IS NULL
+           AND created_at <= ?
+           AND (alerted_at IS NULL OR alerted_at <= ?)
+         ORDER BY created_at ASC`,
+      )
+      .bind(nowSec - alertAfterSec, nowSec - alertRepeatSec)
+      .all<D1Row>();
+    return (res.results ?? []).map(rowToOutbox);
+  }
+
+  async markAlerted(ids: string[], nowSec: number): Promise<void> {
+    for (const id of ids) {
+      await this.db.prepare('UPDATE outbox SET alerted_at = ? WHERE id = ?').bind(nowSec, id).run();
+    }
+  }
+
+  async purgeExpiredUnsent(nowSec: number, maxRetentionSec: number): Promise<number> {
+    const res = await this.db
+      .prepare('DELETE FROM outbox WHERE sent_at IS NULL AND created_at <= ?')
+      .bind(nowSec - maxRetentionSec)
+      .run();
+    return res.meta?.changes ?? 0;
+  }
+
+  async purgeSentBefore(beforeSec: number): Promise<void> {
+    await this.db.prepare('DELETE FROM outbox WHERE sent_at IS NOT NULL AND sent_at <= ?').bind(beforeSec).run();
+  }
+
+  async purgeDedupeBefore(beforeSec: number): Promise<void> {
+    await this.db.prepare('DELETE FROM dedupe WHERE created_at <= ?').bind(beforeSec).run();
+  }
+
+  async pendingCount(): Promise<number> {
+    const row = await this.db
+      .prepare('SELECT COUNT(*) AS cnt FROM outbox WHERE sent_at IS NULL')
+      .first<{ cnt: number }>();
+    return Number(row?.cnt ?? 0);
+  }
+
+  async oldestPendingAgeSec(nowSec: number): Promise<number> {
+    const row = await this.db
+      .prepare('SELECT MIN(created_at) AS oldest FROM outbox WHERE sent_at IS NULL')
+      .first<{ oldest: number | null }>();
+    if (!row || row.oldest === null || row.oldest === undefined) return 0;
+    return Math.max(0, nowSec - Number(row.oldest));
+  }
+
+  async countMailLog(kind: 'notify' | 'summary' | 'alert', sinceSec: number): Promise<number> {
+    const row = await this.db
+      .prepare('SELECT COUNT(*) AS cnt FROM mail_log WHERE kind = ? AND sent_at >= ?')
+      .bind(kind, sinceSec)
+      .first<{ cnt: number }>();
+    return Number(row?.cnt ?? 0);
+  }
+
+  async recordMailLog(kind: 'notify' | 'summary' | 'alert', nowSec: number): Promise<void> {
+    await this.db.prepare('INSERT INTO mail_log (sent_at, kind) VALUES (?, ?)').bind(nowSec, kind).run();
+  }
+
+  async updateHeartbeat(name: string, nowSec: number): Promise<void> {
+    await this.db.prepare('INSERT OR REPLACE INTO heartbeat (name, last_at) VALUES (?, ?)').bind(name, nowSec).run();
+  }
+
+  async getHeartbeat(name: string): Promise<number | null> {
+    const row = await this.db
+      .prepare('SELECT last_at FROM heartbeat WHERE name = ?')
+      .bind(name)
+      .first<{ last_at: number }>();
+    return row ? Number(row.last_at) : null;
+  }
+
+  async dumpAllTables(): Promise<string> {
+    const [outbox, rate, dedupe, mailLog, hb] = await Promise.all([
+      this.db.prepare('SELECT * FROM outbox').all(),
+      this.db.prepare('SELECT * FROM rate_counter').all(),
+      this.db.prepare('SELECT * FROM dedupe').all(),
+      this.db.prepare('SELECT * FROM mail_log').all(),
+      this.db.prepare('SELECT * FROM heartbeat').all(),
+    ]);
+    return JSON.stringify({
+      outbox: outbox.results ?? [],
+      rate_counter: rate.results ?? [],
+      dedupe: dedupe.results ?? [],
+      mail_log: mailLog.results ?? [],
+      heartbeat: hb.results ?? [],
+    });
+  }
+
+  async resetAllTables(): Promise<void> {
+    await this.ensureSchema();
+    await this.db.batch([
+      this.db.prepare('DELETE FROM outbox'),
+      this.db.prepare('DELETE FROM rate_counter'),
+      this.db.prepare('DELETE FROM dedupe'),
+      this.db.prepare('DELETE FROM mail_log'),
+      this.db.prepare('DELETE FROM heartbeat'),
+    ]);
+  }
+}
+
+export class D1RateCounter implements RateCounter {
+  private db: D1Database;
+  constructor(db: D1Database) {
+    this.db = db;
+  }
+  async getHits(key: string, windowStartSec: number): Promise<number> {
+    const row = await this.db
+      .prepare('SELECT COALESCE(SUM(hits), 0) AS total FROM rate_counter WHERE key = ? AND window_start >= ?')
+      .bind(key, windowStartSec)
+      .first<{ total: number }>();
+    return Number(row?.total ?? 0);
+  }
+  async increment(key: string, windowStartSec: number, delta = 1): Promise<number> {
+    await this.db
+      .prepare(
+        `INSERT INTO rate_counter (key, window_start, hits) VALUES (?, ?, ?)
+         ON CONFLICT(key, window_start) DO UPDATE SET hits = hits + excluded.hits`,
+      )
+      .bind(key, windowStartSec, delta)
+      .run();
+    return this.getHits(key, windowStartSec);
+  }
+  async purgeBefore(beforeSec: number): Promise<void> {
+    await this.db.prepare('DELETE FROM rate_counter WHERE window_start <= ?').bind(beforeSec).run();
+  }
+}

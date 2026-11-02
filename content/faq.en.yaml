@@ -1,0 +1,12 @@
+- key: "faq-1"
+  order: 1
+  question: "What treatment branches does the GMS Hung Yen plant operate?"
+  answer: "The facility operates two main branches: Mechanical Sorting (recovering plastic film, organic humus and RDF) and VPD Vacuum Pyrolysis technology (recovering syngas, activated carbon and recycled oil)."
+- key: "faq-2"
+  order: 2
+  question: "How can partners contact GMS for technical or business inquiries?"
+  answer: "You can submit an inquiry via our online Contact form or call our hotline at +84 98 799 83 70."
+- key: "faq-3"
+  order: 3
+  question: "How is personal data submitted through the contact form protected?"
+  answer: "GMS complies with Personal Data Protection Law No. 91/2025/QH15; submitted details are used solely to reply to your inquiry and are removed from the web outbox after email delivery."

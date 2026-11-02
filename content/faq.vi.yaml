@@ -1,0 +1,12 @@
+- key: "faq-1"
+  order: 1
+  question: "Nhà máy GMS Hưng Yên xử lý chất thải theo những nhánh công nghệ nào?"
+  answer: "Hệ thống gồm hai nhánh công đoạn chính: Sàng tuyển cơ học (thu hồi nilon, mùn hữu cơ, RDF) và Công nghệ VPD phân huỷ nhiệt chân không (thu hồi syngas, than hoạt tính, dầu tái chế)."
+- key: "faq-2"
+  order: 2
+  question: "Làm thế nào để liên hệ hợp tác hoặc trao đổi kỹ thuật với GMS?"
+  answer: "Quý đối tác có thể gửi thông tin qua biểu mẫu tại trang Liên hệ hoặc gọi trực tiếp tới đường dây nóng 098 799 83 70."
+- key: "faq-3"
+  order: 3
+  question: "Dữ liệu cá nhân gửi qua biểu mẫu liên hệ được bảo vệ như thế nào?"
+  answer: "GMS tuân thủ Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15; thông tin chỉ dùng để phản hồi liên hệ và tự động xoá khỏi hàng đợi kỹ thuật trên web sau khi chuyển thư thành công."

@@ -1,9 +1,9 @@
 // performance-and-accessibility.feature → PERF-05..PERF-10 (S4, S5). Chạy trên cùng danh sách trang đo.
 // [giả định — chờ khách] D6 (mức hiệu ứng khi KHÔNG bật giảm chuyển động) — test chỉ kiểm nhánh reduce.
 // Phụ thuộc cần cài (pha 2): @axe-core/playwright.
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { listTargets } from '../support/perf';
-import { path, type Locale } from '../support/routes';
+import { type Locale, path } from '../support/routes';
 import { bodyText, expectNoHorizontalScroll, tid } from '../support/ui';
 
 const axeModule = '@axe-core/playwright'; // import động: pha 1 chưa có package
@@ -19,9 +19,19 @@ for (const width of [375, 320]) {
       const body = await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
       expect(body, `${t.url} cỡ chữ thân bài`).toBeGreaterThanOrEqual(16);
       const small = await page.locator('a, button, input, select, textarea, summary').evaluateAll((els) =>
-        els.filter((e) => { const r = (e as HTMLElement).getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.width < 24 || r.height < 24)
-          && getComputedStyle(e).visibility !== 'hidden' && (e as HTMLInputElement).type !== 'hidden'; })
-          .map((e) => (e as HTMLElement).outerHTML.slice(0, 80)));
+        els
+          .filter((e) => {
+            const r = (e as HTMLElement).getBoundingClientRect();
+            return (
+              r.width > 0 &&
+              r.height > 0 &&
+              (r.width < 24 || r.height < 24) &&
+              getComputedStyle(e).visibility !== 'hidden' &&
+              (e as HTMLInputElement).type !== 'hidden'
+            );
+          })
+          .map((e) => (e as HTMLElement).outerHTML.slice(0, 80)),
+      );
       expect(small, `${t.url} vùng bấm nhỏ`).toEqual([]);
     }
   });
@@ -32,34 +42,57 @@ test('PERF-06 Bảng dài ở 375px không làm cả trang cuộn ngang, không 
   await page.goto(path('products', 'en')); // bản mẫu có tên đầu ra dài nhất (XQ-21)
   await expectNoHorizontalScroll(page);
   const clipped = await page.locator('[data-testid="output-row"] *').evaluateAll((els) =>
-    els.filter((e) => { const s = getComputedStyle(e); const el = e as HTMLElement;
-      return el.scrollWidth > el.clientWidth + 1 && s.overflowX !== 'auto' && s.overflowX !== 'scroll'; }).map((e) => (e as HTMLElement).innerText.slice(0, 60)));
+    els
+      .filter((e) => {
+        const s = getComputedStyle(e);
+        const el = e as HTMLElement;
+        return el.scrollWidth > el.clientWidth + 1 && s.overflowX !== 'auto' && s.overflowX !== 'scroll';
+      })
+      .map((e) => (e as HTMLElement).innerText.slice(0, 60)),
+  );
   expect(clipped, 'chữ bị cắt').toEqual([]);
-  const textClip = await page.locator('[data-testid="output-row"] *').evaluateAll((els) =>
-    els.filter((e) => getComputedStyle(e).textOverflow === 'ellipsis').length);
+  const textClip = await page
+    .locator('[data-testid="output-row"] *')
+    .evaluateAll((els) => els.filter((e) => getComputedStyle(e).textOverflow === 'ellipsis').length);
   expect(textClip, 'không dùng ellipsis che chữ').toBe(0);
 });
 
 test('PERF-07 Không lỗi tiếp cận serious/critical trên mọi trang (@S4)', async ({ page }) => {
   const targets = listTargets();
-  const { default: AxeBuilder } = (await import(axeModule)) as { default: new (a: { page: typeof page }) => { analyze(): Promise<{ violations: Array<{ id: string; impact?: string | null; nodes: unknown[] }> }> } };
+  const { default: AxeBuilder } = (await import(axeModule)) as {
+    default: new (a: {
+      page: typeof page;
+    }) => { analyze(): Promise<{ violations: Array<{ id: string; impact?: string | null; nodes: unknown[] }> }> };
+  };
   const bad: string[] = [];
   for (const t of targets) {
     await page.goto(t.url);
     const { violations } = await new AxeBuilder({ page }).analyze();
-    for (const v of violations.filter((x) => x.impact === 'serious' || x.impact === 'critical')) bad.push(`${t.url} ${v.id} (${v.impact}) x${v.nodes.length}`);
+    for (const v of violations.filter((x) => x.impact === 'serious' || x.impact === 'critical'))
+      bad.push(`${t.url} ${v.id} (${v.impact}) x${v.nodes.length}`);
   }
   expect(bad, bad.join('\n')).toEqual([]);
 });
 
 test('PERF-08 Chỉ dùng Tab/Shift+Tab/Enter đi hết trang Liên hệ, luôn có viền focus (@S4)', async ({ page }) => {
   await page.goto(path('contact', 'vi')); // bản build mẫu có email nhận + tên pháp lý ⇒ có form
-  const want = ['nav-menu', 'lang-switcher', 'contact-name', 'contact-email', 'contact-phone', 'contact-company', 'contact-message', 'contact-consent', 'contact-submit'];
+  const want = [
+    'nav-menu',
+    'lang-switcher',
+    'contact-name',
+    'contact-email',
+    'contact-phone',
+    'contact-company',
+    'contact-message',
+    'contact-consent',
+    'contact-submit',
+  ];
   const seen = new Set<string>();
   for (let i = 0; i < 120 && seen.size < want.length; i++) {
     await page.keyboard.press('Tab');
     const info = await page.evaluate(() => {
-      const e = document.activeElement as HTMLElement | null; if (!e || e === document.body) return null;
+      const e = document.activeElement as HTMLElement | null;
+      if (!e || e === document.body) return null;
       const s = getComputedStyle(e);
       const own = e.getAttribute('data-testid') ?? e.closest('[data-testid]')?.getAttribute('data-testid') ?? '';
       const ring = (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0) || s.boxShadow !== 'none';
@@ -69,7 +102,11 @@ test('PERF-08 Chỉ dùng Tab/Shift+Tab/Enter đi hết trang Liên hệ, luôn 
     expect(info.ring, `focus không có viền ở ${info.own}`).toBe(true);
     seen.add(info.own);
   }
-  for (const w of want) expect([...seen].some((s) => s === w || s.startsWith(w)), `Tab không tới ${w}`).toBe(true);
+  for (const w of want)
+    expect(
+      [...seen].some((s) => s === w || s.startsWith(w)),
+      `Tab không tới ${w}`,
+    ).toBe(true);
   // Shift+Tab đi ngược được và Enter bấm được nút gửi (form trống ⇒ hiện lỗi thay vì gửi)
   await page.keyboard.press('Shift+Tab');
   await tid(page, 'contact-submit').focus();
@@ -79,21 +116,35 @@ test('PERF-08 Chỉ dùng Tab/Shift+Tab/Enter đi hết trang Liên hệ, luôn 
 
 test('PERF-09 Giảm chuyển động: không hiệu ứng, nội dung hiện đủ, sơ đồ tĩnh (@S5 @cho-khach:D6)', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const l of ['vi', 'en'] as Locale[]) for (const key of ['home', 'technology'] as const) {
-    await page.goto(path(key, l));
-    const before = (await bodyText(page)).length;
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    const longAnim = await page.evaluate(() =>
-      document.getAnimations().filter((a) => { const t = a.effect?.getComputedTiming(); return t && (Number(t.duration) > 10 || a.playState === 'running' && Number(t.duration) > 10); }).length);
-    expect(longAnim, `${l}/${key} còn hoạt ảnh > 0,01s`).toBe(0);
-    const slow = await page.evaluate(() => [...document.querySelectorAll('*')].filter((e) => {
-      const s = getComputedStyle(e); const d = (v: string) => Math.max(...v.split(',').map((x) => parseFloat(x) * (x.trim().endsWith('ms') ? 0.001 : 1)));
-      return d(s.transitionDuration) > 0.01 || d(s.animationDuration) > 0.01; }).length);
-    expect(slow, `${l}/${key} transition/animation > 0,01s`).toBe(0);
-    const hidden = await page.evaluate(() => [...document.querySelectorAll('main *')].filter((e) => getComputedStyle(e).opacity === '0').length);
-    expect(hidden, 'khối ẩn chờ cuộn').toBe(0);
-    expect((await bodyText(page)).length).toBe(before); // không có nội dung sinh thêm khi cuộn
-  }
+  for (const l of ['vi', 'en'] as Locale[])
+    for (const key of ['home', 'technology'] as const) {
+      await page.goto(path(key, l));
+      const before = (await bodyText(page)).length;
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      const longAnim = await page.evaluate(
+        () =>
+          document.getAnimations().filter((a) => {
+            const t = a.effect?.getComputedTiming();
+            return t && (Number(t.duration) > 10 || (a.playState === 'running' && Number(t.duration) > 10));
+          }).length,
+      );
+      expect(longAnim, `${l}/${key} còn hoạt ảnh > 0,01s`).toBe(0);
+      const slow = await page.evaluate(
+        () =>
+          [...document.querySelectorAll('*')].filter((e) => {
+            const s = getComputedStyle(e);
+            const d = (v: string) =>
+              Math.max(...v.split(',').map((x) => parseFloat(x) * (x.trim().endsWith('ms') ? 0.001 : 1)));
+            return d(s.transitionDuration) > 0.01 || d(s.animationDuration) > 0.01;
+          }).length,
+      );
+      expect(slow, `${l}/${key} transition/animation > 0,01s`).toBe(0);
+      const hidden = await page.evaluate(
+        () => [...document.querySelectorAll('main *')].filter((e) => getComputedStyle(e).opacity === '0').length,
+      );
+      expect(hidden, 'khối ẩn chờ cuộn').toBe(0);
+      expect((await bodyText(page)).length).toBe(before); // không có nội dung sinh thêm khi cuộn
+    }
   await page.goto(path('technology', 'vi'));
   expect(await tid(page, 'tech-diagram').locator('[data-stage]').count()).toBeGreaterThan(0);
   await expect(tid(page, 'tech-diagram').locator('[data-stage]').first()).toBeVisible();
