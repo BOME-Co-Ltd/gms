@@ -39,6 +39,10 @@ import {
 } from '../../contracts/content-model.ts';
 import { DETAIL_HTTP, EMPTY_LIST_NOINDEX, PAGE_SIZE, ROUTES } from '../../contracts/routes.ts';
 import { SafeHref, safeHref } from '../../contracts/safe-url.ts';
+import nextConfig from '../../next.config.ts';
+import playwrightConfig from '../../playwright.config.ts';
+// @ts-expect-error JS module without declaration
+import postcssConfig from '../../postcss.config.mjs';
 import {
   buildOrgJsonLd,
   escHtml,
@@ -86,6 +90,7 @@ import {
 } from '../../src/content/rules/index.ts';
 import { getDictionary } from '../../src/i18n/index.ts';
 import { formatPublicPhone, isValidPublicVNPhone, normalizeVNPhone } from '../../src/shared/contact/schema.ts';
+import vitestConfig from '../../vitest.config.ts';
 import {
   CfClientIp,
   CloudflareSendEmailMailer,
@@ -485,6 +490,12 @@ describe('Content Rules & Loader', () => {
     expect(checkRes.ok).toBe(true);
     expect(checkRes.hash).toMatch(/^[0-9a-f]{64}$/);
 
+    const emptyTmpDir = mkdtempSync(join(tmpdir(), 'empty-content-'));
+    const badCheck = runContentCheck(emptyTmpDir);
+    expect(badCheck.ok).toBe(false);
+    expect(badCheck.errors.length).toBeGreaterThan(0);
+    rmSync(emptyTmpDir, { recursive: true, force: true });
+
     const loaded = loadSiteContent(join(process.cwd(), 'content'));
     expect(loaded.errors).toHaveLength(0);
     expect(loaded.figures.length).toBeGreaterThan(0);
@@ -552,6 +563,22 @@ describe('Content Rules & Loader', () => {
       configPath: 'wrangler.test.jsonc',
     });
     expect(badCfg.ok).toBe(false);
+
+    const stagingRes = verifyDeployApproval({
+      cwd: tmpDir,
+      contentDir,
+      dryRun: true,
+      siteEnv: 'staging',
+    });
+    expect(stagingRes.ok).toBe(false);
+
+    const branchRes = verifyDeployApproval({
+      cwd: tmpDir,
+      contentDir,
+      dryRun: true,
+      workersCiBranch: 'feature/branch',
+    });
+    expect(branchRes.ok).toBe(false);
     rmSync(tmpDir, { recursive: true, force: true });
   });
 });
@@ -975,5 +1002,10 @@ describe('Next.js App Router Pages, Sections, UI Components & i18n', () => {
     expect(typeof TechSummarySection).toBe('function');
     expect(typeof JourneySection).toBe('function');
     expect(typeof ContactFormSection).toBe('function');
+
+    expect(nextConfig.output).toBe('export');
+    expect(playwrightConfig.timeout).toBe(60_000);
+    expect(vitestConfig.test?.include).toBeDefined();
+    expect(postcssConfig.plugins).toBeDefined();
   });
 });

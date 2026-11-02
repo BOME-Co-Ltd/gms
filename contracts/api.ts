@@ -4,6 +4,7 @@
 import { z } from "zod";
 
 export const Locale = z.enum(["vi", "en"]);
+export type Locale = z.infer<typeof Locale>;
 
 // §1 Giới hạn trường (giữ nguyên lượt 4)
 export const CONTACT_LIMITS = {
