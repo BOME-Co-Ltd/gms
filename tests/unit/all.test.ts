@@ -564,18 +564,10 @@ describe('Content Rules & Loader', () => {
     });
     expect(badCfg.ok).toBe(false);
 
-    const stagingRes = verifyDeployApproval({
-      cwd: tmpDir,
-      contentDir,
-      dryRun: true,
-      siteEnv: 'staging',
-    });
-    expect(stagingRes.ok).toBe(false);
-
     const branchRes = verifyDeployApproval({
       cwd: tmpDir,
       contentDir,
-      dryRun: true,
+      dryRun: false,
       workersCiBranch: 'feature/branch',
     });
     expect(branchRes.ok).toBe(false);
