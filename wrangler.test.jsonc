@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gms-contact-test",
+  "main": "worker/index.test.ts",
+  "compatibility_date": "2026-10-19",
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./out",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "html_handling": "drop-trailing-slash",
+    "run_worker_first": ["/*"]
+  },
+  "triggers": {
+    "crons": ["* * * * *", "5 17 * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gms_contact",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  "vars": {
+    "FORM_ENABLED": "true",
+    "POLICY_VERSION": "1.0",
+    "SITE_ORIGIN": "http://localhost:8787",
+    "MAIL_FROM": "thongbao@thongbao.gmshungyen.vn",
+    "ALERT_TO": "kythuat@gmshungyen.vn",
+    "CONTACT_RECIPIENT": "lienhe@vi-du.test"
+  }
+}

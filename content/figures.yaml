@@ -1,0 +1,12 @@
+- key: "dien-tich"
+  value: "5"
+  unit:
+    vi: "ha"
+    en: "ha"
+  label:
+    vi: "Diện tích nhà máy"
+    en: "Plant area"
+  source: "Hồ sơ dự án GMS Hưng Yên"
+  confirmedBy: "Đại diện GMS Hưng Yên"
+  confirmedAt: "2026-10-01"
+  public: true

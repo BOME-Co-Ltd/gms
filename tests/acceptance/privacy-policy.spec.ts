@@ -1,10 +1,10 @@
 // privacy-policy.feature → PRIV-01..PRIV-07 (S25). v0.3: chính sách là file nội dung nguồn; xoá theo yêu cầu = GMS xoá thư trong hộp thư (G9).
 // [giả định — chờ khách] V8, V9, V11 · [cần luật sư] · [cần hỏi admin] XQ-1(4a): nội dung thật chưa chốt;
 // test chỉ kiểm sự có mặt của căn cứ/phiên bản/quyền, không kiểm câu chữ pháp lý.
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { buildSite, htmlOf } from '../support/build';
 import { companyFile } from '../support/fixtures';
-import { path, type Locale } from '../support/routes';
+import { type Locale, path } from '../support/routes';
 import { bodyText, htmlLang, open, tid } from '../support/ui';
 
 const PURPOSE: Record<Locale, RegExp[]> = {
@@ -23,7 +23,10 @@ for (const locale of ['vi', 'en'] as Locale[]) {
   });
 }
 
-const BASIS: Array<[Locale, string]> = [['vi', 'Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15'], ['en', '91/2025/QH15']];
+const BASIS: Array<[Locale, string]> = [
+  ['vi', 'Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15'],
+  ['en', '91/2025/QH15'],
+];
 for (const [locale, basis] of BASIS) {
   test(`PRIV-02 Chính sách dẫn đúng căn cứ đang hiệu lực (${locale}) (@S25 @kiem-luc-build)`, () => {
     const r = buildSite(companyFile({ legalName: 'Công ty Mẫu GMS' })); // N27 [giả định — chờ khách]: tên mẫu
@@ -33,7 +36,11 @@ for (const [locale, basis] of BASIS) {
     expect(t).not.toContain('13/2023');
     expect(t).toContain('Công ty Mẫu GMS');
     expect(t).toMatch(locale === 'vi' ? /rút (lại )?đồng ý/i : /withdraw (your )?consent/i);
-    expect(t).toMatch(locale === 'vi' ? /\bxem\b[\s\S]*\bsửa\b[\s\S]*\bxoá|xóa\b/i : /access[\s\S]*(rectif|correct)[\s\S]*(delet|erasure)/i);
+    expect(t).toMatch(
+      locale === 'vi'
+        ? /\bxem\b[\s\S]*\bsửa\b[\s\S]*\bxoá|xóa\b/i
+        : /access[\s\S]*(rectif|correct)[\s\S]*(delet|erasure)/i,
+    );
   });
 }
 
@@ -62,7 +69,8 @@ test('PRIV-06 Chính sách thiếu bản EN thì build đỏ (@S25 @kiem-luc-bui
   expect(r.ok).toBe(false);
   expect(r.log).toContain('Chính sách bảo mật 1.1');
   expect(r.log).toMatch(/thiếu bản "?en"?/);
-  for (const locale of ['vi', 'en'] as Locale[]) { // bản đang chạy vẫn phục vụ 1.0
+  for (const locale of ['vi', 'en'] as Locale[]) {
+    // bản đang chạy vẫn phục vụ 1.0
     await open(page, 'privacy', locale);
     const t = await bodyText(page);
     expect(t).toMatch(/1\.0/);

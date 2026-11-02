@@ -1,0 +1,267 @@
+# forge-ci.yml — CI pha 0 sinh bằng chứng cho gate qa_passed (theo templates/forge-ci.yml).
+name: forge-ci
+
+on:
+  push: {}
+  pull_request: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forge-ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  BUN_CONFIG_REGISTRY: https://registry.npmjs.org/
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - name: Kiểm registry và bun.lock (Q3)
+        run: |
+          [ -f bun.lock ] || { echo "::error::khong co bun.lock (text) -- bun install --frozen-lockfile can lockfile da commit"; exit 1; }
+          bad=$(grep -oE 'https?://[^"[:space:],]+' bun.lock | grep -vE '^https://registry\.npmjs\.org/' | sort -u || true)
+          if [ -n "$bad" ]; then echo "::error::bun.lock co host ngoai registry.npmjs.org:"; echo "$bad"; exit 1; fi
+          for f in bunfig.toml .npmrc; do
+            [ -f "$f" ] || continue
+            bad=$(grep -iE 'registry' "$f" | grep -oE 'https?://[^"[:space:]]+' | grep -vE '^https://registry\.npmjs\.org/' || true)
+            if [ -n "$bad" ]; then echo "::error::$f tro registry ngoai registry.npmjs.org: $bad"; exit 1; fi
+          done
+      - name: Kiểm .env* không nằm trong git
+        run: |
+          bad=$(git ls-files | grep -E '(^|/)\.env($|\.)' | grep -vE '(^|/)\.env\.(example|sample|template)$' || true)
+          if [ -n "$bad" ]; then echo "::error::file .env* dang duoc git theo doi (chi cho phep file mau .env.example|sample|template):"; echo "$bad"; exit 1; fi
+      - run: bun install --frozen-lockfile
+      - run: bun x biome check .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: bun install --frozen-lockfile
+      - run: bun x tsc --noEmit --incremental false
+
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      gitleaks: ${{ steps.gitleaks.outputs.leaks }}
+      semgrep_high: ${{ steps.semgrep.outputs.high }}
+      dependency_critical: ${{ steps.osv.outputs.critical }}
+      suppressions: ${{ steps.supp.outputs.count }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: |
+          rm -f .gitleaks.toml .gitleaksignore
+          find . -name .semgrepignore -not -path './.git/*' -delete
+          printf '[extend]\nuseDefault = true\n' > .forge-ci-gitleaks.toml
+          : > .forge-ci-gitleaksignore
+      - id: gitleaks
+        run: |
+          set +e
+          timeout 360 docker run --rm -v "$PWD:/repo" -v "$RUNNER_TEMP:/out" -w /repo \
+            -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/repo \
+            ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f detect --source /repo --config /repo/.forge-ci-gitleaks.toml \
+            --log-opts=HEAD --report-format json --report-path /out/gitleaks.json --exit-code 0 --ignore-gitleaks-allow \
+            --gitleaks-ignore-path /repo/.forge-ci-gitleaksignore --no-color > "$RUNNER_TEMP/gitleaks.log" 2>&1
+          rc=$?
+          set -e
+          cat "$RUNNER_TEMP/gitleaks.log"
+          want=$(git rev-list --count HEAD)
+          got=$(grep -oE '[0-9]+ commits scanned' "$RUNNER_TEMP/gitleaks.log" | grep -oE '^[0-9]+' | head -1)
+          if [ "$rc" = 0 ] && ! grep -q ' ERR ' "$RUNNER_TEMP/gitleaks.log" && [ -n "$got" ] && [ "$got" -ge 1 ] && { [ $((got * 100)) -ge $((want * 95)) ] || [ $((want - got)) -le 1 ]; } && [ -s "$RUNNER_TEMP/gitleaks.json" ]; then
+            echo "leaks=$(jq 'length' "$RUNNER_TEMP/gitleaks.json")" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::gitleaks khong quet du (rc=$rc, commit quet=$got, can=$want) -- ghi not_run"
+          fi
+      - uses: docker://semgrep/semgrep@sha256:529ee8a277ec8adc5b534d7c74eea0a47e9de21d62852b6ba7ac6ba9566845c3
+        with:
+          args: semgrep scan --config p/default --disable-nosem --json --output semgrep.json --metrics off
+      - id: semgrep
+        run: echo "high=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' semgrep.json)" >> "$GITHUB_OUTPUT"
+      - id: osv
+        run: |
+          set +e
+          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner@sha256:4f3b7e2c64b9d38a5febc5a7e4a3dfef1d1362f726dea7a2ef4762b46469fcd0 scan source --format json --output-file /src/osv.json -r /src
+          rc=$?
+          set -e
+          if [ "$rc" -le 1 ] && [ -s osv.json ]; then
+            echo "critical=$(jq '[.results[]?.packages[]?.groups[]? | select(((.max_severity // "0") | if . == "" then 0 else tonumber end) >= 9)] | length' osv.json)" >> "$GITHUB_OUTPUT"
+          fi
+      - id: supp
+        run: echo "count=$(grep -rIoE 'nosemgrep|gitleaks:allow' --exclude-dir=.git --exclude-dir=.github . | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
+
+  a11y:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      A11Y_PAGES: "/ /gioi-thieu /giai-phap /cong-nghe /san-pham-dau-ra /tin-tuc /du-an-thu-vien /tuyen-dung /faq /lien-he /chinh-sach-bao-mat /en /en/about /en/solutions /en/technology /en/products /en/news /en/projects-library /en/careers /en/faq /en/contact /en/privacy-policy"
+      A11Y_SERVE: "bun x serve@14.2.6 -l 4173 out"
+      A11Y_BASE: "http://127.0.0.1:4173"
+      A11Y_READY: ""
+    outputs:
+      serious_critical: ${{ steps.axe.outputs.serious_critical }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: |
+          nohup sh -c "$A11Y_SERVE" > "$RUNNER_TEMP/serve.log" 2>&1 &
+          for _ in $(seq 60); do
+            if curl -fsS -o /dev/null "$A11Y_BASE/"; then exit 0; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/serve.log"
+          echo "::error::ban dung khong phuc vu duoc o $A11Y_BASE sau 60s"
+          exit 1
+      - id: axe
+        run: |
+          set -eu
+          T="$RUNNER_TEMP/forge-axe"
+          mkdir -p "$T"
+          cd "$T"
+          printf '{"private":true,"type":"module"}\n' > package.json
+          npm install --no-audit --no-fund --ignore-scripts --save-exact \
+            playwright@1.63.0 @axe-core/playwright@4.13.0 axe-core@4.13.0
+          npx --no-install playwright install --with-deps chromium
+          cat > axe.mjs <<'JS'
+          import { chromium } from 'playwright';
+          import * as axePw from '@axe-core/playwright';
+          const AxeBuilder = axePw.AxeBuilder ?? axePw.default;
+          const base = process.env.A11Y_BASE;
+          const pages = process.env.A11Y_PAGES.trim().split(/\s+/).filter(Boolean);
+          const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+          const out = { tools: { 'axe-core': '4.13.0', playwright: '1.63.0' }, tags: TAGS,
+                        pages: pages.length, scanned: 0, serious_critical: 0, nodes: 0, results: [] };
+          const browser = await chromium.launch();
+          for (const p of pages) {
+            const context = await browser.newContext();
+            const page = await context.newPage();
+            const res = await page.goto(new URL(p, base).href, { waitUntil: 'networkidle' });
+            if (!res || !res.ok()) { console.error(`trang ${p}: HTTP ${res ? res.status() : 'khong co phan hoi'}`); process.exit(3); }
+            if (process.env.A11Y_READY) await page.waitForFunction(process.env.A11Y_READY, null, { timeout: 8000 }).catch(() => {});
+            const settle = await page.evaluate(async () => {
+              const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+              const t0 = performance.now();
+              const left = () => 8000 - (performance.now() - t0);
+              const live = () => document.getAnimations().filter((a) => a.timeline === document.timeline && a.playState === 'running'
+                && !(a.effect && a.effect.getComputedTiming().iterations === Infinity)).length;
+              const step = Math.max(window.innerHeight * 0.8, 200);
+              for (let y = 0; y < document.documentElement.scrollHeight && left() > 0; y += step) {
+                window.scrollTo(0, y);
+                await sleep(120);
+              }
+              window.scrollTo(0, 0);
+              let calm = 0;
+              while (left() > 0 && calm < 600) {
+                await sleep(100);
+                calm = live() === 0 ? calm + 100 : 0;
+              }
+              return { settled: calm >= 600, ms: Math.round(performance.now() - t0) };
+            });
+            const r = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+            const bad = r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+            out.serious_critical += bad.length;
+            out.nodes += bad.reduce((n, v) => n + v.nodes.length, 0);
+            out.results.push({ page: p, incomplete: r.incomplete.length, settled: settle.settled, settle_ms: settle.ms,
+                               violations: bad.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.length,
+                                 details: v.nodes.slice(0, 10).map((n) => ({ target: n.target, html: n.html.slice(0, 160),
+                                   data: (n.any[0] && n.any[0].data) || null })) })) });
+            out.scanned += 1;
+            await context.close();
+          }
+          await browser.close();
+          console.log(JSON.stringify(out, null, 1));
+          JS
+          set +e
+          node axe.mjs > a11y.json
+          rc=$?
+          set -e
+          cat a11y.json
+          # shellcheck disable=SC2086
+          want=$(printf '%s\n' $A11Y_PAGES | grep -c .)
+          got=$(jq -r '.scanned' a11y.json 2>/dev/null || echo x)
+          sc=$(jq -r '.serious_critical' a11y.json 2>/dev/null || echo x)
+          if [ "$rc" = 0 ] && [ "$want" -gt 0 ] && [ "$got" = "$want" ] && printf '%s' "$sc" | grep -Eq '^[0-9]+$'; then
+            echo "serious_critical=$sc" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::axe khong quet du (rc=$rc, trang quet=$got, can=$want) -- ghi not_run"
+          fi
+
+  summary:
+    needs: [build, lint, typecheck, security, a11y]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          R_BUILD: ${{ needs.build.result }}
+          R_LINT: ${{ needs.lint.result }}
+          R_TYPECHECK: ${{ needs.typecheck.result }}
+          R_SECURITY: ${{ needs.security.result }}
+          O_GITLEAKS: ${{ needs.security.outputs.gitleaks }}
+          O_SEMGREP: ${{ needs.security.outputs.semgrep_high }}
+          O_OSV: ${{ needs.security.outputs.dependency_critical }}
+          O_SUPP: ${{ needs.security.outputs.suppressions }}
+          R_A11Y: ${{ needs.a11y.result }}
+          O_A11Y: ${{ needs.a11y.outputs.serious_critical }}
+        run: |
+          set -eu
+          pf() { case "$1" in success) echo '"pass"' ;; failure) echo '"fail"' ;; *) echo '"not_run"' ;; esac; }
+          num() { if [ "$R_SECURITY" = success ] && printf '%s' "$1" | grep -Eq '^[0-9]+$'; then echo "$1"; else echo '"not_run"'; fi; }
+          a11y() { if [ "${R_A11Y:-}" = success ] && printf '%s' "${O_A11Y:-}" | grep -Eq '^[0-9]+$'; then echo "$O_A11Y"; else echo '"not_run"'; fi; }
+          if [ "$R_SECURITY" = success ] && printf '%s' "$O_GITLEAKS" | grep -Eq '^[0-9]+$'; then
+            if [ "$O_GITLEAKS" = 0 ]; then GL='"pass"'; else GL='"fail"'; fi
+          else GL='"not_run"'; fi
+          cat > forge-verifier.json <<JSON
+          {"format":"forge-ci-verifier-v1","commit":"$GITHUB_SHA","run_id":$GITHUB_RUN_ID,"run_attempt":$GITHUB_RUN_ATTEMPT,
+           "checks":{"build":$(pf "$R_BUILD"),"lint":$(pf "$R_LINT"),"typecheck":$(pf "$R_TYPECHECK"),"gitleaks":$GL,
+                     "semgrep_high":$(num "$O_SEMGREP"),"dependency_critical":$(num "$O_OSV"),"a11y_serious_critical":$(a11y)},
+           "suppressions":$(num "$O_SUPP"),"tools":{}}
+          JSON
+          cat forge-verifier.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: forge-verifier
+          path: forge-verifier.json
+          retention-days: 90

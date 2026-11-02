@@ -1,0 +1,54 @@
+- key: "nilon"
+  group: "sang-tuyen"
+  state: "dinh-huong"
+  name:
+    vi: "Nilon"
+    en: "Plastic film"
+  desc:
+    vi: "Phân tách dòng nilon từ chất thải rắn đầu vào để đưa vào chu trình tái chế hạt nhựa hoặc xử lý nhiệt."
+    en: "Separated plastic film stream from incoming solid waste for recycling or thermal recovery."
+- key: "mun-huu-co"
+  group: "sang-tuyen"
+  state: "dinh-huong"
+  name:
+    vi: "Mùn hữu cơ"
+    en: "Organic humus"
+  desc:
+    vi: "Thành phần hữu cơ sau sàng lồng được ổn định làm nguyên liệu mùn cải tạo đất."
+    en: "Organic fraction separated by rotary trommel screening and stabilised as soil-conditioning humus."
+- key: "rdf"
+  group: "sang-tuyen"
+  state: "dinh-huong"
+  name:
+    vi: "RDF"
+    en: "RDF (Refuse-Derived Fuel)"
+  desc:
+    vi: "Nhiên liệu tái chế từ chất thải có nhiệt trị ổn định phục vụ lò hơi công nghiệp."
+    en: "Refuse-Derived Fuel pellets with consistent calorific value for industrial boilers."
+- key: "syngas"
+  group: "vpd"
+  state: "dinh-huong"
+  name:
+    vi: "Syngas"
+    en: "Syngas"
+  desc:
+    vi: "Khí tổng hợp thu hồi từ buồng phân huỷ nhiệt chân không VPD, tuần hoàn cấp nhiệt cho hệ thống."
+    en: "Synthesis gas recovered from the VPD vacuum pyrolysis chamber and recirculated for process heating."
+- key: "than-hoat-tinh"
+  group: "vpd"
+  state: "dinh-huong"
+  name:
+    vi: "Than hoạt tính"
+    en: "Activated carbon"
+  desc:
+    vi: "Phần rắn sau phân huỷ nhiệt được thu hồi làm than hoạt tính và vật liệu hấp phụ công nghiệp."
+    en: "Solid carbon fraction recovered after thermal decomposition for activated carbon applications."
+- key: "dau-tai-che"
+  group: "vpd"
+  state: "dinh-huong"
+  name:
+    vi: "Dầu tái chế"
+    en: "Recycled oil"
+  desc:
+    vi: "Dầu ngưng tụ từ dòng khí nhiệt phân sau làm sạch, dùng làm nhiên liệu công nghiệp."
+    en: "Condensed pyrolysis oil separated during gas cleaning for industrial fuel applications."

@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+.wrangler/
+coverage/
+.evals/
+tests/.results/
+.results/
+test-results/
+playwright-report/
+.DS_Store
+*.tsbuildinfo
+.dev.vars
+.env
+.env.local
