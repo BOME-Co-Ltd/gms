@@ -49,7 +49,7 @@ export function HomePageView({ locale }: { locale: Locale }): React.ReactElement
     <>
       <Header
         locale={locale}
-        brandName={dict.brand.legalName}
+        brandName={dict.brand.shortName}
         homeHref={ROUTES.home[locale]}
         viPath={ROUTES.home.vi}
         enPath={ROUTES.home.en}

@@ -1381,7 +1381,7 @@ function renderPrivacyPage(content: LoadedSiteContent, locale: Locale): string {
   const pol = content.policies[locale][0];
   const ver = pol?.version ?? '1.0';
   const eff = formatDateLocale(pol?.effectiveFrom ?? '2026-01-01', locale);
-  const ctrlName = content.company.legalName || 'Công ty Mẫu GMS';
+  const ctrlName = content.company.legalName || 'Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên';
   const reqEmail = content.company.privacyRequestEmail;
 
   const standardNotice = isVi
