@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 import { PAGE_SIZE, ROUTES } from '../../contracts/routes.ts';
@@ -286,8 +286,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   position: sticky; top: 0; z-index: 50;
   background: rgb(255 255 255 / 0.97);
   border-bottom: 1px solid var(--line);
-  padding: 10px 0;
+  padding: 4px 0;
 }
+.header-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.header-nav { padding: 4px 0; overflow-x: auto; }
 .header-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .brand-link { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--g900); font-weight: 800; font-size: 1.05rem; padding: 4px 6px; }
 nav[data-testid="nav-main"] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
@@ -544,6 +546,10 @@ function renderLayout(opts: {
   <link rel="alternate" hreflang="vi" href="${escHtml(viUrl)}" />
   <link rel="alternate" hreflang="en" href="${escHtml(enUrl)}" />
   <link rel="alternate" hreflang="x-default" href="${escHtml(viUrl)}" />
+  <link rel="icon" type="image/svg+xml" href="/brand/logo-gms-mark.svg" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="shortcut icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" href="/brand/logo-gms-mark.svg" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="${escHtml(title)}" />
   <meta property="og:description" content="${escHtml(description)}" />
@@ -556,17 +562,21 @@ function renderLayout(opts: {
 <body>
   <a href="#main-content" class="skip-link" data-testid="nav-menu">${escHtml(skipText)}</a>
   <header class="site-header">
-    <div class="container header-inner">
-      <a href="${ROUTES.home[locale]}" class="brand-link" data-testid="nav-menu">
-        ${INLINE_LOGO_MARK_SVG}
-        <span>${escHtml(displayBrand)}</span>
-      </a>
-      <nav data-testid="nav-main" aria-label="${locale === 'vi' ? 'Điều hướng chính' : 'Main navigation'}">
-        ${navLinks}
-      </nav>
-      <div class="lang-switcher" data-testid="lang-switcher" role="group" aria-label="${switcherLabel}">
-        <a hreflang="vi" href="${escHtml(viPath)}" lang="vi"${locale === 'vi' ? ' aria-current="true"' : ''}>${viSwitcherText}</a>
-        <a hreflang="en" href="${escHtml(enPath)}" lang="en"${locale === 'en' ? ' aria-current="true"' : ''}>English</a>
+    <div class="container">
+      <div class="header-top" style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line);">
+        <a href="${ROUTES.home[locale]}" class="brand-link" data-testid="nav-menu">
+          ${INLINE_LOGO_MARK_SVG}
+          <span>${escHtml(displayBrand)}</span>
+        </a>
+        <div class="lang-switcher" data-testid="lang-switcher" role="group" aria-label="${switcherLabel}">
+          <a hreflang="vi" href="${escHtml(viPath)}" lang="vi"${locale === 'vi' ? ' aria-current="true"' : ''}>${viSwitcherText}</a>
+          <a hreflang="en" href="${escHtml(enPath)}" lang="en"${locale === 'en' ? ' aria-current="true"' : ''}>English</a>
+        </div>
+      </div>
+      <div class="header-nav" style="padding:6px 0; overflow-x:auto;">
+        <nav data-testid="nav-main" aria-label="${locale === 'vi' ? 'Điều hướng chính' : 'Main navigation'}">
+          ${navLinks}
+        </nav>
       </div>
     </div>
   </header>
@@ -1725,6 +1735,26 @@ export async function runBuildSite(options?: {
     const publicOg = join(process.cwd(), 'public', 'og', 'default.png');
     mkdirSync(dirname(publicOg), { recursive: true });
     writeFileSync(publicOg, defaultOgBytes);
+  } catch {}
+
+  const brandDir = join(outDir, 'brand');
+  mkdirSync(brandDir, { recursive: true });
+  try {
+    const pubBrand = join(process.cwd(), 'public', 'brand');
+    if (existsSync(pubBrand)) {
+      for (const f of readdirSync(pubBrand)) {
+        writeFileSync(join(brandDir, f), readFileSync(join(pubBrand, f)));
+      }
+    }
+  } catch {}
+
+  try {
+    for (const f of ['favicon.ico', 'favicon.png', 'icon.svg']) {
+      const srcFile = join(process.cwd(), 'public', f);
+      if (existsSync(srcFile)) {
+        writeFileSync(join(outDir, f), readFileSync(srcFile));
+      }
+    }
   } catch {}
 
   for (const img of loaded.images.values()) {
