@@ -168,5 +168,207 @@
     "errSendFailed": "We couldn't send your message and GMS has not received it. What you typed is still here; please try again in a few minutes.",
     "mapTitle": "Plant Location Map",
     "mapOpenBtn": "Show interactive map"
+  },
+  "about": {
+    "eyebrow": "About us",
+    "title": "About GMS Hung Yen",
+    "lead": "Hung Yen Green Energy Environment JSC (GMS Hung Yen) is a pioneer in municipal solid waste intake, mechanical sorting, and thermal resource conversion towards circular economy and sustainability.",
+    "visionTitle": "Vision & Mission",
+    "visionDesc": "To become the benchmark modern solid waste treatment facility in the Red River Delta, employing zero-smoke VPD pyrolysis technology and maximizing resource recovery.",
+    "missionDesc": "Comprehensively solve local municipal waste challenges, minimize landfill usage, and transform waste into valuable fuel and clean energy.",
+    "valuesTitle": "Core Values",
+    "values": [
+      {
+        "title": "Advanced Technology",
+        "desc": "Integrated mechanical sorting line paired with modern VPD vacuum pyrolysis technology."
+      },
+      {
+        "title": "Resource Recovery",
+        "desc": "Turning waste into recycled film, organic humus, RDF, syngas, activated carbon, and recycled oil."
+      },
+      {
+        "title": "Sustainable Development",
+        "desc": "Steadfast commitment to environmental protection, emission reduction, and community partnership."
+      },
+      {
+        "title": "For a Green Community",
+        "desc": "Creating stable jobs and improving the local living environment across Hung Yen province."
+      }
+    ]
+  },
+  "solutions": {
+    "eyebrow": "Solutions",
+    "title": "Waste Treatment & Resource Recovery Solutions",
+    "lead": "Comprehensive solutions spanning intake, mechanical sorting, vacuum pyrolysis conversion, and industrial supply partnerships.",
+    "items": [
+      {
+        "title": "1. Integrated Mechanical Sorting",
+        "desc": "Modern sorting line combining bag openers, trommel screens, magnetic separators, and optical sorting to accurately classify incoming waste streams."
+      },
+      {
+        "title": "2. Zero-Smoke VPD Vacuum Pyrolysis",
+        "desc": "Negative-pressure oxygen-deficient thermal decomposition preventing dark smoke and dioxins, recovering synthesis syngas and high-grade activated carbon."
+      },
+      {
+        "title": "3. RDF Fuel Supply & Industrial Integration",
+        "desc": "Producing calorific Refuse-Derived Fuel (RDF) pellets for industrial boilers and cement kilns to substitute fossil coal."
+      }
+    ]
+  },
+  "products": {
+    "eyebrow": "Output Products",
+    "title": "Six Output Product Lines from GMS Technology",
+    "lead": "The synergy of mechanical sorting and VPD vacuum pyrolysis delivers six high-value product streams fueling the circular economy.",
+    "items": [
+      {
+        "name": "Recycled Plastic Film",
+        "state": "Available",
+        "desc": "Separated clean plastic film stream from municipal solid waste supplied to plastic reprocessing plants."
+      },
+      {
+        "name": "Bio-Organic Humus",
+        "state": "Available",
+        "desc": "Organic fraction screened by trommels and stabilized into nutrient-rich humus for soil conditioning."
+      },
+      {
+        "name": "Refuse-Derived Fuel (RDF)",
+        "state": "Available",
+        "desc": "High-calorific pelletized fuel replacing fossil coal in industrial boilers and cement kilns."
+      },
+      {
+        "name": "Synthesis Gas (Syngas)",
+        "state": "Planned",
+        "desc": "Clean synthesis gas recovered from the VPD chamber, cooled and scrubbed for heat recirculation or power generation."
+      },
+      {
+        "name": "Activated Carbon / Biochar",
+        "state": "Planned",
+        "desc": "High-grade solid carbon recovered post-pyrolysis, applied in water purification, gas filtration, and soil remediation."
+      },
+      {
+        "name": "Recycled Pyrolysis Oil",
+        "state": "Planned",
+        "desc": "Condensed heavy and light oil fractions recovered during gas cleaning, serving as industrial fuel oil or refinery feedstock."
+      }
+    ]
+  },
+  "news": {
+    "eyebrow": "News / Journey",
+    "title": "Transformation Journey & Plant News",
+    "lead": "Latest updates and milestones in the transformation of GMS Hung Yen waste treatment facility into a circular economy plant.",
+    "roadmapTitle": "5-Step Transformation Roadmap",
+    "articles": [
+      {
+        "title": "Technology upgrade project launched at GMS Hung Yen municipal waste plant",
+        "date": "15/10/2026",
+        "summary": "GMS Hung Yen officially initiates synchronous investment in mechanical sorting and VPD vacuum pyrolysis systems."
+      },
+      {
+        "title": "Site survey completed and VPD technology partnership agreement signed",
+        "date": "20/10/2026",
+        "summary": "Engineering team concludes field assessment on the 5-hectare My Hao site and finalizes thermal decomposition chamber specs."
+      },
+      {
+        "title": "Personal data protection framework standardized per Law No. 91/2025/QH15",
+        "date": "28/10/2026",
+        "summary": "GMS issues internal data compliance regulations and secure online inquiry channels for partners and clients."
+      }
+    ]
+  },
+  "projects": {
+    "eyebrow": "Projects / Gallery",
+    "title": "GMS Hung Yen Plant Project & Photo Gallery",
+    "lead": "Renderings of the future eco-park, 3D technology layouts, and on-site facility imagery.",
+    "items": [
+      {
+        "title": "Bird-eye render of the future GMS Eco-Industrial Plant",
+        "img": "/img/hero-plant-render.jpg",
+        "caption": "Planned impression: Solar rooftop array, landscape retention ponds, and isolation greenery belts in My Hao, Hung Yen."
+      },
+      {
+        "title": "3D engineering layout of the municipal waste sorting line",
+        "img": "/img/sorting-line-3d.png",
+        "caption": "Original 3D engineering layout of the high-capacity mechanical sorting line with title block."
+      },
+      {
+        "title": "VPD Vacuum Pyrolysis System 3D Model",
+        "img": "/img/vpd-system-render.jpg",
+        "caption": "3D simulation of the airtight zero-smoke thermal decomposition system recovering syngas and biochar."
+      }
+    ]
+  },
+  "careers": {
+    "eyebrow": "Careers",
+    "title": "Career Opportunities at GMS Hung Yen",
+    "lead": "GMS Hung Yen welcomes talented engineers, technical specialists, and dedicated operators to build a green future.",
+    "cultureTitle": "Workplace Culture at GMS",
+    "cultureDesc": "We provide a safe, respectful environment with competitive compensation and transparent career development paths.",
+    "openPositions": [
+      {
+        "title": "VPD Vacuum Pyrolysis Operations Engineer",
+        "location": "My Hao, Hung Yen",
+        "type": "Full-time",
+        "desc": "Supervise thermal decomposition chamber, monitor negative-pressure parameters, and maintain gas separation equipment."
+      },
+      {
+        "title": "Mechanical Sorting Maintenance Engineer",
+        "location": "My Hao, Hung Yen",
+        "type": "Full-time",
+        "desc": "Operate and manage industrial bag openers, rotary trommel screens, dewatering presses, and conveyor systems."
+      },
+      {
+        "title": "HSE Environmental & Safety Specialist",
+        "location": "My Hao, Hung Yen",
+        "type": "Full-time",
+        "desc": "Conduct periodic air and water monitoring reports, maintain regulatory records, and uphold occupational safety standards."
+      }
+    ]
+  },
+  "faq": {
+    "eyebrow": "FAQ",
+    "title": "Frequently Asked Questions",
+    "lead": "Common inquiries regarding process technology, environmental safety, and industrial partnership opportunities.",
+    "items": [
+      {
+        "q": "Does VPD vacuum pyrolysis produce dark smoke or dioxins/furans?",
+        "a": "No. VPD operates in an oxygen-free negative-pressure sealed chamber at regulated temperatures without direct combustion, eliminating dark smoke and preventing dioxin/furan synthesis. Gases are rapidly quenched and multi-stage scrubbed."
+      },
+      {
+        "q": "What types of solid waste does the plant accept?",
+        "a": "The plant accepts municipal solid waste from urban and rural districts, as well as non-hazardous industrial solid waste suitable for sorting and pyrolysis."
+      },
+      {
+        "q": "Where is the Refuse-Derived Fuel (RDF) utilized?",
+        "a": "GMS RDF pellets feature high calorific value and low moisture, supplied to cement kilns, power plants, and industrial boilers to substitute fossil coal."
+      },
+      {
+        "q": "How can partners contact GMS for waste treatment or product off-take?",
+        "a": "Partners can reach us directly via Hotline +84 98 799 83 70, official Zalo, or through the online inquiry form on our website."
+      }
+    ]
+  },
+  "privacy": {
+    "eyebrow": "Privacy Policy",
+    "title": "Personal Data Processing & Privacy Policy",
+    "lead": "Compliant with Vietnam Personal Data Protection Law No. 91/2025/QH15 and Decree 13/2023/ND-CP.",
+    "intro": "Hung Yen Green Energy Environment JSC (GMS Hung Yen) is committed to safeguarding personal data and privacy rights of visitors, clients, and partners.",
+    "sections": [
+      {
+        "title": "1. Data We Collect",
+        "content": "We only collect necessary personal details when you voluntarily submit an inquiry: Full Name, Phone Number, Email Address, Company/Organization Name, and message content."
+      },
+      {
+        "title": "2. Purposes of Data Processing",
+        "content": "Data is exclusively processed to respond to inquiries, provide technical support, and discuss collaboration. We strictly never sell or disclose your data to third parties for commercial gain."
+      },
+      {
+        "title": "3. Retention Period & Security Safeguards",
+        "content": "Data is encrypted in transit (SSL/TLS) and securely maintained on certified server infrastructure. Data is retained only as long as necessary to fulfill communication or until deletion is requested."
+      },
+      {
+        "title": "4. Data Subject Rights",
+        "content": "You retain full rights to inspect, rectify, withdraw consent, or request erasure of your personal data at any time by contacting: lienhe@gmshungyen.vn."
+      }
+    ]
   }
 }
