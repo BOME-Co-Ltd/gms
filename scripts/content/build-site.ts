@@ -174,9 +174,10 @@ async function processAndWriteImage(img: LoadedImage, outDir: string): Promise<v
   const relOut = `img/${img.relPath.replace(/^images\//, '')}`;
   const dest = join(outDir, relOut);
   mkdirSync(dirname(dest), { recursive: true });
+  let outBuf: Buffer;
   try {
     const pipeline = sharp(img.bytes).rotate();
-    const outBuf =
+    outBuf =
       img.ext === 'png'
         ? await pipeline.png().toBuffer()
         : img.ext === 'webp'
@@ -184,8 +185,14 @@ async function processAndWriteImage(img: LoadedImage, outDir: string): Promise<v
           : await pipeline.jpeg({ quality: 85 }).toBuffer();
     writeFileSync(dest, outBuf);
   } catch {
-    writeFileSync(dest, stripExifFromJpegBuffer(img.bytes));
+    outBuf = stripExifFromJpegBuffer(img.bytes);
+    writeFileSync(dest, outBuf);
   }
+  try {
+    const publicDest = join(process.cwd(), 'public', relOut);
+    mkdirSync(dirname(publicDest), { recursive: true });
+    writeFileSync(publicDest, outBuf);
+  } catch {}
 }
 
 export function buildOrgJsonLd(company: LoadedCompany, siteUrl: string, locale: Locale = 'vi'): string {
@@ -1714,6 +1721,11 @@ export async function runBuildSite(options?: {
     .png()
     .toBuffer();
   writeFileSync(join(ogDir, 'default.png'), defaultOgBytes);
+  try {
+    const publicOg = join(process.cwd(), 'public', 'og', 'default.png');
+    mkdirSync(dirname(publicOg), { recursive: true });
+    writeFileSync(publicOg, defaultOgBytes);
+  } catch {}
 
   for (const img of loaded.images.values()) {
     await processAndWriteImage(img, outDir);

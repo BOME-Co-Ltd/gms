@@ -168,5 +168,207 @@
     "errSendFailed": "Chưa gửi được liên hệ của bạn, GMS chưa nhận được. Chữ bạn đã nhập vẫn còn; vui lòng thử lại sau ít phút.",
     "mapTitle": "Bản đồ vị trí nhà máy",
     "mapOpenBtn": "Hiện bản đồ tương tác"
+  },
+  "about": {
+    "eyebrow": "Giới thiệu",
+    "title": "Giới thiệu về GMS Hưng Yên",
+    "lead": "Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên (GMS Hưng Yên) là đơn vị tiên phong trong lĩnh vực tiếp nhận, phân loại và chuyển hoá chất thải rắn sinh hoạt thành các nguồn tài nguyên tái tạo, hướng tới kinh tế tuần hoàn và phát triển bền vững.",
+    "visionTitle": "Tầm nhìn & Sứ mệnh",
+    "visionDesc": "Trở thành mô hình nhà máy xử lý rác sinh hoạt hiện đại kiểu mẫu tại Đồng bằng Sông Hồng, ứng dụng công nghệ nhiệt phân VPD không khói thải, thu hồi tối đa tài nguyên.",
+    "missionDesc": "Giải quyết triệt để bài toán rác thải sinh hoạt địa phương, giảm thiểu chôn lấp, chuyển hoá chất thải thành nhiên liệu và năng lượng xanh.",
+    "valuesTitle": "Giá trị cốt lõi",
+    "values": [
+      {
+        "title": "Công nghệ tiên tiến",
+        "desc": "Ứng dụng dây chuyền sàng tuyển cơ học đồng bộ và công nghệ nhiệt phân chân không VPD hiện đại."
+      },
+      {
+        "title": "Tái tạo tài nguyên",
+        "desc": "Biến chất thải thành nilon tái chế, mùn hữu cơ, RDF, syngas, than hoạt tính và dầu tái chế."
+      },
+      {
+        "title": "Phát triển bền vững",
+        "desc": "Kiên định mục tiêu bảo vệ môi trường, giảm thiểu phát thải và đồng hành cùng cộng đồng."
+      },
+      {
+        "title": "Vì cộng đồng xanh",
+        "desc": "Tạo việc làm ổn định, nâng cao chất lượng môi trường sống cho địa phương Hưng Yên."
+      }
+    ]
+  },
+  "solutions": {
+    "eyebrow": "Giải pháp",
+    "title": "Giải pháp xử lý chất thải & Tái tạo tài nguyên",
+    "lead": "Các giải pháp toàn diện từ tiếp nhận, phân loại cơ học đến chuyển hoá nhiệt phân và liên kết cung ứng công nghiệp.",
+    "items": [
+      {
+        "title": "1. Tiếp nhận và phân loại cơ học đồng bộ",
+        "desc": "Dây chuyền sàng tuyển hiện đại kết hợp mở bao, sàng lồng, phân ly từ tính và tách quang học giúp phân chia chính xác từng dòng vật chất đầu vào."
+      },
+      {
+        "title": "2. Nhiệt phân chân không VPD không khói thải",
+        "desc": "Công nghệ phân huỷ nhiệt trong điều kiện thiếu oxy ở áp suất âm, không phát sinh khói đen hay dioxin, thu hồi tối đa khí tổng hợp syngas và than hoạt tính."
+      },
+      {
+        "title": "3. Cung ứng nhiên liệu RDF và liên kết công nghiệp",
+        "desc": "Sản xuất nhiên liệu tái chế RDF đạt chuẩn nhiệt trị cấp cho các lò nung công nghiệp và nhà máy xi măng, thay thế dần than đá truyền thống."
+      }
+    ]
+  },
+  "products": {
+    "eyebrow": "Sản phẩm đầu ra",
+    "title": "Sáu dòng sản phẩm đầu ra từ công nghệ GMS",
+    "lead": "Sự kết hợp giữa nhánh sàng tuyển cơ học và nhánh nhiệt phân VPD tạo ra 6 dòng sản phẩm giá trị cao phục vụ kinh tế tuần hoàn.",
+    "items": [
+      {
+        "name": "Nilon tái chế",
+        "state": "Đã có",
+        "desc": "Phân tách dòng màng nilon sạch từ chất thải rắn sinh hoạt, cung cấp cho các nhà máy tái sinh hạt nhựa."
+      },
+      {
+        "name": "Mùn hữu cơ vi sinh",
+        "state": "Đã có",
+        "desc": "Thành phần hữu cơ tách ra sau sàng lồng được ủ ổn định tạo mùn giàu dinh dưỡng cải tạo đất nông nghiệp."
+      },
+      {
+        "name": "Nhiên liệu RDF",
+        "state": "Đã có",
+        "desc": "Nhiên liệu tái chế ép viên từ các cấu phần có nhiệt trị cao, thay thế than đốt cho nồi hơi và lò nung công nghiệp."
+      },
+      {
+        "name": "Khí tổng hợp Syngas",
+        "state": "Định hướng",
+        "desc": "Khí tổng hợp thu hồi từ buồng phân huỷ nhiệt VPD, qua hệ thống lọc bụi và làm sạch để tái cấp nhiệt hoặc phát điện."
+      },
+      {
+        "name": "Than hoạt tính / Biochar",
+        "state": "Định hướng",
+        "desc": "Cacbon rắn chất lượng cao sau quá trình nhiệt phân, dùng trong lọc nước, xử lý khí thải hoặc cải tạo đất."
+      },
+      {
+        "name": "Dầu nhiệt phân tái chế",
+        "state": "Định hướng",
+        "desc": "Dầu ngưng tụ từ pha khí nhiệt phân sau các tầng làm sạch, dùng làm dầu đốt công nghiệp hoặc nguyên liệu tinh chế."
+      }
+    ]
+  },
+  "news": {
+    "eyebrow": "Tin tức / Hành trình",
+    "title": "Hành trình chuyển đổi & Tin tức hoạt động",
+    "lead": "Cập nhật các bước tiến mới nhất trong quá trình chuyển đổi nhà máy xử lý rác GMS Hưng Yên theo mô hình kinh tế tuần hoàn.",
+    "roadmapTitle": "Lộ trình 5 bước chuyển đổi",
+    "articles": [
+      {
+        "title": "Khởi động dự án nâng cấp công nghệ nhà máy xử lý chất thải sinh hoạt GMS Hưng Yên",
+        "date": "15/10/2026",
+        "summary": "GMS Hưng Yên chính thức triển khai kế hoạch đầu tư đồng bộ dây chuyền sàng tuyển cơ học và công nghệ nhiệt phân chân không VPD."
+      },
+      {
+        "title": "Khảo sát và ký kết thoả thuận hợp tác kỹ thuật chuyển giao công nghệ VPD",
+        "date": "20/10/2026",
+        "summary": "Đoàn chuyên gia kỹ thuật hoàn tất đánh giá thực địa mặt bằng 5 ha tại Mỹ Hào và chốt thông số thiết kế buồng nhiệt phân."
+      },
+      {
+        "title": "Chuẩn hoá quy trình bảo vệ dữ liệu cá nhân theo Luật số 91/2025/QH15",
+        "date": "28/10/2026",
+        "summary": "GMS ban hành quy chế nội bộ và hoàn thiện hệ thống tiếp nhận thông tin trực tuyến bảo mật cho đối tác và khách hàng."
+      }
+    ]
+  },
+  "projects": {
+    "eyebrow": "Dự án / Thư viện",
+    "title": "Dự án Nhà máy GMS Hưng Yên & Thư viện hình ảnh",
+    "lead": "Hình ảnh phối cảnh dự kiến, mô hình 3D dây chuyền công nghệ và thực địa nhà máy.",
+    "items": [
+      {
+        "title": "Phối cảnh toàn cảnh khuôn viên nhà máy sinh thái GMS",
+        "img": "/img/hero-plant-render.jpg",
+        "caption": "Phối cảnh dự kiến: Mái pin mặt trời, hồ sinh học cảnh quan và dải cây xanh cách ly tại Mỹ Hào, Hưng Yên."
+      },
+      {
+        "title": "Mô hình 3D dây chuyền sàng tuyển phân loại rác",
+        "img": "/img/sorting-line-3d.png",
+        "caption": "Bản vẽ 3D nguyên bản dây chuyền phân loại cơ học rác thải sinh hoạt công suất cao."
+      },
+      {
+        "title": "Hệ thống nhiệt phân chân không VPD",
+        "img": "/img/vpd-system-render.jpg",
+        "caption": "Mô phỏng 3D buồng kín phân huỷ nhiệt không sinh khói thu hồi syngas và biochar."
+      }
+    ]
+  },
+  "careers": {
+    "eyebrow": "Tuyển dụng",
+    "title": "Cơ hội nghề nghiệp tại GMS Hưng Yên",
+    "lead": "GMS Hưng Yên chào đón các kỹ sư, chuyên gia và công nhân lành nghề cùng kiến tạo tương lai môi trường bền vững.",
+    "cultureTitle": "Môi trường làm việc tại GMS",
+    "cultureDesc": "Chúng tôi xây dựng môi trường làm việc an toàn, tôn trọng con người, chế độ đãi ngộ cạnh tranh và lộ trình phát triển rõ ràng.",
+    "openPositions": [
+      {
+        "title": "Kỹ sư Vận hành Công nghệ Nhiệt phân VPD",
+        "location": "Mỹ Hào, Hưng Yên",
+        "type": "Toàn thời gian",
+        "desc": "Giám sát quy trình buồng nhiệt, kiểm soát hệ thống áp suất âm, tách khí syngas và bảo dưỡng định kỳ."
+      },
+      {
+        "title": "Kỹ sư Cơ khí Dây chuyền Sàng tuyển",
+        "location": "Mỹ Hào, Hưng Yên",
+        "type": "Toàn thời gian",
+        "desc": "Quản lý và vận hành hệ thống máy phá bao, sàng lồng xoay, máy ép tách nước và băng tải phân loại."
+      },
+      {
+        "title": "Chuyên viên Quan trắc & An toàn Môi trường (HSE)",
+        "location": "Mỹ Hào, Hưng Yên",
+        "type": "Toàn thời gian",
+        "desc": "Đo đạc, lập báo cáo giám sát khí thải, nước thải định kỳ và duy trì hệ thống quản lý an toàn lao động."
+      }
+    ]
+  },
+  "faq": {
+    "eyebrow": "Câu hỏi thường gặp",
+    "title": "Câu hỏi thường gặp về công nghệ & GMS Hưng Yên",
+    "lead": "Giải đáp các thắc mắc phổ biến về quy trình xử lý, tính an toàn môi trường và cơ hội hợp tác.",
+    "items": [
+      {
+        "q": "Công nghệ nhiệt phân VPD có sinh khói đen hoặc khí dioxin/furan không?",
+        "a": "Không. Công nghệ VPD thực hiện trong buồng kín chân không hoàn toàn thiếu oxy ở nhiệt độ kiểm soát, không xảy ra quá trình cháy trực tiếp nên không tạo khói đen và triệt tiêu nguy cơ hình thành dioxin/furan. Khí phát sinh được làm lạnh nhanh và lọc đa cấp."
+      },
+      {
+        "q": "Nhà máy tiếp nhận và xử lý những loại chất thải nào?",
+        "a": "Nhà máy tiếp nhận chất thải rắn sinh hoạt từ các khu dân cư đô thị, nông thôn và chất thải công nghiệp thông thường không nguy hại phù hợp cho sàng tuyển và nhiệt phân."
+      },
+      {
+        "q": "Sản phẩm nhiên liệu RDF được sử dụng ở đâu?",
+        "a": "Nhiên liệu RDF của GMS có nhiệt trị cao, độ ẩm thấp, được cung cấp cho các nhà máy xi măng, nhà máy nhiệt điện và các lò hơi công nghiệp thay thế một phần than đá."
+      },
+      {
+        "q": "Làm thế nào để các đơn vị, đối tác liên hệ hợp tác thu gom hoặc tiêu thụ sản phẩm?",
+        "a": "Đối tác có thể liên hệ trực tiếp qua số Hotline 098 799 83 70, kênh Zalo chính thức hoặc gửi yêu cầu qua biểu mẫu liên hệ trực tuyến trên website."
+      }
+    ]
+  },
+  "privacy": {
+    "eyebrow": "Chính sách bảo mật",
+    "title": "Chính sách bảo mật và Xử lý dữ liệu cá nhân",
+    "lead": "Tuân thủ theo Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 và Nghị định 13/2023/NĐ-CP của Chính phủ Việt Nam.",
+    "intro": "Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên (GMS Hưng Yên) cam kết bảo vệ dữ liệu cá nhân và sự riêng tư của khách hàng, đối tác và người sử dụng khi truy cập website của chúng tôi.",
+    "sections": [
+      {
+        "title": "1. Dữ liệu chúng tôi thu thập",
+        "content": "Chúng tôi chỉ thu thập các dữ liệu cá nhân cơ bản khi bạn chủ động gửi biểu mẫu liên hệ: Họ và tên, Số điện thoại, Địa chỉ email, Tên tổ chức/doanh nghiệp và nội dung thông điệp trao đổi."
+      },
+      {
+        "title": "2. Mục đích xử lý dữ liệu",
+        "content": "Dữ liệu được dùng duy nhất nhằm mục đích phản hồi yêu cầu hợp tác, giải đáp thắc mắc kỹ thuật và cung cấp thông tin liên quan đến dịch vụ của GMS Hưng Yên. Chúng tôi tuyệt đối không bán hoặc chia sẻ dữ liệu cho bên thứ ba vì mục đích thương mại."
+      },
+      {
+        "title": "3. Thời gian lưu trữ và Biện pháp bảo mật",
+        "content": "Dữ liệu được mã hoá trên đường truyền (SSL/TLS) và lưu trữ bảo mật trên hạ tầng máy chủ đạt chuẩn an toàn thông tin. Dữ liệu sẽ được lưu trữ trong thời gian cần thiết để hoàn tất mục đích trao đổi hoặc cho đến khi có yêu cầu xoá từ chủ thể dữ liệu."
+      },
+      {
+        "title": "4. Quyền của chủ thể dữ liệu",
+        "content": "Bạn có toàn quyền yêu cầu xem lại, đính chính, rút lại sự đồng ý hoặc yêu cầu xoá dữ liệu cá nhân của mình bất kỳ lúc nào bằng cách gửi email tới: lienhe@gmshungyen.vn."
+      }
+    ]
   }
 }
