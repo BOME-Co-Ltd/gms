@@ -27,7 +27,7 @@ export function SolutionsPageView({ locale }: { locale: Locale }): React.ReactEl
     <>
       <Header
         locale={locale}
-        brandName={dict.brand.legalName}
+        brandName={dict.brand.shortName}
         homeHref={ROUTES.home[locale]}
         viPath={ROUTES.solutions.vi}
         enPath={ROUTES.solutions.en}

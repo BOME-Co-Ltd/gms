@@ -27,7 +27,7 @@ export function CareersPageView({ locale }: { locale: Locale }): React.ReactElem
     <>
       <Header
         locale={locale}
-        brandName={dict.brand.legalName}
+        brandName={dict.brand.shortName}
         homeHref={ROUTES.home[locale]}
         viPath={ROUTES.careers.vi}
         enPath={ROUTES.careers.en}

@@ -1,6 +1,6 @@
 {
   "brand": {
-    "legalName": "Công ty Mẫu GMS",
+    "legalName": "Hung Yen Green Energy Environment JSC",
     "shortName": "GMS Hung Yen",
     "slogan": "Smart solutions – Creating green value",
     "address": "National Route 39, Ban Yen Nhan Ward, My Hao Town, Hung Yen Province, Vietnam",
@@ -30,7 +30,11 @@
     "kicker": "The transformation journey",
     "heroTitle": "Smart solutions – Creating green value",
     "heroSub": "From waste to resources. GMS Hung Yen is building, step by step, a sorting and conversion system that returns still-valuable material streams to a new cycle of use.",
-    "pillars": ["VPD technology", "Sorting", "Resource recovery"],
+    "pillars": [
+      "VPD technology",
+      "Sorting",
+      "Resource recovery"
+    ],
     "ctaTech": "Explore the technology",
     "ctaContact": "Partner with us",
     "photoLabelAi": "Artist's impression",
@@ -43,19 +47,31 @@
         "num": "01",
         "title": "VPD technology",
         "desc": "Aims to convert suitable feedstock streams into new output products.",
-        "chips": ["Syngas", "Activated carbon", "Recycled oil"]
+        "chips": [
+          "Syngas",
+          "Activated carbon",
+          "Recycled oil"
+        ]
       },
       {
         "num": "02",
         "title": "Sorting",
         "desc": "Separates suitable material streams for further processing or value recovery.",
-        "chips": ["Plastic film", "Organic humus", "RDF"]
+        "chips": [
+          "Plastic film",
+          "Organic humus",
+          "RDF"
+        ]
       },
       {
         "num": "03",
         "title": "Resource recovery",
         "desc": "Returns still-valuable materials to production, creating new resource life cycles.",
-        "chips": ["Separate", "Convert", "Recover value"]
+        "chips": [
+          "Separate",
+          "Convert",
+          "Recover value"
+        ]
       }
     ],
     "techEyebrow": "Technology",
@@ -124,13 +140,19 @@
         "num": "5",
         "title": "Thermal decomposition",
         "desc": "In a closed chamber the material breaks down under heat; the remaining solids are collected separately.",
-        "chips": ["Activated carbon"]
+        "chips": [
+          "Activated carbon"
+        ]
       },
       {
         "num": "6",
         "title": "Gas cleaning and separation",
         "desc": "The gas mixture is cooled, cleared of dust and split into separate streams.",
-        "chips": ["Recycled oil", "Separated water", "Syngas"]
+        "chips": [
+          "Recycled oil",
+          "Separated water",
+          "Syngas"
+        ]
       },
       {
         "num": "7",
@@ -156,7 +178,7 @@
     "phoneLabel": "Phone number",
     "companyLabel": "Company / Organisation (optional)",
     "messageLabel": "Message (required)",
-    "consentPrefix": "I agree that Công ty Mẫu GMS may collect and use the full name, email or phone number, company and message I enter in order to reply and respond to my inquiry. See the ",
+    "consentPrefix": "I agree that Hung Yen Green Energy Environment JSC may collect and use the full name, email or phone number, company and message I enter in order to reply and respond to my inquiry. See the ",
     "consentLinkText": "Privacy policy",
     "submitBtn": "Send message",
     "successMsg": "Thank you. GMS has received your details and will get back to you.",

@@ -27,7 +27,7 @@ export function TechnologyPageView({ locale }: { locale: Locale }): React.ReactE
     <>
       <Header
         locale={locale}
-        brandName={dict.brand.legalName}
+        brandName={dict.brand.shortName}
         homeHref={ROUTES.home[locale]}
         viPath={ROUTES.technology.vi}
         enPath={ROUTES.technology.en}

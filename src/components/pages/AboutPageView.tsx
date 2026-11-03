@@ -27,7 +27,7 @@ export function AboutPageView({ locale }: { locale: Locale }): React.ReactElemen
     <>
       <Header
         locale={locale}
-        brandName={dict.brand.legalName}
+        brandName={dict.brand.shortName}
         homeHref={ROUTES.home[locale]}
         viPath={ROUTES.about.vi}
         enPath={ROUTES.about.en}

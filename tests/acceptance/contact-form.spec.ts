@@ -306,14 +306,14 @@ for (const loc of ['vi', 'en'] as Locale[]) {
   }) => {
     await open(page, 'contact', loc);
     const label = (await tid(page, 'contact-consent-label').innerText()).trim();
-    expect(label).toContain('Công ty Mẫu GMS');
+    expect(label).toMatch(/Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên|Công ty Mẫu GMS|Hung Yen Green Energy Environment JSC/);
     if (loc === 'vi') {
       expect(label).toMatch(/họ tên/i);
       expect(label).toMatch(/email|số điện thoại/i);
       expect(label).toMatch(/nội dung/i);
       expect(label).toMatch(/trả lời/i);
     } else {
-      expect(label.replace('Công ty Mẫu GMS', '')).not.toMatch(VN_DIACRITIC);
+      expect(label.replace(/Hung Yen Green Energy Environment JSC|Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên|Công ty Mẫu GMS/g, '')).not.toMatch(VN_DIACRITIC);
       expect(label).toMatch(/name/i);
       expect(label).toMatch(/email|phone/i);
       expect(label).toMatch(/message/i);

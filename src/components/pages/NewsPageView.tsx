@@ -27,7 +27,7 @@ export function NewsPageView({ locale }: { locale: Locale }): React.ReactElement
     <>
       <Header
         locale={locale}
-        brandName={dict.brand.legalName}
+        brandName={dict.brand.shortName}
         homeHref={ROUTES.home[locale]}
         viPath={ROUTES.news.vi}
         enPath={ROUTES.news.en}

@@ -36,7 +36,7 @@ export function ProductsPageView({ locale }: { locale: Locale }): React.ReactEle
     <>
       <Header
         locale={locale}
-        brandName={dict.brand.legalName}
+        brandName={dict.brand.shortName}
         homeHref={ROUTES.home[locale]}
         viPath={ROUTES.products.vi}
         enPath={ROUTES.products.en}
