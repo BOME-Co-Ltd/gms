@@ -6,14 +6,17 @@ import { bodyText, htmlLang, open, tid, VN_DIACRITIC } from '../support/ui';
 
 // Thứ tự menu theo prd.md §4 = thứ tự khoá trong bảng đường dẫn (routes.ts của architect).
 const NAV_MENU_ORDER: PageKey[] = [
+  'home',
   'about',
   'solutions',
   'technology',
   'products',
-  'projects',
   'news',
+  'projects',
   'careers',
+  'faq',
   'contact',
+  'privacy',
 ];
 // Tin mẫu cố định của bản build mặc định (XQ-21): cặp slug vi/en của Tin "doi-ngon-ngu".
 const NEWS_SAMPLE = { vi: 'doi-ngon-ngu-vi', en: 'doi-ngon-ngu-en' };
@@ -28,7 +31,7 @@ test('LAY-01 Khung trang đúng ngôn ngữ đang xem (@S1)', async ({ page }) =
   await open(page, 'about', 'en');
   expect(await htmlLang(page)).toBe('en');
   const links = tid(page, 'nav-main').locator('a');
-  expect(await links.count()).toBe(8);
+  expect(await links.count()).toBe(11); // prd.md §4 S1: menu 11 trang
   const hrefs = await links.evaluateAll((as) => as.map((a) => new URL((a as HTMLAnchorElement).href).pathname));
   expect(hrefs).toEqual(NAV_MENU_ORDER.map((k) => path(k, 'en')));
   for (const t of await links.allInnerTexts()) expect(t, 'menu EN chứa chữ Việt').not.toMatch(VN_DIACRITIC);
@@ -63,17 +66,26 @@ for (const [label, key, from, to] of SWITCH) {
   });
 }
 
-test('LAY-04 Bộ chọn ngôn ngữ hiển thị icon cờ Việt Nam và Anh Quốc (@S2)', async ({ page }) => {
-  await open(page, 'home', 'vi');
-  const sw = tid(page, 'lang-switcher');
-  const viLink = sw.locator('a[hreflang="vi"]');
-  const enLink = sw.locator('a[hreflang="en"]');
-  await expect(viLink).toBeVisible();
-  await expect(enLink).toBeVisible();
-  await expect(viLink.locator('svg')).toHaveCount(1);
-  await expect(enLink.locator('svg')).toHaveCount(1);
-  await expect(viLink).toHaveAttribute('title', 'Tiếng Việt');
-  await expect(enLink).toHaveAttribute('title', 'English');
+// Feature: bộ chọn ghi tên ngôn ngữ bằng chính ngôn ngữ đó, KHÔNG dùng cờ (ảnh, svg, emoji cờ quốc gia).
+const FLAG_EMOJI = /[\u{1F1E6}-\u{1F1FF}]|🏴|🏳/u;
+test('LAY-04 Bộ chọn ngôn ngữ ghi "Tiếng Việt"/"English", không có hình cờ (@S2)', async ({ page }) => {
+  for (const [pageKey, locale] of [
+    ['home', 'vi'],
+    ['about', 'en'],
+  ] as Array<[PageKey, Locale]>) {
+    await open(page, pageKey, locale);
+    const sw = tid(page, 'lang-switcher');
+    const viLink = sw.locator('a[hreflang="vi"]');
+    const enLink = sw.locator('a[hreflang="en"]');
+    await expect(viLink).toBeVisible();
+    await expect(enLink).toBeVisible();
+    await expect(viLink).toHaveText(/Tiếng Việt/);
+    await expect(enLink).toHaveText(/English/);
+    await expect(sw.locator('img, svg, picture, [class*="flag" i], [data-testid*="flag" i]')).toHaveCount(0);
+    expect(await sw.innerText(), 'emoji cờ trong bộ chọn').not.toMatch(FLAG_EMOJI);
+    const label = [await viLink.getAttribute('aria-label'), await enLink.getAttribute('aria-label')].join(' ');
+    expect(label, 'aria-label chứa emoji cờ').not.toMatch(FLAG_EMOJI);
+  }
 });
 
 // Site tĩnh có thể KHÔNG có "đường đổi ngôn ngữ" riêng (XQ-22). Test chấp nhận hai hình: đường đó không tồn tại (404) hoặc nếu có

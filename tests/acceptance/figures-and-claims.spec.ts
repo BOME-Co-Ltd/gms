@@ -126,7 +126,70 @@ test('FIG-13 Đối tác không có văn bản cho phép thì build đỏ (@S33 
   const r = buildSite({ 'partners.yaml': yamlItem({ name: 'Xanh Asian' }) + '\n' });
   expect(r.ok).toBe(false);
   expect(r.log).toContain('Xanh Asian');
-  expect(r.log).toContain('văn bản cho phép');
+  expect(r.log).toContain('Đối tác "Xanh Asian" thiếu trường "căn cứ cho phép"'); // build.ts §8 PARTNER_PERMISSION_MISSING
+});
+
+const PARTNER = {
+  name: 'Xanh Asian',
+  role: { vi: 'đối tác chuyển giao công nghệ', en: 'technology transfer partner' },
+  permissionBasis: 'raw 02/11 N22',
+  allowedAssets: ['sơ đồ quy trình', 'bảng so sánh', 'bản vẽ 3D'],
+};
+const partnersFile = (over: Record<string, unknown> = {}) => ({ 'partners.yaml': yamlItem({ ...PARTNER, ...over }) + '\n' });
+
+test('FIG-16 Tư liệu đối tác loại "logo" thì build đỏ, nêu tên ảnh + loại + đối tác (@S33 @kiem-luc-build)', () => {
+  const r = buildSite({
+    ...partnersFile(),
+    ...imageMeta('logo-xanhasian', { partnerAsset: { partner: 'Xanh Asian', type: 'logo' } }),
+    'images/logo-xanhasian.jpg': bytesOfSize(2048, JPEG_HEAD),
+  });
+  expect(r.ok).toBe(false);
+  expect(r.log).toContain('"logo-xanhasian" loại "logo" không thuộc tư liệu được phép của "Xanh Asian"');
+});
+
+test('FIG-17 Tư liệu của đối tác không có trong partners.yaml thì build đỏ (@S33 @kiem-luc-build)', () => {
+  const r = buildSite({
+    ...imageMeta('so-do', { partnerAsset: { partner: 'Không Có', type: 'sơ đồ quy trình' } }),
+    'images/so-do.jpg': bytesOfSize(2048, JPEG_HEAD),
+  });
+  expect(r.ok).toBe(false);
+  expect(r.log).toContain('Không Có');
+  expect(r.log).toContain('không có Đối tác này trong partners.yaml');
+});
+
+test('FIG-18 Đối tác hợp lệ: build xanh, trang Công nghệ nêu tên + vai trò, không ảnh logo (@S33 @kiem-luc-build)', () => {
+  const r = buildSite(partnersFile());
+  expect(r.ok, r.log).toBe(true);
+  const vi = r.read('cong-nghe/index.html') ?? r.read('technology/index.html') ?? '';
+  expect(vi).toContain('Xanh Asian');
+  expect(vi).toContain('đối tác chuyển giao công nghệ');
+  expect(vi).not.toMatch(/<img[^>]*(logo|xanh-?asian)[^>]*>/i);
+});
+
+test('FIG-19 Bản vẽ 3D "giữ khung tên" ra bản build là tệp gốc không cắt, kèm nhãn ảnh dựng (@S33 @kiem-luc-build)', () => {
+  const src = bytesOfSize(4096, JPEG_HEAD);
+  const r = buildSite({
+    ...partnersFile(),
+    ...imageMeta('sorting-line-3d', {
+      kind: 'anh-dung-ai',
+      partnerAsset: { partner: 'Xanh Asian', type: 'bản vẽ 3D' },
+      keepTitleBlock: true,
+    }),
+    'images/sorting-line-3d.jpg': src,
+  });
+  expect(r.ok, r.log).toBe(true);
+  const out = r.files().filter((f) => f.includes('sorting-line-3d') && /\.(jpe?g|webp|png)$/.test(f));
+  expect(out.length, 'ảnh phải có trong bản build').toBeGreaterThan(0);
+});
+
+test('FIG-20 FormStatus: thiếu CONTACT_MAIL_READY ⇒ out/form-status.json open=false; "true" + đủ V3/V14/N27 ⇒ open=true (@S19 build.ts §9)', () => {
+  const closed = buildSite({}, { CONTACT_MAIL_READY: 'false' });
+  expect(closed.ok, closed.log).toBe(true);
+  expect(JSON.parse(closed.read('form-status.json') ?? '{}').open).toBe(false);
+  const open = buildSite({}, { CONTACT_MAIL_READY: 'true' });
+  const st = JSON.parse(open.read('form-status.json') ?? '{}');
+  expect(st).toHaveProperty('open');
+  expect(Array.isArray(st.reasons)).toBe(true);
 });
 
 test('FIG-15 Bảng so sánh có số thiếu nguồn thì build đỏ (@S33 @kiem-luc-build @cho-khach:N6 @cho-khach:N25)', () => {
@@ -180,8 +243,10 @@ for (const [locale, label] of [
     await open(page, 'home', locale); // SITE_FIXTURE có ảnh "cover" kind "anh-dung-ai" ở trang chủ (XQ-21)
     const fig = tid(page, 'home-cover');
     await expect(fig).toBeVisible();
-    const caption = fig.locator('figcaption, [data-testid="photo-label"]');
-    await expect(caption).toBeAttached();
+    // Feature @S17: chữ nhãn nhìn thấy được ngay trên/dưới ảnh, không chỉ nằm trong alt.
+    const caption = fig.locator('figcaption, [data-testid="photo-label"]').first();
+    await expect(caption).toBeVisible();
+    expect((await caption.innerText()).trim()).toContain(label);
   });
 }
 

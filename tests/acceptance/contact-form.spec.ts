@@ -137,13 +137,14 @@ test('FORM-07 Cùng email, hai nội dung khác: hai thư, mỗi thư một nộ
 test('FORM-08 Dịch vụ thư lỗi 09:00–15:00: trang vẫn xác nhận, sau 15:00 có đúng 1 thư đủ nội dung (@S19 @risk:mail-failure)', async ({
   page,
 }) => {
-  await control.failMail(true, ISO(9), ISO(15));
+  await control.failMail(true); // contract lượt 9: không còn cửa sổ giờ; tắt lỗi bằng failMail(false)
   await control.setNow(ISO(9, 10));
   await open(page, 'contact', 'vi');
   await fillAndSubmit(page, { name: VALID.name, email: VALID.email, message: VALID.message, consent: true });
   await expect(tid(page, 'contact-success')).toBeVisible();
   await control.runCron(ISO(12));
   expect(await inbox()).toHaveLength(0);
+  await control.failMail(false);
   await control.runCron(ISO(15, 1));
   const mails = await inbox();
   expect(mails).toHaveLength(1);
@@ -154,7 +155,7 @@ test('FORM-09 Lỗi thư liên tục 25 giờ: sau 24 giờ có 1 cảnh báo kh
   request,
 }) => {
   const start = ISO(9);
-  await control.failMail(true, start, '2026-11-01T11:00:00Z'); // 25 giờ
+  await control.failMail(true); // tắt tay ở dưới (không còn cửa sổ giờ trong contract)
   await control.setNow(start);
   const r = await postContact(request, VALID);
   expect(r.status).toBe(200);
@@ -282,7 +283,7 @@ test('FORM-15 Chưa có email nhận thì bản build không có form, vẫn cò
 test('FORM-16 API đóng khi cấu hình thiếu email nhận (@S19 @cho-khach:V3) [qa thêm: lớp Worker]', async ({
   request,
 }) => {
-  await control.recipient(null);
+  await control.turnstileSecret(''); // contract lượt 9 (M31): secret rỗng ⇒ FORM_DISABLED
   const r = await postContact(request, VALID);
   expect(r.status).toBe(503);
   expect(r.json?.code).toBe('FORM_DISABLED');
