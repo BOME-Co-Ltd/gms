@@ -1,4 +1,4 @@
-// contact-form.feature (v0.3) → FORM-01..FORM-34. Form → Worker `gms-contact` → thư báo (Mailer giả) → web không giữ PII.
+// contact-form.feature (v0.5.2) → FORM-01..FORM-35. Form → Worker `gms-contact` → thư báo (Mailer giả) → web không giữ PII.
 // Đi qua UI khi kịch bản nói "trang hiện"; đi thẳng POST /api/contact khi kịch bản nói về máy/địa chỉ/kích thước (postContact).
 // [giả định — chờ khách] V3, V4, N27. Cửa điều khiển: XQ-20; lệnh build: XQ-21 (tên biến CONTACT_RECIPIENT là đề xuất).
 import { expect, test } from '../support/turnstile-stub';
@@ -151,29 +151,102 @@ test('FORM-08 Dịch vụ thư lỗi 09:00–15:00: trang vẫn xác nhận, sau
   for (const s of [VALID.name, VALID.email, VALID.message]) expect(mails[0].body).toContain(s);
 });
 
-test('FORM-09 Lỗi thư liên tục 25 giờ: sau 24 giờ có 1 cảnh báo không PII, liên hệ vẫn giữ (@S19 @risk:mail-failure)', async ({
+// Loại cảnh báo = mã contract api.ts MAIL_ALERT_CODES (dòng 190–198), đọc từ cột `code` của mail_log (d1-schema.sql dòng 53–58,
+// kind='alert'); KHÔNG đoán theo câu chữ. Đếm hộp thư cảnh báo (control.alerts) phải khớp số dòng mail_log kind='alert'.
+const CODE_15M = 'PENDING_OVERDUE_15M'; // api.ts:194
+const CODE_24H = 'PENDING_OVERDUE_24H'; // api.ts:195
+const alertCodes = async () =>
+  ((await control.storeDump()).tables.mail_log ?? [])
+    .filter((r) => r.kind === 'alert')
+    .map((r) => String(r.code))
+    .sort();
+
+// contact-form.feature dòng 89–95 (v0.5.2): lỗi thư liên tục 25 giờ ⇒ 1 cảnh báo "quá 15 phút" + 1 "quá 24 giờ", khác loại.
+test('FORM-09 Lỗi thư liên tục 25 giờ: sau 24 giờ có cảnh báo "quá 24 giờ" không PII, tổng đúng 2 cảnh báo khác loại, liên hệ vẫn giữ (@S19 @risk:mail-failure)', async ({
   request,
 }) => {
-  const start = ISO(9);
   await control.failMail(true); // tắt tay ở dưới (không còn cửa sổ giờ trong contract)
-  await control.setNow(start);
+  await control.setNow(ISO(9)); // 02:00Z ngày 31/10 = đầu khoảng lỗi
   const r = await postContact(request, VALID);
   expect(r.status).toBe(200);
-  await control.runCron('2026-11-01T01:30:00Z'); // 18,5 giờ: chưa tới 24 giờ
-  expect(await control.alerts()).toHaveLength(0);
+  await control.runCron('2026-10-31T02:20:00Z'); // 20 phút: đã quá 15 phút, xa mốc 24 giờ
+  expect(await alertCodes(), 'quá 15 phút ⇒ đúng 1 cảnh báo loại 15 phút').toEqual([CODE_15M]);
+  await control.runCron('2026-11-01T01:30:00Z'); // 23,5 giờ: chưa tới 24 giờ
+  expect(await alertCodes(), 'chưa tới 24 giờ ⇒ chưa có cảnh báo 24 giờ, 15 phút không lặp').toEqual([CODE_15M]);
+  expect(await control.alerts()).toHaveLength(1);
+  const before = await control.alerts();
   await control.runCron('2026-11-01T02:05:00Z'); // > 24 giờ
-  const alerts = await control.alerts();
-  expect(alerts).toHaveLength(1);
-  expect(alerts[0].subject + alerts[0].body).toMatch(/có liên hệ chưa gửi được thư báo/);
-  for (const pii of [VALID.name, VALID.email, VALID.message])
-    expect(alerts[0].subject + alerts[0].body).not.toContain(pii);
+  const after = await control.alerts();
+  const fresh = after.filter((a) => !before.some((b) => b.raw === a.raw));
+  expect(fresh, 'sau 24 giờ thêm đúng 1 cảnh báo').toHaveLength(1);
+  expect(await alertCodes()).toEqual([CODE_15M, CODE_24H]);
+  const text24 = fresh[0].subject + fresh[0].body;
+  expect(text24).toMatch(/có liên hệ chưa gửi được thư báo/);
+  for (const a of after)
+    for (const pii of [VALID.name, VALID.email, VALID.message])
+      expect(a.subject + a.body, `cảnh báo không chứa "${pii}"`).not.toContain(pii);
   await control.runCron('2026-11-01T02:10:00Z');
-  expect(await control.alerts(), 'không cảnh báo lặp mỗi lượt Cron').toHaveLength(1);
+  await control.runCron('2026-11-01T03:00:00Z'); // 25 giờ
+  expect(await alertCodes(), 'cả 25 giờ: tổng đúng 2 cảnh báo khác loại, không lặp mỗi lượt Cron').toEqual([
+    CODE_15M,
+    CODE_24H,
+  ]);
+  expect(await control.alerts(), 'hộp thư cảnh báo khớp mail_log').toHaveLength(2);
+  expect((await control.storeDump()).tables.outbox, 'liên hệ vẫn giữ').toHaveLength(1);
   await control.failMail(false);
   await control.runCron('2026-11-01T12:00:00Z');
   const mails = await inbox();
   expect(mails).toHaveLength(1);
   expect(mails[0].body).toContain(VALID.message);
+});
+
+// contact-form.feature dòng 97–104 (v0.5.2): đợt hỏng 09:00–11:00, 3 liên hệ lúc 09:05 / 09:30 / 10:15.
+test('FORM-35 Liên hệ chờ gửi thư quá 15 phút: đúng 1 cảnh báo cho cả đợt hỏng từ 09:20, không PII, cả 3 liên hệ vẫn giữ (@S19 @risk:mail-failure @risk:pii-log)', async ({
+  request,
+}) => {
+  await control.failMail(true); // lỗi liên tục từ 09:00 tới 11:00 (không có cửa sổ giờ trong contract: bật suốt, kiểm tới 11:00)
+  const people = [
+    { at: ISO(9, 5), name: 'Nguyễn Văn An', email: 'an@vi-du.test', message: 'Lời nhắn đầu tiên 0905' },
+    { at: ISO(9, 30), name: 'Trần Thị Bình', email: 'binh@vi-du.test', message: 'Lời nhắn thứ hai 0930' },
+    { at: ISO(10, 15), name: 'Lê Văn Cường', email: 'cuong@vi-du.test', message: 'Lời nhắn thứ ba 1015' },
+  ];
+  const piiAll = people.flatMap((p) => [p.name, p.email, p.message]);
+  const post = async (i: number) => {
+    await control.setNow(people[i].at);
+    const { name, email, message } = people[i];
+    const r = await postContact(request, { name, email, message, consent: true }, { ip: `198.51.100.${40 + i}` });
+    expect(r.status, `liên hệ ${i + 1}`).toBe(200);
+  };
+
+  await post(0); // 09:05
+  await control.runCron(ISO(9, 10));
+  await control.runCron(ISO(9, 19)); // liên hệ 1 mới chờ 14 phút
+  expect(await control.alerts(), 'trước 09:20 không có cảnh báo').toHaveLength(0);
+  expect(await alertCodes()).toEqual([]);
+
+  await control.runCron(ISO(9, 21)); // liên hệ 1 chờ 16 phút
+  expect(await alertCodes(), 'từ 09:20: đúng 1 cảnh báo loại 15 phút').toEqual([CODE_15M]);
+
+  await post(1); // 09:30
+  await control.runCron(ISO(9, 31));
+  await control.runCron(ISO(9, 46)); // liên hệ 2 cũng đã quá 15 phút
+  expect(await alertCodes(), 'liên hệ thứ 2 quá 15 phút không sinh cảnh báo thứ 2').toEqual([CODE_15M]);
+
+  await post(2); // 10:15
+  await control.runCron(ISO(10, 16));
+  await control.runCron(ISO(10, 31)); // liên hệ 3 cũng đã quá 15 phút
+  await control.runCron(ISO(10, 59));
+  await control.runCron(ISO(11, 0));
+
+  expect(await alertCodes(), 'cả đợt hỏng 09:20–11:00: đúng 1 cảnh báo "quá 15 phút", Cron chạy nhiều lần').toEqual([CODE_15M]);
+  const alerts = await control.alerts();
+  expect(alerts).toHaveLength(1);
+  const text = alerts[0].subject + alerts[0].body;
+  expect(text).toMatch(/có liên hệ chờ gửi thư báo quá 15 phút/i);
+  for (const pii of [...piiAll, 'Nguyen Van An', 'an%40vi-du.test']) expect(text, `cảnh báo không chứa "${pii}"`).not.toContain(pii);
+
+  expect((await control.storeDump()).tables.outbox, 'lúc 11:00 cả 3 liên hệ vẫn giữ').toHaveLength(3);
+  expect(await inbox(), 'dịch vụ thư còn lỗi: chưa có thư báo nào').toHaveLength(0);
 });
 
 test('FORM-10 Nơi giữ tạm lỗi thì KHÔNG báo đã nhận, giữ chữ đã nhập, gợi cách liên hệ khác (@S19 @risk:mail-failure)', async ({
