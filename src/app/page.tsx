@@ -104,7 +104,7 @@ export function HomePageView({ locale }: { locale: Locale }): React.ReactElement
           <h2>{dict.home.outputsHeading}</h2>
           <ul className="grid-cards">
             {outputs.map((o) => (
-              <OutputCard key={o.name} name={o.name} stateLabel={dict.home.statePlanned} description={o.desc} />
+              <OutputCard key={o.name} name={o.name} description={o.desc} />
             ))}
           </ul>
         </section>

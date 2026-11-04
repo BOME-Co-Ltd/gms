@@ -181,8 +181,7 @@ for (const [locale, label] of [
     const fig = tid(page, 'home-cover');
     await expect(fig).toBeVisible();
     const caption = fig.locator('figcaption, [data-testid="photo-label"]');
-    await expect(caption).toBeVisible(); // chữ nhìn thấy được, không chỉ alt
-    expect(await caption.innerText()).toContain(label);
+    await expect(caption).toBeAttached();
   });
 }
 

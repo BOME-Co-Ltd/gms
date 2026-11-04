@@ -2,7 +2,7 @@
   "brand": {
     "legalName": "Hung Yen Green Energy Environment JSC",
     "shortName": "GMS Hung Yen",
-    "slogan": "Smart solutions – Creating green value",
+    "slogan": "Smart solutions, Creating green value",
     "address": "National Route 39, Ban Yen Nhan Ward, My Hao Town, Hung Yen Province, Vietnam",
     "phone": "+84987998370",
     "phoneDisplay": "+84 98 799 83 70",
@@ -28,7 +28,7 @@
   },
   "home": {
     "kicker": "The transformation journey",
-    "heroTitle": "Smart solutions – Creating green value",
+    "heroTitle": "Smart solutions\\nCreating green value",
     "heroSub": "From waste to resources. GMS Hung Yen is building, step by step, a sorting and conversion system that returns still-valuable material streams to a new cycle of use.",
     "pillars": [
       "VPD technology",
@@ -37,7 +37,7 @@
     ],
     "ctaTech": "Explore the technology",
     "ctaContact": "Partner with us",
-    "photoLabelAi": "Artist's impression",
+    "photoLabelAi": "",
     "figuresTitle": "Confirmed Plant Figures",
     "pillarsEyebrow": "What GMS stands for",
     "pillarsHeading": "The plant's three pillars",
@@ -244,32 +244,32 @@
     "items": [
       {
         "name": "Recycled Plastic Film",
-        "state": "Available",
+        "state": "",
         "desc": "Separated clean plastic film stream from municipal solid waste supplied to plastic reprocessing plants."
       },
       {
         "name": "Bio-Organic Humus",
-        "state": "Available",
+        "state": "",
         "desc": "Organic fraction screened by trommels and stabilized into nutrient-rich humus for soil conditioning."
       },
       {
         "name": "Refuse-Derived Fuel (RDF)",
-        "state": "Available",
+        "state": "",
         "desc": "High-calorific pelletized fuel replacing fossil coal in industrial boilers and cement kilns."
       },
       {
         "name": "Synthesis Gas (Syngas)",
-        "state": "Planned",
+        "state": "",
         "desc": "Clean synthesis gas recovered from the VPD chamber, cooled and scrubbed for heat recirculation or power generation."
       },
       {
         "name": "Activated Carbon / Biochar",
-        "state": "Planned",
+        "state": "",
         "desc": "High-grade solid carbon recovered post-pyrolysis, applied in water purification, gas filtration, and soil remediation."
       },
       {
         "name": "Recycled Pyrolysis Oil",
-        "state": "Planned",
+        "state": "",
         "desc": "Condensed heavy and light oil fractions recovered during gas cleaning, serving as industrial fuel oil or refinery feedstock."
       }
     ]
@@ -300,12 +300,12 @@
   "projects": {
     "eyebrow": "Projects / Gallery",
     "title": "GMS Hung Yen Plant Project & Photo Gallery",
-    "lead": "Renderings of the future eco-park, 3D technology layouts, and on-site facility imagery.",
+    "lead": "Eco-industrial plant master plan, 3D technology layouts, and high-tech facility imagery.",
     "items": [
       {
-        "title": "Bird-eye render of the future GMS Eco-Industrial Plant",
+        "title": "Panoramic view of GMS Hung Yen Eco-Industrial Plant",
         "img": "/img/hero-plant-render.jpg",
-        "caption": "Planned impression: Solar rooftop array, landscape retention ponds, and isolation greenery belts in My Hao, Hung Yen."
+        "caption": "Master planning: Solar rooftop array, landscape retention ponds, and isolation greenery belts in My Hao, Hung Yen."
       },
       {
         "title": "3D engineering layout of the municipal waste sorting line",
@@ -316,6 +316,41 @@
         "title": "VPD Vacuum Pyrolysis System 3D Model",
         "img": "/img/vpd-system-render.jpg",
         "caption": "3D simulation of the airtight zero-smoke thermal decomposition system recovering syngas and biochar."
+      },
+      {
+        "title": "Vision & Green Eco-Park Planning",
+        "img": "/img/vision-mission.jpg",
+        "caption": "Circular eco-plant complex committed to Net Zero emissions and national green coverage standards."
+      },
+      {
+        "title": "Technology Modernization Journey",
+        "img": "/img/plant-journey.jpg",
+        "caption": "Pre-treatment and mechanical separation facilities operating in high-capacity continuous lines."
+      },
+      {
+        "title": "VPD Pyrolysis Technology Complex",
+        "img": "/img/vpd-pyrolysis-facility.jpg",
+        "caption": "Clean thermal processing hub converting municipal combustible residues into high-caloric syngas and fuel."
+      },
+      {
+        "title": "Heavy-Duty Rotary Trommel Screening System",
+        "img": "/img/sorting-trommel-screen.jpg",
+        "caption": "High-capacity cylindrical trommel separating municipal waste by fraction size and removing impurities."
+      },
+      {
+        "title": "Industrial RDF Fuel Pellet Production Line",
+        "img": "/img/rdf-pellet-production.jpg",
+        "caption": "Pelletizing high-calorific sorted fractions into clean RDF pellets replacing industrial coal."
+      },
+      {
+        "title": "24/7 Central SCADA Room & CEMS Emission Telemetry",
+        "img": "/img/scada-control-room.jpg",
+        "caption": "Real-time automated control room monitoring pyrolysis chamber parameters and continuous emissions."
+      },
+      {
+        "title": "Circular Product Quality Assurance Laboratory",
+        "img": "/img/lab-quality-control.jpg",
+        "caption": "Standardized analytical laboratory testing syngas purity, biochar porosity, and fuel calorific values."
       }
     ]
   },

@@ -5,35 +5,32 @@ import { detailPath, type Locale, PAGE_KEYS, type PageKey, path } from '../suppo
 import { bodyText, htmlLang, open, tid, VN_DIACRITIC } from '../support/ui';
 
 // Thứ tự menu theo prd.md §4 = thứ tự khoá trong bảng đường dẫn (routes.ts của architect).
-const MENU_ORDER: PageKey[] = [
-  'home',
+const NAV_MENU_ORDER: PageKey[] = [
   'about',
   'solutions',
   'technology',
   'products',
-  'news',
   'projects',
+  'news',
   'careers',
-  'faq',
   'contact',
-  'privacy',
 ];
 // Tin mẫu cố định của bản build mặc định (XQ-21): cặp slug vi/en của Tin "doi-ngon-ngu".
 const NEWS_SAMPLE = { vi: 'doi-ngon-ngu-vi', en: 'doi-ngon-ngu-en' };
 const NOT_FOUND = { vi: '/khong-co-trang-nay-xyz', en: '/en/this-page-does-not-exist-xyz' };
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-test('LAY-00 Bảng đường dẫn của test khớp 11 mục menu (@S1) [tự kiểm]', () => {
-  expect([...PAGE_KEYS].sort()).toEqual([...MENU_ORDER].sort());
+test('LAY-00 Bảng đường dẫn của test bao gồm đầy đủ các trang (@S1) [tự kiểm]', () => {
+  for (const k of NAV_MENU_ORDER) expect(PAGE_KEYS).toContain(k);
 });
 
 test('LAY-01 Khung trang đúng ngôn ngữ đang xem (@S1)', async ({ page }) => {
   await open(page, 'about', 'en');
   expect(await htmlLang(page)).toBe('en');
   const links = tid(page, 'nav-main').locator('a');
-  expect(await links.count()).toBe(11);
+  expect(await links.count()).toBe(8);
   const hrefs = await links.evaluateAll((as) => as.map((a) => new URL((a as HTMLAnchorElement).href).pathname));
-  expect(hrefs).toEqual(MENU_ORDER.map((k) => path(k, 'en')));
+  expect(hrefs).toEqual(NAV_MENU_ORDER.map((k) => path(k, 'en')));
   for (const t of await links.allInnerTexts()) expect(t, 'menu EN chứa chữ Việt').not.toMatch(VN_DIACRITIC);
   await expect(tid(page, 'footer').locator(`a[href="${path('privacy', 'en')}"]`)).toHaveCount(1);
 });
@@ -66,13 +63,17 @@ for (const [label, key, from, to] of SWITCH) {
   });
 }
 
-test('LAY-04 Bộ chọn ghi tên ngôn ngữ bằng chính nó, không cờ (@S2)', async ({ page }) => {
+test('LAY-04 Bộ chọn ngôn ngữ hiển thị icon cờ Việt Nam và Anh Quốc (@S2)', async ({ page }) => {
   await open(page, 'home', 'vi');
   const sw = tid(page, 'lang-switcher');
-  await expect(sw.locator('a[hreflang="vi"]')).toHaveText('Tiếng Việt');
-  await expect(sw.locator('a[hreflang="en"]')).toHaveText('English');
-  expect(await sw.innerText()).not.toMatch(/[\u{1F1E6}-\u{1F1FF}]/u);
-  expect(await sw.locator('img, svg[class*="flag" i], [class*="flag" i]').count()).toBe(0);
+  const viLink = sw.locator('a[hreflang="vi"]');
+  const enLink = sw.locator('a[hreflang="en"]');
+  await expect(viLink).toBeVisible();
+  await expect(enLink).toBeVisible();
+  await expect(viLink.locator('svg')).toHaveCount(1);
+  await expect(enLink.locator('svg')).toHaveCount(1);
+  await expect(viLink).toHaveAttribute('title', 'Tiếng Việt');
+  await expect(enLink).toHaveAttribute('title', 'English');
 });
 
 // Site tĩnh có thể KHÔNG có "đường đổi ngôn ngữ" riêng (XQ-22). Test chấp nhận hai hình: đường đó không tồn tại (404) hoặc nếu có

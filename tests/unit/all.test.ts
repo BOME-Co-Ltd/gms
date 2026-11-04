@@ -932,11 +932,13 @@ describe('Next.js App Router Pages, Sections, UI Components & i18n', () => {
     expect(rootHtml).toContain('Child');
 
     const homeViHtml = renderToStaticMarkup(React.createElement(HomePage));
-    expect(homeViHtml).toContain('Giải pháp thông minh – Kiến tạo giá trị xanh');
+    expect(homeViHtml).toContain('Giải pháp thông minh');
+    expect(homeViHtml).toContain('Kiến tạo giá trị xanh');
     expect(homeViHtml).toContain('data-testid="figures-strip"');
 
     const homeEnHtml = renderToStaticMarkup(React.createElement(EnglishHomePage));
-    expect(homeEnHtml).toContain('Smart solutions – Creating green value');
+    expect(homeEnHtml).toContain('Smart solutions');
+    expect(homeEnHtml).toContain('Creating green value');
 
     const techViHtml = renderToStaticMarkup(React.createElement(TechnologyPage));
     expect(techViHtml).toContain('data-testid="tech-diagram"');

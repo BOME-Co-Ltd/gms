@@ -47,21 +47,33 @@ export function AboutPageView({ locale }: { locale: Locale }): React.ReactElemen
         <section className="section-block" data-testid="about-vision">
           <p className="eyebrow">{isVi ? 'Định hướng' : 'Strategic direction'}</p>
           <h2>{t.visionTitle}</h2>
-          <div className="grid-cards">
-            <article className="card">
-              <span className="card-num" aria-hidden="true">
-                01
-              </span>
-              <h3>{isVi ? 'Tầm nhìn' : 'Vision'}</h3>
-              <p>{t.visionDesc}</p>
-            </article>
-            <article className="card">
-              <span className="card-num" aria-hidden="true">
-                02
-              </span>
-              <h3>{isVi ? 'Sứ mệnh' : 'Mission'}</h3>
-              <p>{t.missionDesc}</p>
-            </article>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch mt-6">
+            <div className="lg:col-span-5 overflow-hidden rounded-2xl border border-[#0f5838]/15 shadow-sm bg-white">
+              <img
+                src="/img/vision-mission.jpg"
+                alt={isVi ? 'Tầm nhìn phát triển xanh GMS Hưng Yên' : 'GMS Hung Yen Green Development Vision'}
+                width={600}
+                height={500}
+                className="w-full h-full object-cover min-h-[300px]"
+                loading="lazy"
+              />
+            </div>
+            <div className="lg:col-span-7 flex flex-col justify-between gap-6">
+              <article className="card m-0 flex-1">
+                <span className="card-num" aria-hidden="true">
+                  01
+                </span>
+                <h3>{isVi ? 'Tầm nhìn' : 'Vision'}</h3>
+                <p>{t.visionDesc}</p>
+              </article>
+              <article className="card m-0 flex-1">
+                <span className="card-num" aria-hidden="true">
+                  02
+                </span>
+                <h3>{isVi ? 'Sứ mệnh' : 'Mission'}</h3>
+                <p>{t.missionDesc}</p>
+              </article>
+            </div>
           </div>
         </section>
 

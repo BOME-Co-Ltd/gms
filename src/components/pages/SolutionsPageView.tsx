@@ -4,6 +4,13 @@ import { getDictionary, type Locale } from '../../i18n/index.ts';
 import { Footer } from '../ui/Footer.tsx';
 import { Header } from '../ui/Header.tsx';
 
+const SOLUTION_IMAGES: Record<number, string> = {
+  0: '/img/sorting-trommel-screen.jpg',
+  1: '/img/vpd-pyrolysis-facility.jpg',
+  2: '/img/rdf-pellet-production.jpg',
+  3: '/img/scada-control-room.jpg',
+};
+
 export function SolutionsPageView({ locale }: { locale: Locale }): React.ReactElement {
   const dict = getDictionary(locale);
   const t = dict.solutions;
@@ -49,13 +56,25 @@ export function SolutionsPageView({ locale }: { locale: Locale }): React.ReactEl
           <h2>{isVi ? 'Quy trình giải pháp khép kín' : 'Integrated Solution Framework'}</h2>
           <div className="grid-cards">
             {t.items.map((item, i) => (
-              <article key={item.title} className="card" data-testid="solution-item">
-                <span className="card-num" aria-hidden="true">
-                  0{i + 1}
-                </span>
-                <h3>{item.title}</h3>
-                <p>{item.desc}</p>
-                <p className="mt-4">
+              <article key={item.title} className="card flex flex-col justify-between" data-testid="solution-item">
+                <div>
+                  <figure className="mb-4 overflow-hidden rounded-xl border border-[#0f5838]/10 shadow-xs">
+                    <img
+                      src={SOLUTION_IMAGES[i] || '/og/default.png'}
+                      alt={item.title}
+                      width={480}
+                      height={280}
+                      className="h-48 w-full object-cover transition-transform duration-500 hover:scale-105"
+                      loading="lazy"
+                    />
+                  </figure>
+                  <span className="card-num" aria-hidden="true">
+                    0{i + 1}
+                  </span>
+                  <h3 className="text-xl font-bold text-[#0f5838] mt-2 mb-2">{item.title}</h3>
+                  <p className="text-sm leading-relaxed text-[#1b4332]/85">{item.desc}</p>
+                </div>
+                <p className="mt-4 pt-2 border-t border-[#0f5838]/10">
                   <a href={ROUTES.contact[locale]} className="btn btn-outline" data-testid="cta-contact">
                     {isVi ? 'Liên hệ tư vấn' : 'Inquire now'} →
                   </a>

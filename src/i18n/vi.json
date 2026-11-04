@@ -2,7 +2,7 @@
   "brand": {
     "legalName": "Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên",
     "shortName": "GMS Hưng Yên",
-    "slogan": "Giải pháp thông minh – Kiến tạo giá trị xanh",
+    "slogan": "Giải pháp thông minh, Kiến tạo giá trị xanh",
     "address": "Quốc lộ 39, Phường Bần Yên Nhân, Thị xã Mỹ Hào, Tỉnh Hưng Yên, Việt Nam",
     "phone": "+84987998370",
     "phoneDisplay": "098 799 83 70",
@@ -28,7 +28,7 @@
   },
   "home": {
     "kicker": "Hành trình chuyển đổi",
-    "heroTitle": "Giải pháp thông minh – Kiến tạo giá trị xanh",
+    "heroTitle": "Giải pháp thông minh\\nKiến tạo giá trị xanh",
     "heroSub": "Từ chất thải đến tài nguyên. GMS Hưng Yên đang từng bước xây dựng hệ thống sàng tuyển và chuyển hoá, đưa những dòng vật chất còn giá trị trở lại chu trình sử dụng.",
     "pillars": [
       "Công nghệ VPD",
@@ -37,7 +37,7 @@
     ],
     "ctaTech": "Tìm hiểu công nghệ",
     "ctaContact": "Liên hệ hợp tác",
-    "photoLabelAi": "Phối cảnh dự kiến",
+    "photoLabelAi": "",
     "figuresTitle": "Quy mô & Số liệu đã xác nhận",
     "pillarsEyebrow": "Định hướng của GMS",
     "pillarsHeading": "Ba trụ cột của nhà máy",
@@ -244,32 +244,32 @@
     "items": [
       {
         "name": "Nilon tái chế",
-        "state": "Đã có",
+        "state": "",
         "desc": "Phân tách dòng màng nilon sạch từ chất thải rắn sinh hoạt, cung cấp cho các nhà máy tái sinh hạt nhựa."
       },
       {
         "name": "Mùn hữu cơ vi sinh",
-        "state": "Đã có",
+        "state": "",
         "desc": "Thành phần hữu cơ tách ra sau sàng lồng được ủ ổn định tạo mùn giàu dinh dưỡng cải tạo đất nông nghiệp."
       },
       {
         "name": "Nhiên liệu RDF",
-        "state": "Đã có",
+        "state": "",
         "desc": "Nhiên liệu tái chế ép viên từ các cấu phần có nhiệt trị cao, thay thế than đốt cho nồi hơi và lò nung công nghiệp."
       },
       {
         "name": "Khí tổng hợp Syngas",
-        "state": "Định hướng",
+        "state": "",
         "desc": "Khí tổng hợp thu hồi từ buồng phân huỷ nhiệt VPD, qua hệ thống lọc bụi và làm sạch để tái cấp nhiệt hoặc phát điện."
       },
       {
         "name": "Than hoạt tính / Biochar",
-        "state": "Định hướng",
+        "state": "",
         "desc": "Cacbon rắn chất lượng cao sau quá trình nhiệt phân, dùng trong lọc nước, xử lý khí thải hoặc cải tạo đất."
       },
       {
         "name": "Dầu nhiệt phân tái chế",
-        "state": "Định hướng",
+        "state": "",
         "desc": "Dầu ngưng tụ từ pha khí nhiệt phân sau các tầng làm sạch, dùng làm dầu đốt công nghiệp hoặc nguyên liệu tinh chế."
       }
     ]
@@ -300,12 +300,12 @@
   "projects": {
     "eyebrow": "Dự án / Thư viện",
     "title": "Dự án Nhà máy GMS Hưng Yên & Thư viện hình ảnh",
-    "lead": "Hình ảnh phối cảnh dự kiến, mô hình 3D dây chuyền công nghệ và thực địa nhà máy.",
+    "lead": "Hình ảnh quy hoạch nhà máy sinh thái, mô hình 3D dây chuyền công nghệ và thực địa phân khu xử lý GMS Hưng Yên.",
     "items": [
       {
-        "title": "Phối cảnh toàn cảnh khuôn viên nhà máy sinh thái GMS",
+        "title": "Toàn cảnh khuôn viên Nhà máy Sinh thái GMS Hưng Yên",
         "img": "/img/hero-plant-render.jpg",
-        "caption": "Phối cảnh dự kiến: Mái pin mặt trời, hồ sinh học cảnh quan và dải cây xanh cách ly tại Mỹ Hào, Hưng Yên."
+        "caption": "Quy hoạch tổng thể: Mái pin mặt trời, hồ sinh học cảnh quan và dải cây xanh cách ly tại Mỹ Hào, Hưng Yên."
       },
       {
         "title": "Mô hình 3D dây chuyền sàng tuyển phân loại rác",
@@ -313,9 +313,44 @@
         "caption": "Bản vẽ 3D nguyên bản dây chuyền phân loại cơ học rác thải sinh hoạt công suất cao."
       },
       {
-        "title": "Hệ thống nhiệt phân chân không VPD",
+        "title": "Hệ thống buồng nhiệt phân chân không VPD",
         "img": "/img/vpd-system-render.jpg",
         "caption": "Mô phỏng 3D buồng kín phân huỷ nhiệt không sinh khói thu hồi syngas và biochar."
+      },
+      {
+        "title": "Tầm nhìn & Quy hoạch xanh GMS Hưng Yên",
+        "img": "/img/vision-mission.jpg",
+        "caption": "Khuôn viên nhà máy sinh thái tuần hoàn hướng tới Net Zero với diện tích cây xanh cách ly đạt chuẩn quốc gia."
+      },
+      {
+        "title": "Lộ trình hiện đại hoá dây chuyền công nghệ",
+        "img": "/img/plant-journey.jpg",
+        "caption": "Khu vực tiền xử lý và vận hành tích hợp chuỗi công nghệ sàng tuyển cơ học đa cấp hiện đại."
+      },
+      {
+        "title": "Khu phức hợp công nghệ nhiệt phân VPD",
+        "img": "/img/vpd-pyrolysis-facility.jpg",
+        "caption": "Trung tâm buồng nhiệt phân chân không VPD chuyển hoá rác trơ thành nhiên liệu và syngas chất lượng cao."
+      },
+      {
+        "title": "Hệ thống sàng lồng quay hạng nặng Trommel Screen",
+        "img": "/img/sorting-trommel-screen.jpg",
+        "caption": "Trục sàng lồng công suất lớn phân ly rác thải sinh hoạt theo kích thước hạt và loại bỏ tạp chất."
+      },
+      {
+        "title": "Dây chuyền ép viên nhiên liệu RDF công nghiệp",
+        "img": "/img/rdf-pellet-production.jpg",
+        "caption": "Quy trình ép mùn và vật liệu nhiệt trị cao thành viên nhiên liệu RDF thay thế than đá công nghiệp."
+      },
+      {
+        "title": "Trung tâm điều khiển SCADA & Quan trắc CEMS 24/7",
+        "img": "/img/scada-control-room.jpg",
+        "caption": "Màn hình điều khiển tự động hoá giám sát thời gian thực toàn bộ chu trình nhiệt phân và khí thải."
+      },
+      {
+        "title": "Phòng kiểm nghiệm chất lượng sản phẩm tuần hoàn",
+        "img": "/img/lab-quality-control.jpg",
+        "caption": "Kiểm chuẩn phân tích hoá nghiệm định kỳ hàm lượng Syngas, Biochar và nhiên liệu trước khi xuất xưởng."
       }
     ]
   },

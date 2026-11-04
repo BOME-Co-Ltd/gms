@@ -9,6 +9,7 @@ import { getDictionary, type Locale } from '../../i18n/index.ts';
 export function TechnologyPageView({ locale }: { locale: Locale }): React.ReactElement {
   const dict = getDictionary(locale);
   const t = dict.technology;
+  const isVi = locale === 'vi';
   const navItems = [
     { key: 'home', label: dict.nav.home, href: ROUTES.home[locale] },
     { key: 'about', label: dict.nav.about, href: ROUTES.about[locale] },
@@ -64,6 +65,53 @@ export function TechnologyPageView({ locale }: { locale: Locale }): React.ReactE
               <span className="badge">{t.drawingBadge}</span> · {t.drawingCaption}
             </figcaption>
           </figure>
+        </section>
+
+        <section className="section-block">
+          <p className="eyebrow">{isVi ? 'Kiểm chuẩn & Giám sát' : 'Quality Assurance & SCADA'}</p>
+          <h2>{isVi ? 'Hạ tầng kiểm chuẩn và trung tâm điều khiển' : 'Quality Control Laboratory & SCADA Center'}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <figure className="card overflow-hidden rounded-2xl border border-[#0f5838]/20 shadow-md bg-white p-0">
+              <img
+                src="/img/scada-control-room.jpg"
+                alt={isVi ? 'Trung tâm điều khiển SCADA và giám sát khí thải CEMS' : 'SCADA control room and CEMS monitoring'}
+                width={800}
+                height={500}
+                className="w-full h-64 object-cover"
+                loading="lazy"
+              />
+              <figcaption className="p-4 bg-white">
+                <strong className="block text-base font-bold text-[#0f5838] mb-1">
+                  {isVi ? 'Trung tâm điều hành SCADA 24/7' : '24/7 Central SCADA Room'}
+                </strong>
+                <p className="text-xs text-[#1b4332]/80 leading-relaxed m-0">
+                  {isVi
+                    ? 'Hệ thống tự động hoá giám sát áp suất buồng chân không, nhiệt độ và truyền dữ liệu quan trắc CEMS trực tiếp về Sở TN&MT.'
+                    : 'Automated monitoring of chamber negative pressure, thermal gradient, and real-time CEMS telemetry to authorities.'}
+                </p>
+              </figcaption>
+            </figure>
+            <figure className="card overflow-hidden rounded-2xl border border-[#0f5838]/20 shadow-md bg-white p-0">
+              <img
+                src="/img/lab-quality-control.jpg"
+                alt={isVi ? 'Phòng thí nghiệm kiểm chuẩn chất lượng' : 'Quality control testing laboratory'}
+                width={800}
+                height={500}
+                className="w-full h-64 object-cover"
+                loading="lazy"
+              />
+              <figcaption className="p-4 bg-white">
+                <strong className="block text-base font-bold text-[#0f5838] mb-1">
+                  {isVi ? 'Phòng kiểm nghiệm chất lượng sản phẩm' : 'Product Quality Testing Lab'}
+                </strong>
+                <p className="text-xs text-[#1b4332]/80 leading-relaxed m-0">
+                  {isVi
+                    ? 'Đo đạc nhiệt trị RDF, thành phần khí Syngas và độ xốp than hoạt tính Biochar đảm bảo tiêu chuẩn khắt khe trước khi xuất xưởng.'
+                    : 'Calorific testing of RDF, syngas composition chromatography, and biochar porosity verification.'}
+                </p>
+              </figcaption>
+            </figure>
+          </div>
         </section>
 
         <VpdStepper
