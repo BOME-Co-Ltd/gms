@@ -2,7 +2,10 @@ import {
   CONTACT_HTTP_STATUS,
   CONTACT_LIMITS,
   CONTACT_REQUIRED_MESSAGE,
+  CONTACT_CONTENT_TYPES,
+  CRON_LIMITS,
   HEADER_UNSAFE_CHARS,
+  MAIL_ALERT_CODES,
   MAIL_CAPS,
   OUTBOX,
   RATE_LIMITS,
@@ -21,7 +24,13 @@ import type {
   RateCounter,
   WorkerConfig,
 } from '../ports.ts';
-import { buildAlertMail, buildNotifyMail, buildSummaryMail } from './mail-builder.ts';
+import {
+  buildAlertMail,
+  buildNotifyMail,
+  buildSummaryMail,
+  encodeBodyB64,
+  notifyBodyText,
+} from './mail-builder.ts';
 
 export type ContactDeps = {
   queue: ContactQueue;
@@ -43,14 +52,6 @@ function jsonResponse(body: unknown, status: number, extraHeaders: Record<string
       ...extraHeaders,
     },
   });
-}
-
-async function sha256Hex(input: string): Promise<string> {
-  const bytes = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -82,12 +83,13 @@ export async function handleContactPost(req: Request, deps: ContactDeps): Promis
   const cfg = deps.config();
 
   // 1. Content-Type & body size
-  const ct = (req.headers.get('content-type') ?? '').toLowerCase();
-  const isJson = ct.includes('application/json');
-  const isForm = ct.includes('application/x-www-form-urlencoded');
-  if (!isJson && !isForm) {
+  const mediaType = (req.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+  if (!(CONTACT_CONTENT_TYPES as readonly string[]).includes(mediaType)) {
     deps.logger.error('UNSUPPORTED_MEDIA_TYPE');
-    return jsonResponse({ ok: false, code: 'VALIDATION' }, 415);
+    return jsonResponse(
+      { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' },
+      CONTACT_HTTP_STATUS.UNSUPPORTED_MEDIA_TYPE,
+    );
   }
 
   const rawBuffer = await req.arrayBuffer();
@@ -97,6 +99,10 @@ export async function handleContactPost(req: Request, deps: ContactDeps): Promis
   }
 
   // 2. FORM_ENABLED & recipient check
+  if (cfg.humanSecretValid === false) {
+    deps.logger.error('TURNSTILE_SECRET_INVALID');
+    return jsonResponse({ ok: false, code: 'FORM_DISABLED' }, CONTACT_HTTP_STATUS.FORM_DISABLED);
+  }
   if (!cfg.formEnabled || !cfg.contactRecipient || cfg.contactRecipient.trim() === '') {
     deps.logger.error('FORM_DISABLED');
     return jsonResponse({ ok: false, code: 'FORM_DISABLED' }, CONTACT_HTTP_STATUS.FORM_DISABLED);
@@ -120,25 +126,15 @@ export async function handleContactPost(req: Request, deps: ContactDeps): Promis
   // 4. Parse body
   const rawText = new TextDecoder('utf-8').decode(rawBuffer);
   let body: Record<string, unknown> = {};
-  if (isJson) {
-    try {
-      const parsed = JSON.parse(rawText);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        body = parsed as Record<string, unknown>;
-      } else {
-        return jsonResponse({ ok: false, code: 'VALIDATION' }, 422);
-      }
-    } catch {
-      return jsonResponse({ ok: false, code: 'VALIDATION' }, 422);
+  try {
+    const parsed = JSON.parse(rawText);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      body = parsed as Record<string, unknown>;
+    } else {
+      return jsonResponse({ ok: false, code: 'VALIDATION' }, CONTACT_HTTP_STATUS.VALIDATION);
     }
-  } else {
-    const params = new URLSearchParams(rawText);
-    for (const [k, v] of params.entries()) {
-      body[k] = v;
-    }
-    if (body.consent === 'true' || body.consent === 'on' || body.consent === '1') {
-      body.consent = true;
-    }
+  } catch {
+    return jsonResponse({ ok: false, code: 'VALIDATION' }, CONTACT_HTTP_STATUS.VALIDATION);
   }
 
   const locale: 'vi' | 'en' = body.locale === 'en' ? 'en' : 'vi';
@@ -152,11 +148,14 @@ export async function handleContactPost(req: Request, deps: ContactDeps): Promis
   const ip = deps.clientIp.fromRequest(req);
   const humanRes = await deps.human.verify(token, ip);
   if (humanRes.error) {
-    deps.logger.error('HUMAN_CHECK_ERROR');
-    return jsonResponse({ ok: false, code: 'STORE_FAILED' }, 503);
+    deps.logger.error(humanRes.reason ?? 'TURNSTILE_UNAVAILABLE');
+    return jsonResponse(
+      { ok: false, code: 'HUMAN_CHECK_UNAVAILABLE' },
+      CONTACT_HTTP_STATUS.HUMAN_CHECK_UNAVAILABLE,
+    );
   }
   if (!humanRes.ok) {
-    deps.logger.error('HUMAN_CHECK_FAILED');
+    deps.logger.error(humanRes.reason ?? 'HUMAN_CHECK_FAILED');
     return jsonResponse({ ok: false, code: 'HUMAN_CHECK_FAILED' }, CONTACT_HTTP_STATUS.HUMAN_CHECK_FAILED);
   }
 
@@ -304,7 +303,7 @@ export async function handleContactPost(req: Request, deps: ContactDeps): Promis
   const normalizedEmail = rawEmail ? rawEmail.toLowerCase() : null;
   const normalizedPhone = rawPhone ? normalizeVNPhone(rawPhone) : null;
   const contactKey = `${normalizedEmail ?? ''}|${normalizedPhone ?? ''}|${rawMessage.replace(/\s+/g, ' ').trim()}`;
-  const dedupeHash = await sha256Hex(contactKey);
+  const dedupeHash = await deps.ipKey.hmac(contactKey);
   const isDuplicate = await deps.queue.hasDedupe(dedupeHash, nowSec - RATE_LIMITS.dedupeWindowSeconds);
   if (isDuplicate) {
     await deps.rate.increment(okKey, nowSec, 1);
@@ -339,6 +338,10 @@ export async function handleContactPost(req: Request, deps: ContactDeps): Promis
     attempts: 0,
     nextAttemptAt: nowSec,
   };
+  rec.bodyB64 = encodeBodyB64(notifyBodyText(rec));
+  if (rec.bodyB64.length > CRON_LIMITS.bodyB64MaxBytes) {
+    return jsonResponse({ ok: false, code: 'PAYLOAD_TOO_LARGE' }, CONTACT_HTTP_STATUS.PAYLOAD_TOO_LARGE);
+  }
 
   // 12. Enqueue into D1
   try {
@@ -417,7 +420,9 @@ export async function runCronJob(deps: ContactDeps, nowOverrideSec?: number): Pr
         const mail = buildSummaryMail(leasedRecords, cfg.mailFrom, cfg.contactRecipient, nowSec);
         const res = await deps.mailer.send(mail);
         if (res.ok) {
-          await deps.queue.recordMailLog('summary', nowSec);
+          await deps.queue.recordMailLog('summary', nowSec, {
+            summaryHour: Math.floor((oldestCreated + 7 * 3600) / 3600) * 3600 - 7 * 3600,
+          });
           for (const s of leasedRecords) {
             await deps.queue.markSentAndDelete(s.id, nowSec);
           }
@@ -438,7 +443,7 @@ export async function runCronJob(deps: ContactDeps, nowOverrideSec?: number): Pr
     const alertMail = buildAlertMail({ count: overdue.length, reason: 'overdue' }, cfg.mailFrom, cfg.alertTo, nowSec);
     // Alerts go to technical contact even if user notify mail is failing or we record alert directly
     await deps.mailer.send(alertMail);
-    await deps.queue.recordMailLog('alert', nowSec);
+    await deps.queue.recordMailLog('alert', nowSec, { code: MAIL_ALERT_CODES.overdue24h });
     await deps.queue.markAlerted(
       overdue.map((o) => o.id),
       nowSec,
@@ -456,7 +461,7 @@ export async function runCronJob(deps: ContactDeps, nowOverrideSec?: number): Pr
       nowSec,
     );
     await deps.mailer.send(alertMail);
-    await deps.queue.recordMailLog('alert', nowSec);
+    await deps.queue.recordMailLog('alert', nowSec, { code: MAIL_ALERT_CODES.expired7d });
     deps.logger.info('ALERT_PURGED_SENT', { count: purgedCount });
   }
 
@@ -471,5 +476,6 @@ export async function handleContactHealth(deps: ContactDeps): Promise<Response> 
   const lastCron = await deps.queue.getHeartbeat('cron');
   const lastCronAgeSec = lastCron !== null ? Math.max(0, nowSec - lastCron) : 0;
   const pending = await deps.queue.pendingCount();
-  return jsonResponse({ ok: true, lastCronAgeSec, pending }, 200);
+  const oldestOverdueSec = await deps.queue.oldestPendingAgeSec(nowSec);
+  return jsonResponse({ ok: true, lastCronAgeSec, pending, oldestOverdueSec }, 200);
 }

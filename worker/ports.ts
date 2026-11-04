@@ -12,6 +12,8 @@ export type OutboxRecord = {
   policyVersion: string;
   consentAt: number; // epoch seconds
   dedupeHash: string;
+  /** Khối thân thư base64 (dòng 76 ký tự + CRLF), tính lúc enqueue. Không bao giờ log. */
+  bodyB64?: string;
   batch: 'single' | 'summary';
   attempts: number;
   nextAttemptAt: number;
@@ -38,7 +40,12 @@ export interface ContactQueue {
   pendingCount(): Promise<number>;
   oldestPendingAgeSec(nowSec: number): Promise<number>;
   countMailLog(kind: 'notify' | 'summary' | 'alert', sinceSec: number): Promise<number>;
-  recordMailLog(kind: 'notify' | 'summary' | 'alert', nowSec: number): Promise<void>;
+  /** `code` bắt buộc khi kind='alert'; `summaryHour` bắt buộc khi kind='summary' (CHECK của d1-schema.sql). */
+  recordMailLog(
+    kind: 'notify' | 'summary' | 'alert',
+    nowSec: number,
+    extra?: { code?: string; summaryHour?: number },
+  ): Promise<void>;
   updateHeartbeat(name: string, nowSec: number): Promise<void>;
   getHeartbeat(name: string): Promise<number | null>;
 }
@@ -67,7 +74,8 @@ export interface Mailer {
 }
 
 export interface HumanCheck {
-  verify(token: string, ip: string): Promise<{ ok: boolean; error?: boolean }>;
+  /** error=true ⇒ siteverify không dùng được (503 HUMAN_CHECK_UNAVAILABLE); ok=false không error ⇒ 403. */
+  verify(token: string, ip: string): Promise<{ ok: boolean; error?: boolean; reason?: string }>;
 }
 
 export interface Clock {
@@ -81,6 +89,7 @@ export interface ClientIp {
 
 export interface IpKey {
   key(ip: string): Promise<string>;
+  hmac(input: string): Promise<string>;
 }
 
 export interface AppLogger {
@@ -95,6 +104,10 @@ export type WorkerConfig = {
   mailFrom: string;
   alertTo: string;
   contactRecipient: string;
+  /** false khi TURNSTILE_SECRET rỗng hoặc là secret thử (api.ts §12) ⇒ 503 FORM_DISABLED. Mặc định true. */
+  humanSecretValid?: boolean;
+  /** Hostname được phép trong siteverify (= hostname của SITE_ORIGIN). */
+  allowedHostnames?: string[];
 };
 
 export interface D1PreparedStatement {

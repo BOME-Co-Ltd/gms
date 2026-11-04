@@ -1,3 +1,4 @@
+import { CONTENT_RULE_MESSAGES } from '../../../contracts/build.ts';
 import { IMAGE_LIMITS } from '../../../contracts/content-model.ts';
 import { ROUTES } from '../../../contracts/routes.ts';
 import { safeHref } from '../../../contracts/safe-url.ts';
@@ -138,10 +139,11 @@ export function validatePartnersRaw(items: Array<Record<string, unknown>>): Cont
   const errors: ContentError[] = [];
   for (const p of items) {
     const name = typeof p.name === 'string' ? p.name : 'Đối tác';
-    if (p.permissionOnFile !== true) {
+    // S33: căn cứ cho phép (permissionBasis) là chuỗi không rỗng; thiếu ⇒ đối tác không ra trang dù build đỏ.
+    if (typeof p.permissionBasis !== 'string' || p.permissionBasis.trim() === '') {
       errors.push({
         code: 'PARTNER_PERMISSION_MISSING',
-        message: `Đối tác "${name}": thiếu trường văn bản cho phép (permissionOnFile)`,
+        message: CONTENT_RULE_MESSAGES.PARTNER_PERMISSION_MISSING({ partner: name }),
       });
     }
   }

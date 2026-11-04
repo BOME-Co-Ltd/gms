@@ -1,4 +1,5 @@
-import { CLIENT_IP_HEADER } from '../../contracts/api.ts';
+import { CLIENT_IP_HEADER, TURNSTILE_SITEVERIFY } from '../../contracts/api.ts';
+import { judgeSiteverify } from '../domain/human-check.ts';
 import type {
   AppLogger,
   ClientIp,
@@ -33,7 +34,10 @@ export class WebCryptoIpKey implements IpKey {
     this.secret = secret || 'default-local-hmac-key-0123456789abcdef';
   }
   async key(ip: string): Promise<string> {
-    const normalized = normalizeIpOrPrefix(ip);
+    return this.hmac(normalizeIpOrPrefix(ip));
+  }
+  /** HMAC-SHA256 hex của chuỗi bất kỳ (dùng cho dedupe, M37). */
+  async hmac(normalized: string): Promise<string> {
     const enc = new TextEncoder();
     const cryptoKey = await crypto.subtle.importKey(
       'raw',
@@ -75,25 +79,26 @@ export class ConsoleAppLogger implements AppLogger {
 
 export class TurnstileHumanCheck implements HumanCheck {
   private secret: string;
-  constructor(secret: string) {
+  private allowedHostnames: string[];
+  constructor(secret: string, allowedHostnames: string[] = []) {
     this.secret = secret;
+    this.allowedHostnames = allowedHostnames;
   }
-  async verify(token: string, ip: string): Promise<{ ok: boolean; error?: boolean }> {
-    if (!this.secret) return { ok: false, error: true };
+  async verify(token: string, ip: string): Promise<{ ok: boolean; error?: boolean; reason?: string }> {
+    if (!this.secret) return { ok: false, error: true, reason: 'TURNSTILE_UNAVAILABLE' };
     try {
       const form = new URLSearchParams();
       form.set('secret', this.secret);
       form.set('response', token);
       if (ip) form.set('remoteip', ip);
-      const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-        method: 'POST',
+      const res = await fetch(TURNSTILE_SITEVERIFY.url, {
+        method: TURNSTILE_SITEVERIFY.method,
         body: form,
+        signal: AbortSignal.timeout(TURNSTILE_SITEVERIFY.timeoutMs),
       });
-      if (!res.ok) return { ok: false, error: true };
-      const data = (await res.json()) as { success?: boolean };
-      return { ok: Boolean(data.success) };
+      return judgeSiteverify(res.status, await res.text(), this.allowedHostnames);
     } catch {
-      return { ok: false, error: true };
+      return { ok: false, error: true, reason: 'TURNSTILE_UNAVAILABLE' };
     }
   }
 }
@@ -137,6 +142,7 @@ function rowToOutbox(r: D1Row): OutboxRecord {
     policyVersion: String(r.policy_version),
     consentAt: Number(r.consent_at),
     dedupeHash: String(r.dedupe_hash),
+    bodyB64: r.body_b64 !== null && r.body_b64 !== undefined ? String(r.body_b64) : undefined,
     batch: r.batch === 'summary' ? 'summary' : 'single',
     attempts: Number(r.attempts ?? 0),
     nextAttemptAt: Number(r.next_attempt_at),
@@ -171,6 +177,7 @@ export class D1ContactQueue implements ContactQueue {
         policy_version TEXT NOT NULL,
         consent_at INTEGER NOT NULL,
         dedupe_hash TEXT NOT NULL,
+        body_b64 TEXT NOT NULL,
         batch TEXT NOT NULL DEFAULT 'single' CHECK (batch IN ('single','summary')),
         attempts INTEGER NOT NULL DEFAULT 0,
         next_attempt_at INTEGER NOT NULL,
@@ -194,7 +201,9 @@ export class D1ContactQueue implements ContactQueue {
       )`),
       this.db.prepare(`CREATE TABLE IF NOT EXISTS mail_log (
         sent_at INTEGER NOT NULL,
-        kind TEXT NOT NULL CHECK (kind IN ('notify','summary','alert'))
+        kind TEXT NOT NULL CHECK (kind IN ('notify','summary','alert')),
+        code TEXT CHECK ((kind = 'alert') = (code IS NOT NULL)),
+        summary_hour INTEGER CHECK ((kind = 'summary') = (summary_hour IS NOT NULL))
       )`),
       this.db.prepare('CREATE INDEX IF NOT EXISTS mail_log_kind_time ON mail_log (kind, sent_at)'),
       this.db.prepare(`CREATE TABLE IF NOT EXISTS heartbeat (
@@ -214,8 +223,8 @@ export class D1ContactQueue implements ContactQueue {
       .prepare(
         `INSERT INTO outbox (
           id, created_at, locale, full_name, company, email, phone, message,
-          page_path, utm_json, policy_version, consent_at, dedupe_hash, batch, attempts, next_attempt_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+          page_path, utm_json, policy_version, consent_at, dedupe_hash, body_b64, batch, attempts, next_attempt_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
       )
       .bind(
         rec.id,
@@ -231,6 +240,7 @@ export class D1ContactQueue implements ContactQueue {
         rec.policyVersion,
         rec.consentAt,
         rec.dedupeHash,
+        rec.bodyB64 ?? '',
         rec.batch,
         rec.nextAttemptAt,
       )
@@ -278,7 +288,7 @@ export class D1ContactQueue implements ContactQueue {
   async acquireLease(id: string, nowSec: number, leaseSec: number): Promise<boolean> {
     const res = await this.db
       .prepare(
-        `UPDATE outbox SET lease_until = ?
+        `UPDATE outbox SET lease_until = ?, attempts = attempts + 1
          WHERE id = ? AND sent_at IS NULL AND (lease_until IS NULL OR lease_until < ?)`,
       )
       .bind(nowSec + leaseSec, id, nowSec)
@@ -357,8 +367,20 @@ export class D1ContactQueue implements ContactQueue {
     return Number(row?.cnt ?? 0);
   }
 
-  async recordMailLog(kind: 'notify' | 'summary' | 'alert', nowSec: number): Promise<void> {
-    await this.db.prepare('INSERT INTO mail_log (sent_at, kind) VALUES (?, ?)').bind(nowSec, kind).run();
+  async recordMailLog(
+    kind: 'notify' | 'summary' | 'alert',
+    nowSec: number,
+    extra: { code?: string; summaryHour?: number } = {},
+  ): Promise<void> {
+    await this.db
+      .prepare('INSERT INTO mail_log (sent_at, kind, code, summary_hour) VALUES (?, ?, ?, ?)')
+      .bind(
+        nowSec,
+        kind,
+        kind === 'alert' ? (extra.code ?? 'UNKNOWN') : null,
+        kind === 'summary' ? (extra.summaryHour ?? Math.floor(nowSec / 3600) * 3600) : null,
+      )
+      .run();
   }
 
   async updateHeartbeat(name: string, nowSec: number): Promise<void> {
