@@ -70,8 +70,10 @@ export type LoadedOutputLine = {
 
 export type LoadedPartner = {
   name: string;
-  logo?: string;
-  permissionOnFile: true;
+  role?: { vi: string; en: string };
+  description?: { vi: string; en: string };
+  permissionBasis: string;
+  allowedAssets: string[];
 };
 
 export type LoadedNews = {
@@ -448,8 +450,10 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
         for (const rp of rawPartners) {
           partners.push({
             name: String(rp.name),
-            logo: typeof rp.logo === 'string' ? rp.logo : undefined,
-            permissionOnFile: true,
+            role: rp.role as LoadedPartner['role'],
+            description: rp.description as LoadedPartner['description'],
+            permissionBasis: String(rp.permissionBasis).trim(),
+            allowedAssets: Array.isArray(rp.allowedAssets) ? rp.allowedAssets.map(String) : [],
           });
         }
       }

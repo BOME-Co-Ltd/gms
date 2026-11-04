@@ -5,6 +5,7 @@ import {
   TEST_CONTROL_HOSTS,
   TEST_PEER_IP_HEADER,
 } from '../contracts/test-control.ts';
+import { isUsableTurnstileSecret, judgeSiteverify } from './domain/human-check.ts';
 import { CfClientIp, D1ContactQueue, D1RateCounter, WebCryptoIpKey } from './adapters/cloudflare.ts';
 import { type ContactDeps, handleContactHealth, handleContactPost, runCronJob } from './domain/contact-service.ts';
 import type { Env } from './index.ts';
@@ -24,6 +25,39 @@ type CapturedMail = {
   headers: Record<string, string>;
 };
 
+type HumanMode =
+  | 'pass'
+  | 'fail'
+  | 'error'
+  | 'timeout'
+  | 'http-error'
+  | 'bad-body'
+  | 'wrong-hostname'
+  | 'wrong-action';
+
+const TEST_DEFAULT_TURNSTILE_SECRET = 'test-turnstile-secret-not-a-cloudflare-dummy';
+
+/** Phản hồi siteverify giả theo mode; hàm quyết định là bản production (judgeSiteverify). */
+function fakeSiteverify(mode: HumanMode, hostname: string): { status: number; body: string } | 'throw' {
+  switch (mode) {
+    case 'error':
+    case 'timeout':
+      return 'throw';
+    case 'http-error':
+      return { status: 500, body: '{}' };
+    case 'bad-body':
+      return { status: 200, body: 'not json' };
+    case 'fail':
+      return { status: 200, body: JSON.stringify({ success: false, 'error-codes': ['invalid-input-response'] }) };
+    case 'wrong-hostname':
+      return { status: 200, body: JSON.stringify({ success: true, hostname: 'evil.example', action: 'contact' }) };
+    case 'wrong-action':
+      return { status: 200, body: JSON.stringify({ success: true, hostname, action: 'other' }) };
+    default:
+      return { status: 200, body: JSON.stringify({ success: true, hostname, action: 'contact' }) };
+  }
+}
+
 const state = {
   nowOverrideSec: null as number | null,
   policyVersion: '1.0',
@@ -33,9 +67,11 @@ const state = {
   failMailFromSec: null as number | null,
   failMailToSec: null as number | null,
   failStore: false,
-  humanMode: 'pass' as 'pass' | 'fail' | 'error' | 'wrong-hostname',
+  failMailMode: 'temporary' as 'temporary' | 'permanent' | 'slow',
+  humanMode: 'pass' as HumanMode,
+  turnstileSecret: null as string | null,
   mailbox: [] as CapturedMail[],
-  alerts: [] as Array<{ subject: string; body: string; sentAt: string }>,
+  alerts: [] as CapturedMail[],
   logs: [TEST_ADAPTER_MARKER] as string[],
   schemaReady: false,
   hasBeenReset: false,
@@ -61,11 +97,15 @@ class TestLogger implements AppLogger {
 }
 
 class TestHumanCheck implements HumanCheck {
-  async verify(token: string, _ip: string): Promise<{ ok: boolean; error?: boolean }> {
+  private hostnames: string[];
+  constructor(hostnames: string[]) {
+    this.hostnames = hostnames;
+  }
+  async verify(token: string, _ip: string): Promise<{ ok: boolean; error?: boolean; reason?: string }> {
     if (!token || token.trim() === '') return { ok: false };
-    if (state.humanMode === 'error') return { ok: false, error: true };
-    if (state.humanMode === 'fail' || state.humanMode === 'wrong-hostname') return { ok: false };
-    return { ok: true };
+    const res = fakeSiteverify(state.humanMode, this.hostnames[0] ?? 'localhost');
+    if (res === 'throw') return { ok: false, error: true, reason: 'TURNSTILE_UNAVAILABLE' };
+    return judgeSiteverify(res.status, res.body, this.hostnames);
   }
 }
 
@@ -75,20 +115,13 @@ class TestMailer implements Mailer {
     this.clock = clock;
   }
   async send(msg: MailSendInput): Promise<MailSendResult> {
-    if (msg.kind === 'alert') {
-      state.alerts.push({
-        subject: msg.subject,
-        body: msg.text,
-        sentAt: msg.sentAtIso,
-      });
-      return { ok: true };
-    }
     const nowSec = this.clock.nowSec();
-    if (state.failMail) {
+    if (state.failMail && msg.kind !== 'alert') {
       const inFrom = state.failMailFromSec === null || nowSec >= state.failMailFromSec;
       const inTo = state.failMailToSec === null || nowSec <= state.failMailToSec;
       if (inFrom && inTo) {
-        return { ok: false, temporary: true, code: 'MAIL_TEMP_FAILURE' };
+        const permanent = state.failMailMode === 'permanent';
+        return { ok: false, temporary: !permanent, code: permanent ? 'MAIL_PERM_FAILURE' : 'MAIL_TEMP_FAILURE' };
       }
     }
     const headers: Record<string, string> = {
@@ -99,7 +132,7 @@ class TestMailer implements Mailer {
       'content-transfer-encoding': 'base64',
     };
     if (msg.replyTo) headers['reply-to'] = msg.replyTo;
-    state.mailbox.push({
+    (msg.kind === 'alert' ? state.alerts : state.mailbox).push({
       kind: msg.kind,
       to: msg.to,
       from: msg.from,
@@ -127,7 +160,14 @@ function makeTestDeps(env: Env): {
   const rate = new D1RateCounter(env.DB);
   const clock = new TestClock();
   const mailer = new TestMailer(clock);
-  const human = new TestHumanCheck();
+  const siteHost = (() => {
+    try {
+      return new URL(env.SITE_ORIGIN ?? 'http://localhost:8787').hostname;
+    } catch {
+      return 'localhost';
+    }
+  })();
+  const human = new TestHumanCheck([siteHost]);
   const baseIp = new CfClientIp();
   const clientIp = {
     fromRequest(req: Request): string {
@@ -152,6 +192,8 @@ function makeTestDeps(env: Env): {
       mailFrom: env.MAIL_FROM ?? 'thongbao@thongbao.gmshungyen.vn',
       alertTo: env.ALERT_TO ?? 'kythuat@gmshungyen.vn',
       contactRecipient: state.contactRecipient ?? '',
+      humanSecretValid: isUsableTurnstileSecret(state.turnstileSecret ?? TEST_DEFAULT_TURNSTILE_SECRET),
+      allowedHostnames: [siteHost],
     }),
   };
   return { deps, queue, rate, ipKey };
@@ -191,7 +233,9 @@ async function handleTestControl(req: Request, env: Env, op: string): Promise<Re
       state.failMailFromSec = null;
       state.failMailToSec = null;
       state.failStore = false;
+      state.failMailMode = 'temporary';
       state.humanMode = 'pass';
+      state.turnstileSecret = null;
       state.mailbox = [];
       state.alerts = [];
       state.logs = [];
@@ -209,19 +253,24 @@ async function handleTestControl(req: Request, env: Env, op: string): Promise<Re
       return Response.json({ ok: true });
     }
     case 'recipient': {
-      const val = body.email !== undefined ? body.email : body.to;
+      const val = body.to !== undefined ? body.to : body.email;
       state.contactRecipient = typeof val === 'string' && val.trim() !== '' ? val.trim() : null;
       return Response.json({ ok: true });
     }
     case 'mailbox': {
       const toFilter = typeof body.to === 'string' && body.to.trim() !== '' ? body.to.trim() : null;
       const list = toFilter ? state.mailbox.filter((m) => m.to === toFilter) : state.mailbox;
-      return Response.json(list);
+      return Response.json({ messages: list });
     }
     case 'alerts': {
-      return Response.json(state.alerts);
+      return Response.json({ messages: state.alerts });
+    }
+    case 'turnstile-secret': {
+      state.turnstileSecret = typeof body.value === 'string' ? body.value : '';
+      return Response.json({ ok: true });
     }
     case 'fail-mail': {
+      state.failMailMode = body.mode === 'permanent' || body.mode === 'slow' ? body.mode : 'temporary';
       state.failMail = Boolean(body.on);
       state.failMailFromSec =
         typeof body.fromIso === 'string' ? Math.floor(new Date(body.fromIso).getTime() / 1000) : null;
@@ -234,7 +283,7 @@ async function handleTestControl(req: Request, env: Env, op: string): Promise<Re
     }
     case 'human-check': {
       if (typeof body.mode === 'string') {
-        state.humanMode = body.mode as 'pass' | 'fail' | 'error' | 'wrong-hostname';
+        state.humanMode = body.mode as HumanMode;
       }
       return Response.json({ ok: true });
     }
@@ -249,7 +298,7 @@ async function handleTestControl(req: Request, env: Env, op: string): Promise<Re
     }
     case 'store-dump': {
       const dump = await queue.dumpAllTables();
-      return Response.json({ text: dump });
+      return Response.json(JSON.parse(dump));
     }
     case 'app-logs': {
       return Response.json({ text: state.logs.join('\n'), lines: state.logs });

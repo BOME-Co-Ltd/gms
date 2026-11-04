@@ -10,6 +10,7 @@ import {
   WebCryptoIpKey,
 } from './adapters/cloudflare.ts';
 import { type ContactDeps, handleContactHealth, handleContactPost, runCronJob } from './domain/contact-service.ts';
+import { isUsableTurnstileSecret } from './domain/human-check.ts';
 import type { D1Database, Fetcher, ScheduledController } from './ports.ts';
 
 export interface Env {
@@ -31,7 +32,14 @@ function makeProdDeps(env: Env): ContactDeps {
   const queue = new D1ContactQueue(env.DB);
   const rate = new D1RateCounter(env.DB);
   const mailer = new CloudflareSendEmailMailer(env.MAIL);
-  const human = new TurnstileHumanCheck(env.TURNSTILE_SECRET ?? '');
+  const siteHost = (() => {
+    try {
+      return new URL(env.SITE_ORIGIN ?? '').hostname;
+    } catch {
+      return '';
+    }
+  })();
+  const human = new TurnstileHumanCheck(env.TURNSTILE_SECRET ?? '', siteHost ? [siteHost] : []);
   const clock = new SystemClock();
   const clientIp = new CfClientIp();
   const ipKey = new WebCryptoIpKey(env.IP_HMAC_KEY ?? '');
@@ -52,6 +60,8 @@ function makeProdDeps(env: Env): ContactDeps {
       mailFrom: env.MAIL_FROM ?? 'thongbao@thongbao.gmshungyen.vn',
       alertTo: env.ALERT_TO ?? '',
       contactRecipient: env.CONTACT_RECIPIENT ?? '',
+      humanSecretValid: isUsableTurnstileSecret(env.TURNSTILE_SECRET),
+      allowedHostnames: siteHost ? [siteHost] : [],
     }),
   };
 }

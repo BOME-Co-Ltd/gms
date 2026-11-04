@@ -11,6 +11,37 @@ function toBase64Lines(utf8Text: string): string {
   return lines.join('\r\n');
 }
 
+/**
+ * Khối thân thư base64 tính lúc enqueue (design.md §6g): đệm khoảng trắng tới bội 57 byte ⇒ mọi dòng đúng 76 ký tự,
+ * nối các khối bằng CRLF vẫn là base64 hợp lệ. Không có "=" ở giữa.
+ */
+export function encodeBodyB64(utf8Text: string): string {
+  const raw = Buffer.from(utf8Text, 'utf8');
+  const padded = Buffer.concat([raw, Buffer.alloc((57 - (raw.length % 57)) % 57, 0x20)]);
+  const b64 = padded.toString('base64');
+  const lines: string[] = [];
+  for (let i = 0; i < b64.length; i += 76) lines.push(b64.slice(i, i + 76));
+  return lines.join('\r\n');
+}
+
+export function notifyBodyText(rec: OutboxRecord): string {
+  const lines = [
+    'Thông báo liên hệ mới từ website GMS Hưng Yên (bản Tiếng Việt):',
+    `Họ và tên: ${rec.fullName}`,
+    rec.company ? `Công ty / Tổ chức: ${rec.company}` : null,
+    rec.email ? `Email: ${rec.email}` : null,
+    rec.phone ? `Số điện thoại: ${rec.phone}` : null,
+    `Ngôn ngữ (locale): ${rec.locale}`,
+    `Trang nơi gửi: ${resolvePageLabelVi(rec.pagePath)} (${rec.pagePath})`,
+    `Thời điểm đồng ý: ${formatVnTimestamp(rec.consentAt)}`,
+    `Phiên bản chính sách bảo mật: ${rec.policyVersion}`,
+    '',
+    'Nội dung liên hệ:',
+    rec.message,
+  ].filter((x): x is string => x !== null);
+  return `${lines.join('\n')}\n`;
+}
+
 export function encodeRfc2047B(text: string): string {
   const clean = text.replace(/[\r\n]+/g, ' ').trim();
   const b64 = Buffer.from(clean, 'utf8').toString('base64');
@@ -70,6 +101,7 @@ export function buildRawMime(opts: {
   subjectHeaderValue: string;
   dateUtc: Date;
   bodyText: string;
+  bodyB64?: string;
 }): string {
   const domain = opts.from.split('@')[1] ?? 'gmshungyen.vn';
   const msgId = `<${crypto.randomUUID()}@${domain}>`;
@@ -85,30 +117,14 @@ export function buildRawMime(opts: {
     'Content-Type: text/plain; charset=utf-8',
     'Content-Transfer-Encoding: base64',
   );
-  return `${headers.join('\r\n')}\r\n\r\n${toBase64Lines(opts.bodyText)}\r\n`;
+  return `${headers.join('\r\n')}\r\n\r\n${opts.bodyB64 ?? toBase64Lines(opts.bodyText)}\r\n`;
 }
 
 export function buildNotifyMail(rec: OutboxRecord, from: string, to: string, nowSec: number): MailSendInput {
   const cleanName = rec.fullName.replace(/[\r\n]+/g, ' ').trim();
   const displaySubject = `${MAIL_SUBJECT_PREFIX.notify}${cleanName}`;
   const subjectHeaderValue = encodeRfc2047B(displaySubject);
-  const pageLabel = resolvePageLabelVi(rec.pagePath);
-  const consentTime = formatVnTimestamp(rec.consentAt);
-  const lines = [
-    'Thông báo liên hệ mới từ website GMS Hưng Yên (bản Tiếng Việt):',
-    `Họ và tên: ${rec.fullName}`,
-    rec.company ? `Công ty / Tổ chức: ${rec.company}` : null,
-    rec.email ? `Email: ${rec.email}` : null,
-    rec.phone ? `Số điện thoại: ${rec.phone}` : null,
-    `Ngôn ngữ (locale): ${rec.locale}`,
-    `Trang nơi gửi: ${pageLabel} (${rec.pagePath})`,
-    `Thời điểm đồng ý: ${consentTime}`,
-    `Phiên bản chính sách bảo mật: ${rec.policyVersion}`,
-    '',
-    'Nội dung liên hệ:',
-    rec.message,
-  ].filter((x): x is string => x !== null);
-  const text = `${lines.join('\n')}\n`;
+  const text = notifyBodyText(rec);
   const sentAtDate = new Date(nowSec * 1000);
   const rawMime = buildRawMime({
     from,
@@ -117,6 +133,7 @@ export function buildNotifyMail(rec: OutboxRecord, from: string, to: string, now
     subjectHeaderValue,
     dateUtc: sentAtDate,
     bodyText: text,
+    bodyB64: rec.bodyB64 || undefined,
   });
   return {
     kind: 'notify',
