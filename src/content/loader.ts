@@ -8,7 +8,9 @@ import {
   type ContentError,
   isImageAllowedForOg,
   isImageAllowedInBuild,
+  type PartnerAssetRef,
   parseSlugsLock,
+  readPartnerAsset,
   validateCompanyRaw,
   validateFigureRaw,
   validateImageBinary,
@@ -16,6 +18,7 @@ import {
   validateLinksInBody,
   validateOutputLinesRaw,
   validatePageClaimsAndFigures,
+  validatePartnerAssetRefs,
   validatePartnersRaw,
 } from './rules/index.ts';
 
@@ -47,6 +50,7 @@ export type LoadedImage = {
   source: string;
   allowedInBuild: boolean;
   allowedForOg: boolean;
+  partnerAsset: { partner: string; type: string } | null;
 };
 
 export type LoadedFigure = {
@@ -359,6 +363,7 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
 
   // 2. images/*
   const images = new Map<string, LoadedImage>();
+  const partnerAssetRefs: PartnerAssetRef[] = [];
   const imagesDir = join(contentDir, 'images');
   if (existsSync(imagesDir)) {
     const entries = readdirSync(imagesDir);
@@ -379,6 +384,8 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
       }
       const metaErrs = validateImageMetaRaw(baseName, metaRaw);
       errors.push(...metaErrs);
+      const partnerAsset = readPartnerAsset(metaRaw);
+      if (partnerAsset) partnerAssetRefs.push({ image: baseName, ...partnerAsset });
       if (metaRaw && metaErrs.length === 0) {
         const altObj = metaRaw.alt as { vi: string; en: string };
         const relPath = `images/${bf}`;
@@ -394,6 +401,7 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
           source: typeof metaRaw.source === 'string' ? metaRaw.source : 'GMS',
           allowedInBuild: isImageAllowedInBuild(metaRaw),
           allowedForOg: isImageAllowedForOg(metaRaw),
+          partnerAsset,
         });
       }
     }
@@ -405,6 +413,8 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
       if (!hasBin) {
         const metaRaw = (parseYaml(readFileSync(join(imagesDir, mf), 'utf8')) as Record<string, unknown> | null) ?? {};
         errors.push(...validateImageMetaRaw(baseName, metaRaw));
+        const partnerAsset = readPartnerAsset(metaRaw);
+        if (partnerAsset) partnerAssetRefs.push({ image: baseName, ...partnerAsset });
       }
     }
   }
@@ -441,9 +451,11 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
   // 4. partners.yaml
   const partners: LoadedPartner[] = [];
   const partnersPath = join(contentDir, 'partners.yaml');
+  let rawPartnerList: Array<Record<string, unknown>> = [];
   if (existsSync(partnersPath)) {
     const rawPartners = (parseYaml(readFileSync(partnersPath, 'utf8')) as Array<Record<string, unknown>> | null) ?? [];
     if (Array.isArray(rawPartners)) {
+      rawPartnerList = rawPartners;
       const pErrs = validatePartnersRaw(rawPartners);
       errors.push(...pErrs);
       if (pErrs.length === 0) {
@@ -459,6 +471,9 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
       }
     }
   }
+
+  // S33: tư liệu đối tác của ảnh đối chiếu partners.yaml (đủ cả khi không có partners.yaml)
+  errors.push(...validatePartnerAssetRefs(partnerAssetRefs, rawPartnerList));
 
   // 5. output-lines.yaml
   let outputLines: LoadedOutputLine[] = DEFAULT_OUTPUT_LINES;
