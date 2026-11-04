@@ -1,0 +1,4 @@
+# Chỉ một file, không phải cả thư mục.
+# .dev.vars.example chứa giá trị THỬ công khai (secret thử "luôn qua" của Cloudflare Turnstile
+# và khoá HMAC giả cho e2e), nên rule detected-generic-secret báo nhầm.
+.dev.vars.example

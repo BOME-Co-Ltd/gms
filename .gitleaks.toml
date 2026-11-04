@@ -1,0 +1,15 @@
+# Cấu hình gitleaks của repo: giữ toàn bộ luật mặc định, chỉ thêm MỘT ngoại lệ hẹp.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Giá trị thử công khai trong .dev.vars.example (không phải bí mật thật)"
+# Chỉ đúng file mẫu này, và chỉ đúng hai giá trị thử bên dưới; mọi giá trị khác trong file vẫn bị quét.
+condition = "AND"
+paths = ['''^\.dev\.vars\.example$''']
+regexes = [
+  # Secret thử "luôn qua" do Cloudflare công bố cho Turnstile (e2e cần đúng giá trị này).
+  '''1x0000000000000000000000000000000AA''',
+  # Khoá HMAC giả cho môi trường cục bộ/e2e (dãy hex tăng dần, không dùng ở production).
+  '''0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef''',
+]
