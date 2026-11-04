@@ -379,15 +379,15 @@ export class D1ContactQueue implements ContactQueue {
     nowSec: number,
     overdueSec: number,
   ): Promise<{ pending: number; oldestDueSec: number | null; overdue: number }> {
-    // Hạn gửi: thư riêng = created_at + firstSendWithinSeconds; thư tóm tắt = hết giờ tròn + summaryDeliver…
-    // (giờ tròn VN = UTC+7 là bội số của 3600 ⇒ chia nguyên theo UTC khớp).
+    // Hạn gửi (design.md §6 "Tín hiệu khi hỏng âm thầm"): thư riêng = created_at; thư tóm tắt = hết giờ tròn +
+    // summaryDeliver… (giờ tròn VN = UTC+7 là bội số của 3600 ⇒ chia nguyên theo UTC khớp).
     const row = await this.db
       .prepare(
         `SELECT COUNT(*) AS pending, MIN(due) AS oldest_due, COALESCE(SUM(due <= ?), 0) AS overdue FROM (
-           SELECT CASE WHEN batch = 'summary' THEN (created_at / 3600 + 1) * 3600 + ? ELSE created_at + ? END AS due
+           SELECT CASE WHEN batch = 'summary' THEN (created_at / 3600 + 1) * 3600 + ? ELSE created_at END AS due
            FROM outbox WHERE sent_at IS NULL)`,
       )
-      .bind(nowSec - overdueSec, MAIL_CAPS.summaryDeliverWithinSecondsAfterHour, MAIL_CAPS.firstSendWithinSeconds)
+      .bind(nowSec - overdueSec, MAIL_CAPS.summaryDeliverWithinSecondsAfterHour)
       .first<{ pending: number; oldest_due: number | null; overdue: number }>();
     return {
       pending: Number(row?.pending ?? 0),
