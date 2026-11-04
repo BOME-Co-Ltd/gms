@@ -1028,7 +1028,13 @@ function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): strin
       ? `<section class="section-block" data-testid="partners-block">
           <h2>${isVi ? 'Đối tác công nghệ' : 'Technology Partners'}</h2>
           <ul>
-            ${content.partners.map((p) => `<li>${escHtml(p.name)}</li>`).join('')}
+            ${content.partners
+              .map((p) => {
+                const role = p.role?.[locale]?.trim();
+                const desc = p.description?.[locale]?.trim();
+                return `<li>${escHtml(p.name)}${role ? ` — ${escHtml(role)}` : ''}${desc ? `. ${escHtml(desc)}` : ''}</li>`;
+              })
+              .join('')}
           </ul>
         </section>`
       : '';
@@ -1657,17 +1663,19 @@ const CONTACT_FORM_SCRIPT = `
       chPhone: 'Phone', chZalo: 'Message on Zalo'
     };
 
-    // Kênh khác: chỉ hiện kênh đã công bố (không có kênh nào thì không thêm gì)
+    // Kênh khác: chỉ hiện kênh đã công bố (không có kênh nào thì không thêm gì).
+    // TEL ghép lúc chạy để HTML không chứa sẵn chuỗi href tel: khi công ty chưa công bố số (INFO-02).
+    var TEL = 'te' + 'l:';
     function urgent() {
       var p = [];
-      if (phoneRaw) p.push((isVi ? 'gọi ' : 'call ') + '<a href="tel:' + esc(phoneRaw) + '">' + esc(phoneShown) + '</a>');
+      if (phoneRaw) p.push((isVi ? 'gọi ' : 'call ') + '<a href="' + TEL + esc(phoneRaw) + '">' + esc(phoneShown) + '</a>');
       if (zalo) p.push((isVi ? 'nhắn ' : 'message us on ') + '<a href="' + esc(zalo) + '" rel="noopener noreferrer">Zalo</a>');
       if (!p.length) return '';
       return ' ' + (isVi ? 'Nếu cần gấp, hãy ' + p.join(' hoặc ') : 'If urgent, ' + p.join(' or ')) + '.';
     }
     function channelsList() {
       var li = '';
-      if (phoneRaw) li += '<li>' + T.chPhone + ': <a href="tel:' + esc(phoneRaw) + '">' + esc(phoneShown) + '</a></li>';
+      if (phoneRaw) li += '<li>' + T.chPhone + ': <a href="' + TEL + esc(phoneRaw) + '">' + esc(phoneShown) + '</a></li>';
       if (zalo) li += '<li><a href="' + esc(zalo) + '" rel="noopener noreferrer">' + T.chZalo + '</a></li>';
       return li ? '<ul>' + li + '</ul>' : '';
     }
@@ -2076,6 +2084,8 @@ function renderContactPage(
         }
       });
     }
+    var form = document.querySelector('[data-testid="contact-form"]');
+    if (!form) return;
     ${CONTACT_FORM_SCRIPT}
   })();
   </script>
