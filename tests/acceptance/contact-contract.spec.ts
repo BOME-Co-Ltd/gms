@@ -94,12 +94,26 @@ test('CC-05 50 lần chưa qua Turnstile không tốn hạn mức; lần hợp l
   expect((await postContact(request, VALID, { ip })).status).toBe(200);
 });
 
-test('CC-06 Biên 20/21: 19 lần đã qua Turnstile ⇒ lần 20 nhận, lần 21 ⇒ 429 (@S21)', async ({ request }) => {
+// prd §6 "Chống spam (S21)" có HAI trần: (2) 5 lần gửi THÀNH CÔNG / 10 phút; (3) 20 lần ĐÃ QUA Turnstile / 10 phút (đếm cả
+// lần qua kiểm rồi bị từ chối). Seed 'ok' ghi cả bộ đếm thành công lẫn lần thử (test-control.ts) ⇒ vượt trần (2) ngay ở lần
+// 6; để kiểm riêng biên 20/21 của trần (3) phải seed lần qua Turnstile nhưng KHÔNG thành công ('trap'). Biên 5/6 của trần
+// (2): FORM-23 (5 lần thật rồi lần 6 ⇒ 429) và CC-06b dưới đây (seed 4 'ok' ⇒ lần 5 nhận, lần 6 ⇒ 429).
+test('CC-06 Biên 20/21 (trần 3): 19 lần qua Turnstile nhưng bị từ chối ⇒ lần 20 nhận, lần 21 ⇒ 429 RATE_LIMITED (@S21)', async ({ request }) => {
   const ip = '198.51.100.42';
-  await control.seedAttempts(ip, 19, 'ok');
-  expect((await postContact(request, { ...VALID, message: 'lần 20' }, { ip })).status).toBe(200);
+  await control.seedAttempts(ip, 19, 'trap');
+  expect((await postContact(request, { ...VALID, message: 'lần 20' }, { ip })).status, 'lần 20 còn trong trần').toBe(200);
   const r = await postContact(request, { ...VALID, message: 'lần 21' }, { ip });
   expect(r.status).toBe(429);
+  expect(r.json?.code).toBe('RATE_LIMITED');
+});
+
+test('CC-06b Biên 5/6 (trần 2): 4 lần thành công ⇒ lần 5 nhận, lần 6 ⇒ 429 RATE_LIMITED dù mới 6 lần thử (@S21)', async ({ request }) => {
+  const ip = '198.51.100.43';
+  await control.seedAttempts(ip, 4, 'ok');
+  expect((await postContact(request, { ...VALID, message: 'lần 5' }, { ip })).status, 'lần 5 còn trong trần').toBe(200);
+  const r = await postContact(request, { ...VALID, message: 'lần 6' }, { ip });
+  expect(r.status).toBe(429);
+  expect(r.json?.code).toBe('RATE_LIMITED');
 });
 
 // ---- Giữ liên hệ chưa gửi tối đa 7 ngày, cảnh báo chỉ nêu số lượng (S19) ---------------------------------------------
@@ -189,12 +203,28 @@ test('CC-11 Q10-4: hai run-cron chạy chồng ⇒ mỗi liên hệ nằm đúng
 });
 
 // ---- M30-b: ký tự điều khiển/Reply-To trong tên ----------------------------------------------------------------------
-test('CC-12 M30-b: tên có "Reply-To:" hoặc ký tự điều khiển/U+2028 ⇒ 422 INVALID_CHARS (@S21)', async ({ request }) => {
-  for (const name of ['A Reply-To: x@evil', 'An B', 'An\u0085B', 'An\u0000B']) {
+// api.ts §2 (dòng 23–33, HEADER_UNSAFE_CHARS) + §3 (dòng 65–70, 81–85): họ tên/công ty có C0 (gồm CR đơn, LF, TAB), DEL, C1
+// (gồm U+0085), U+2028/2029 ⇒ 422, code `VALIDATION`, `fields.<trường>` = `INVALID_CHARS` (INVALID_CHARS là mã TRƯỜNG,
+// không phải mã lỗi cấp trên). Chuỗi "Reply-To:" KHÔNG có ký tự điều khiển thì không bị bộ cấm bắt ⇒ 200 (CC-12b): chỉ
+// CR/LF mới chèn được header.
+test('CC-12 M30-b: tên/công ty có ký tự điều khiển (CR/LF, NEL, NUL, U+2028…) ⇒ 422 VALIDATION + fields.<trường> = INVALID_CHARS (@S21)', async ({ request }) => {
+  for (const name of ['A\r\nReply-To: x@evil', 'An\nB', 'An\rB', 'An\tB', 'An\u007fB', 'An B','An B', 'An\u0085B', 'An\u0000B']) {
     const r = await postContact(request, { ...VALID, name });
     expect(r.status, JSON.stringify(name)).toBe(422);
-    expect(r.json?.code).toBe('VALIDATION');
+    expect(r.json?.code, JSON.stringify(name)).toBe('VALIDATION');
+    expect(r.json?.fields?.fullName, JSON.stringify(name)).toBe('INVALID_CHARS');
   }
+  const c = await postContact(request, { ...VALID, company: 'Cty\r\nBcc: x@evil' });
+  expect(c.status).toBe(422);
+  expect(c.json?.code).toBe('VALIDATION');
+  expect(c.json?.fields?.company).toBe('INVALID_CHARS');
+  expect((await control.storeDump()).tables.outbox ?? [], 'bị từ chối thì không ghi D1').toHaveLength(0);
+});
+
+test('CC-12b M30-b: tên có chữ "Reply-To:" nhưng KHÔNG có ký tự điều khiển ⇒ 200, không bị coi là chèn header (@S21)', async ({ request }) => {
+  const r = await postContact(request, { ...VALID, name: 'A Reply-To: x@evil' });
+  expect(r.status).toBe(200);
+  expect(r.json?.ok).toBe(true);
 });
 
 // ---- Q10-2 trên D1 cục bộ thật: chưa dựng được ca độc lập (xem test-plan §Ca chưa có) --------------------------------
