@@ -1,7 +1,7 @@
 // contact-form.feature (v0.3) → FORM-01..FORM-34. Form → Worker `gms-contact` → thư báo (Mailer giả) → web không giữ PII.
 // Đi qua UI khi kịch bản nói "trang hiện"; đi thẳng POST /api/contact khi kịch bản nói về máy/địa chỉ/kích thước (postContact).
 // [giả định — chờ khách] V3, V4, N27. Cửa điều khiển: XQ-20; lệnh build: XQ-21 (tên biến CONTACT_RECIPIENT là đề xuất).
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../support/turnstile-stub';
 import { buildSite, htmlOf } from '../support/build';
 import { control, pollUntil } from '../support/control';
 import { companyFile } from '../support/fixtures';

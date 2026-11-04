@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 500 1968 1030" role="img" aria-label="GMS – Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên">
+  <!-- Vẽ lại từ ảnh đại diện fanpage gmshungyen (2048px) ngày 30/10/2026, khớp ảnh gốc theo pixel. Bản TẠM: xin file gốc (AI/SVG/PDF) của khách trước deploy. -->
+  <!-- Chữ bên dưới là chữ sống (font thay thế), độ rộng ép theo ảnh gốc. Khi có font/file gốc thì thay. -->
+  <defs>
+    <radialGradient id="gms-gm" gradientUnits="userSpaceOnUse" cx="690" cy="545" r="875" gradientTransform="translate(690 545) scale(1 0.643) translate(-690 -545)">
+      <stop offset="0" stop-color="#A4B93A"/>
+      <stop offset="0.34" stop-color="#90AC3C"/>
+      <stop offset="0.49" stop-color="#648F40"/>
+      <stop offset="0.66" stop-color="#40773F"/>
+      <stop offset="0.78" stop-color="#27673C"/>
+      <stop offset="0.86" stop-color="#22633B"/>
+      <stop offset="1" stop-color="#0F5838"/>
+    </radialGradient>
+    <linearGradient id="gms-s" gradientUnits="userSpaceOnUse" x1="0" y1="545" x2="0" y2="1037">
+      <stop offset="0.15" stop-color="#1C70B8"/>
+      <stop offset="0.315" stop-color="#2367B0"/>
+      <stop offset="0.5" stop-color="#2059A6"/>
+      <stop offset="0.7" stop-color="#204F9F"/>
+      <stop offset="0.84" stop-color="#244999"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#gms-gm)" d="M292,545 L653,545 A98 98 0 0 1 555,643 L310,643 A122 122 0 0 0 188,765 L188,817 A122 122 0 0 0 310,939 L527,939 Q537,939 537,929 L537,840 L322,840 A98 98 0 0 1 420,742 L595,742 A58 58 0 0 1 653,800 L653,922 A115 115 0 0 1 538,1037 L292,1037 C149,1037 72,960 72,817 L72,765 C72,622 149,545 292,545 Z"/>
+  <path fill="url(#gms-gm)" d="M732,1037 L732,605 A60 60 0 0 1 792,545 L848,545 L1023,693 L1198,545 L1254,545 A60 60 0 0 1 1314,605 L1314,981 A56 56 0 0 1 1258,1037 L1198,1037 L1198,697 L1053,818 Q1023,844 993,818 L848,697 L848,981 A56 56 0 0 1 792,1037 Z"/>
+  <path fill="url(#gms-s)" d="M1974,545 C1974,584.2 1915.2,643 1876,643 L1559,643 A49.5 49.5 0 0 0 1559,742 L1826.5,742 A147.5 147.5 0 0 1 1826.5,1037 L1393,1037 C1393,997.8 1451.8,939 1491,939 L1808,939 A49.5 49.5 0 0 0 1808,840 L1540,840 A147.5 147.5 0 0 1 1540,545 Z"/>
+  <g fill="#48973C" font-family="'Be Vietnam Pro','Montserrat','Arial',sans-serif" font-weight="700" text-anchor="start" lengthAdjust="spacingAndGlyphs">
+    <text x="598" y="1236" font-size="97" textLength="846" lengthAdjust="spacingAndGlyphs">CÔNG TY CỔ PHẦN</text>
+    <text x="276" y="1345" font-size="97" textLength="1494" lengthAdjust="spacingAndGlyphs">MÔI TRƯỜNG NĂNG LƯỢNG XANH</text>
+  </g>
+  <g fill="#368F3D">
+    <rect x="340" y="1455" width="277" height="9"/>
+    <text x="693" y="1503" font-family="'Be Vietnam Pro','Montserrat','Arial',sans-serif" font-weight="700" font-size="128" textLength="597" lengthAdjust="spacingAndGlyphs">HƯNG YÊN</text>
+    <rect x="1352" y="1455" width="279" height="9"/>
+  </g>
+</svg>

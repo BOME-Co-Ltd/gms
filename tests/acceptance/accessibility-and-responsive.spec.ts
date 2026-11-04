@@ -1,7 +1,7 @@
 // performance-and-accessibility.feature → PERF-05..PERF-10 (S4, S5). Chạy trên cùng danh sách trang đo.
 // [giả định — chờ khách] D6 (mức hiệu ứng khi KHÔNG bật giảm chuyển động) — test chỉ kiểm nhánh reduce.
 // Phụ thuộc cần cài (pha 2): @axe-core/playwright.
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../support/turnstile-stub';
 import { listTargets } from '../support/perf';
 import { type Locale, path } from '../support/routes';
 import { bodyText, expectNoHorizontalScroll, tid } from '../support/ui';
