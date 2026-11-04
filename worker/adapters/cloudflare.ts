@@ -127,32 +127,6 @@ export class CloudflareSendEmailMailer implements Mailer {
 
 type D1Row = Record<string, unknown>;
 
-function rowToOutbox(r: D1Row): OutboxRecord {
-  return {
-    id: String(r.id),
-    createdAt: Number(r.created_at),
-    locale: r.locale === 'en' ? 'en' : 'vi',
-    fullName: String(r.full_name),
-    company: r.company !== null && r.company !== undefined ? String(r.company) : null,
-    email: r.email !== null && r.email !== undefined ? String(r.email) : null,
-    phone: r.phone !== null && r.phone !== undefined ? String(r.phone) : null,
-    message: String(r.message),
-    pagePath: String(r.page_path),
-    utmJson: r.utm_json !== null && r.utm_json !== undefined ? String(r.utm_json) : null,
-    policyVersion: String(r.policy_version),
-    consentAt: Number(r.consent_at),
-    dedupeHash: String(r.dedupe_hash),
-    bodyB64: r.body_b64 !== null && r.body_b64 !== undefined ? String(r.body_b64) : undefined,
-    batch: r.batch === 'summary' ? 'summary' : 'single',
-    attempts: Number(r.attempts ?? 0),
-    nextAttemptAt: Number(r.next_attempt_at),
-    leaseUntil: r.lease_until !== null && r.lease_until !== undefined ? Number(r.lease_until) : null,
-    lastError: r.last_error !== null && r.last_error !== undefined ? String(r.last_error) : null,
-    alertedAt: r.alerted_at !== null && r.alerted_at !== undefined ? Number(r.alerted_at) : null,
-    sentAt: r.sent_at !== null && r.sent_at !== undefined ? Number(r.sent_at) : null,
-  };
-}
-
 /** Hàng chỉ có cột CRON_SELECT_COLUMNS: các trường không đọc để rỗng, không bao giờ log. */
 function leasedRow(r: D1Row): OutboxRecord {
   const str = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));

@@ -5,9 +5,9 @@ import {
   TEST_CONTROL_HOSTS,
   TEST_PEER_IP_HEADER,
 } from '../contracts/test-control.ts';
-import { isUsableTurnstileSecret, judgeSiteverify } from './domain/human-check.ts';
 import { CfClientIp, D1ContactQueue, D1RateCounter, WebCryptoIpKey } from './adapters/cloudflare.ts';
 import { type ContactDeps, handleContactHealth, handleContactPost, runCronJob } from './domain/contact-service.ts';
+import { isUsableTurnstileSecret, judgeSiteverify } from './domain/human-check.ts';
 import { decodeBodyB64 } from './domain/mail-builder.ts';
 import type { Env } from './index.ts';
 import type { AppLogger, Clock, HumanCheck, Mailer, MailSendInput, MailSendResult } from './ports.ts';
