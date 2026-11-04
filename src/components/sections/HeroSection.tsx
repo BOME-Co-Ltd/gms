@@ -35,7 +35,10 @@ export function HeroSection({
             ))}
           </ul>
           <h1 className="leading-tight text-3xl md:text-5xl font-extrabold tracking-tight">
-            {title.includes("–") || title.includes("-") || title.includes("—") || title.includes("\n") ? (
+            {title.includes('–') ||
+            title.includes('-') ||
+            title.includes('—') ||
+            title.includes('\n') ? (
               title.split(/\s*[-–—\n]\s*/).map((part) => (
                 <span key={part} className="block mt-1 first:mt-0">
                   {part}
