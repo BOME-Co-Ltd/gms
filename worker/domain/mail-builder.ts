@@ -204,13 +204,13 @@ export function buildAlertMail(
   // summary_split: count = số liên hệ còn chờ của giờ đó, parts = số phần đã gửi (design.md §6g); chỉ số đếm, không PII
   const subjects = {
     overdue: `Có liên hệ chưa gửi được thư báo (${opts.count} mục quá 24 giờ)`,
-    overdue_15m: `Có liên hệ chờ gửi quá 15 phút (${opts.count} mục)`,
+    overdue_15m: `Có liên hệ chờ gửi thư báo quá 15 phút (${opts.count} mục)`,
     expired_purged: `Đã xoá ${opts.count} liên hệ quá hạn 7 ngày chưa gửi được`,
     summary_split: `${MAIL_ALERT_CODES.summaryParts}: thư tóm tắt của một giờ phải tách nhiều phần (còn ${opts.count} liên hệ chờ)`,
   } as const;
   const bodies = {
     overdue: `hiện có liên hệ chưa gửi được thư báo (${opts.count} mục sau hơn 24 giờ). Liên hệ vẫn được giữ trong hàng đợi để tiếp tục thử gửi lại.`,
-    overdue_15m: `hiện có ${opts.count} liên hệ chờ gửi quá 15 phút. Liên hệ vẫn được giữ trong hàng đợi để tiếp tục thử gửi lại.`,
+    overdue_15m: `hiện có ${opts.count} liên hệ chờ gửi thư báo quá 15 phút. Liên hệ vẫn được giữ trong hàng đợi để tiếp tục thử gửi lại.`,
     expired_purged: `đã xoá ${opts.count} liên hệ chưa gửi được thư báo do quá hạn lưu 7 ngày.`,
     summary_split: `mã ${MAIL_ALERT_CODES.summaryParts}: thư tóm tắt của một giờ vượt trần kích thước nên được gửi thành nhiều phần (đã gửi ${opts.parts ?? 1} phần, còn ${opts.count} liên hệ chờ).`,
   } as const;

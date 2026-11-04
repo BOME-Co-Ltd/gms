@@ -1,8 +1,8 @@
 import {
+  CONTACT_CONTENT_TYPES,
   CONTACT_HTTP_STATUS,
   CONTACT_LIMITS,
   CONTACT_REQUIRED_MESSAGE,
-  CONTACT_CONTENT_TYPES,
   CRON_LIMITS,
   HEADER_UNSAFE_CHARS,
   MAIL_ALERT_CODES,
@@ -489,5 +489,7 @@ export async function handleContactHealth(deps: ContactDeps): Promise<Response> 
   const stats = await deps.queue.pendingStats(nowSec, OUTBOX.overdueAlertSeconds);
   // oldestOverdueSec đo từ HẠN GỬI (không từ created_at): 0 khi chưa bản ghi nào quá hạn gửi
   const oldestOverdueSec = stats.oldestDueSec === null ? 0 : Math.max(0, nowSec - stats.oldestDueSec);
-  return jsonResponse({ ok: true, lastCronAgeSec, pending: stats.pending, oldestOverdueSec }, 200);
+  // api.ts ContactHealth: ok sai khi Cron im quá cronStaleAlertSeconds HOẶC quá hạn gửi quá overdueAlertSeconds
+  const ok = lastCronAgeSec <= OUTBOX.cronStaleAlertSeconds && oldestOverdueSec <= OUTBOX.overdueAlertSeconds;
+  return jsonResponse({ ok, lastCronAgeSec, pending: stats.pending, oldestOverdueSec }, 200);
 }

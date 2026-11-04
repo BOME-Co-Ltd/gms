@@ -83,7 +83,12 @@ async function setup() {
   };
   const health = async (sec: number) => {
     now = sec;
-    return (await handleContactHealth(deps).then((r) => r.json())) as { pending: number; oldestOverdueSec: number };
+    return (await handleContactHealth(deps).then((r) => r.json())) as {
+      ok: boolean;
+      lastCronAgeSec: number;
+      pending: number;
+      oldestOverdueSec: number;
+    };
   };
   // Mã cảnh báo ghi ở mail_log (không nằm trong chữ thư); thư gửi đi phải khớp số dòng log.
   const overdueAlerts = async () => {
@@ -147,5 +152,41 @@ describe('thư tóm tắt (summary) giữ nguyên hạn gửi = hết giờ trò
     });
     expect((await s.queue.pendingStats(due + 16 * MIN, OUTBOX.overdueAlertSeconds)).overdue).toBe(1);
     expect((await s.health(due - MIN)).oldestOverdueSec).toBe(0);
+  });
+});
+
+describe('health.ok theo api.ts §3: lastCronAgeSec ≤ cronStaleAlertSeconds VÀ oldestOverdueSec ≤ overdueAlertSeconds', () => {
+  it('Cron im: ok đúng tại biên cronStaleAlertSeconds, sai khi vượt 1 s', async () => {
+    const s = await setup();
+    await s.at(T0); // Cron ghi heartbeat
+    const edge = await s.health(T0 + OUTBOX.cronStaleAlertSeconds);
+    expect(edge).toMatchObject({ lastCronAgeSec: OUTBOX.cronStaleAlertSeconds, oldestOverdueSec: 0, ok: true });
+    const over = await s.health(T0 + OUTBOX.cronStaleAlertSeconds + 1);
+    expect(over).toMatchObject({ lastCronAgeSec: OUTBOX.cronStaleAlertSeconds + 1, oldestOverdueSec: 0, ok: false });
+  });
+
+  it('bản ghi quá hạn gửi: ok đúng tại biên overdueAlertSeconds, sai khi vượt 1 s (Cron vẫn chạy)', async () => {
+    const s = await setup();
+    await s.add('single-1', 'single', T0);
+    // heartbeat sát thời điểm hỏi để chỉ điều kiện oldestOverdueSec quyết định
+    const ask = async (age: number) => {
+      await s.at(T0 + age - MIN);
+      return s.health(T0 + age);
+    };
+    expect(await ask(OUTBOX.overdueAlertSeconds)).toMatchObject({
+      oldestOverdueSec: OUTBOX.overdueAlertSeconds,
+      lastCronAgeSec: MIN,
+      ok: true,
+    });
+    expect(await ask(OUTBOX.overdueAlertSeconds + 1)).toMatchObject({
+      oldestOverdueSec: OUTBOX.overdueAlertSeconds + 1,
+      ok: false,
+    });
+  });
+
+  it('khoẻ: Cron mới chạy, không bản ghi chờ ⇒ ok', async () => {
+    const s = await setup();
+    await s.at(T0);
+    expect(await s.health(T0 + MIN)).toMatchObject({ ok: true, pending: 0, oldestOverdueSec: 0 });
   });
 });
