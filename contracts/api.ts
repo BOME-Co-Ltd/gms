@@ -1,6 +1,9 @@
 // Contract HTTP của Worker `gms-contact` (lượt 5, 31/10/2026 — bỏ CMS; phần Payload/login/jobs đã xoá,
-// xem README.md "Đổi ở lượt 5"). Nguồn: prd.md v0.3 §3b, §6; acceptance/contact-form.feature; design.md §6a.
-// Máy validate: `bun x tsc --noEmit -p 02-design/contracts` (chưa kiểm — chờ admin).
+// xem README.md "Đổi ở lượt 5"). Nguồn: prd.md v0.5 §3b, §6; acceptance/contact-form.feature; design.md §6a.
+// Lượt 8 (04/11): chỉ nhận JSON; trần 75/24 giờ; CRON_LIMITS (trần CPU 10 ms gói Free).
+// Lượt 9 (04/11, XQ-32/M38, XQ-25(b)/M31, M29(1)): mã 415 riêng; trần BYTE mỗi phần tóm tắt; luật HumanCheck (§12);
+// health thêm tuổi bản ghi quá hạn. README.md "Lượt 9".
+// Máy validate: `bun x tsc --noEmit` (design.md "Đã kiểm").
 import { z } from "zod";
 
 export const Locale = z.enum(["vi", "en"]);
@@ -50,7 +53,13 @@ export type ContactSubmitRequest = z.infer<typeof ContactSubmitRequest>;
 
 export const CONTACT_ENDPOINT = "/api/contact";
 export const CONTACT_HEALTH_ENDPOINT = "/api/contact/health"; // GET, không PII
-export const CONTACT_CONTENT_TYPES = ["application/json", "application/x-www-form-urlencoded"] as const;
+// Lượt 8: CHỈ JSON (bỏ urlencoded). Form luôn gửi bằng fetch sau Turnstile (Q-UX-13: không có đường gửi khi tắt JS),
+// nên không có `<form method=post>` cần urlencoded; urlencoded cũng không mang được `utm` lồng nhau và `consent: true`
+// kiểu boolean. Thêm: application/json từ origin khác buộc trình duyệt preflight (CORS), Worker không trả OPTIONS ⇒
+// trang lạ không gửi "simple request" vào được. Kiểu khác (gồm urlencoded, multipart, text/plain) hoặc thiếu header
+// ⇒ 415 UNSUPPORTED_MEDIA_TYPE (lượt 9, XQ-32(e): một mã một status; VALIDATION luôn là 422).
+// So khớp: phần trước ";" của Content-Type, hạ chữ thường, bỏ khoảng trắng; tham số charset bỏ qua.
+export const CONTACT_CONTENT_TYPES = ["application/json"] as const;
 
 // §3 Response
 export const FieldErrorCode = z.enum([
@@ -58,18 +67,21 @@ export const FieldErrorCode = z.enum([
   "INVALID_CHARS", // lượt 6, M30: fullName/company có ký tự điều khiển — câu chữ: [cần hỏi ux_ui]
 ]);
 export const ContactErrorCode = z.enum([
-  "VALIDATION",          // 422 (415 khi sai Content-Type)
+  "VALIDATION",          // 422 — chỉ lỗi zod/trường; không bao giờ đi với status khác
+  "UNSUPPORTED_MEDIA_TYPE", // 415 — lượt 9, XQ-32(e): Content-Type thiếu hoặc khác CONTACT_CONTENT_TYPES
   "POLICY_CHANGED",      // 409 — kèm policyVersion hiện hành (Q-UX-15)
   "PAYLOAD_TOO_LARGE",   // 413
-  "HUMAN_CHECK_FAILED",  // 403 — Turnstile thiếu/trượt
+  "HUMAN_CHECK_FAILED",  // 403 — Turnstile thiếu/trượt/sai hostname/sai action (§12)
+  "HUMAN_CHECK_UNAVAILABLE", // 503 — lượt 9, M31: siteverify lỗi mạng/timeout/không 200/thân hỏng (§12). Không bao giờ coi là đạt
   "ORIGIN_REJECTED",     // 403 — lượt 6, M32: header Origin có mà khác SITE_ORIGIN
   "RATE_LIMITED",        // 429 + Retry-After
-  "FORM_DISABLED",       // 503 (chưa có tên miền/Email Routing, hoặc tắt khẩn)
+  "FORM_DISABLED",       // 503 (chưa có tên miền/Email Routing, tắt khẩn, hoặc TURNSTILE_SECRET rỗng/là secret thử §12)
   "STORE_FAILED",        // 503 — D1 lỗi: KHÔNG báo đã nhận
 ]);
 export const CONTACT_HTTP_STATUS: Record<z.infer<typeof ContactErrorCode>, number> = {
-  VALIDATION: 422, POLICY_CHANGED: 409, PAYLOAD_TOO_LARGE: 413, HUMAN_CHECK_FAILED: 403,
-  ORIGIN_REJECTED: 403, RATE_LIMITED: 429, FORM_DISABLED: 503, STORE_FAILED: 503,
+  VALIDATION: 422, UNSUPPORTED_MEDIA_TYPE: 415, POLICY_CHANGED: 409, PAYLOAD_TOO_LARGE: 413,
+  HUMAN_CHECK_FAILED: 403, HUMAN_CHECK_UNAVAILABLE: 503, ORIGIN_REJECTED: 403, RATE_LIMITED: 429,
+  FORM_DISABLED: 503, STORE_FAILED: 503,
 };
 export const ContactSubmitOk = z.object({ ok: z.literal(true) });
 export const ContactSubmitError = z.object({
@@ -86,7 +98,13 @@ export const ContactSubmitResponse = z.discriminatedUnion("ok", [ContactSubmitOk
 // Frontend: mọi phản hồi không phải 200 {ok:true} — kể cả 429/1027 của Cloudflare không có body JSON —
 // hiện câu mời gọi điện/Zalo (design.md §7b), không bao giờ hiện "đã nhận".
 
-export const ContactHealth = z.object({ ok: z.boolean(), lastCronAgeSec: z.number().int(), pending: z.number().int() });
+// Lượt 9 (M38, M29(1)): heartbeat ghi ở bước 1 của Cron nên vẫn tươi khi lượt Cron bị ngắt ở bước tóm tắt ⇒ thêm
+// oldestOverdueSec = tuổi (giây) của bản ghi chưa gửi QUÁ HẠN GỬI lâu nhất, 0 nếu không có. Hạn gửi: batch 'single' =
+// created_at; batch 'summary' = hết giờ tròn chứa created_at + summaryDeliverWithinSecondsAfterHour. Chỉ là số, không id.
+// ok = lastCronAgeSec ≤ OUTBOX.cronStaleAlertSeconds VÀ oldestOverdueSec ≤ OUTBOX.overdueAlertSeconds.
+export const ContactHealth = z.object({
+  ok: z.boolean(), lastCronAgeSec: z.number().int(), pending: z.number().int(), oldestOverdueSec: z.number().int().nonnegative(),
+});
 
 // §4 Ngưỡng (prd §6; XQ-14 bỏ login*)
 // Lượt 6 (M29): cả hai bộ đếm ở D1 nhưng CHỈ chạy sau khi Turnstile đạt (design.md §6a bước 6–7, 10).
@@ -94,19 +112,89 @@ export const ContactHealth = z.object({ ok: z.boolean(), lastCronAgeSec: z.numbe
 // Lớp trước Worker: luật rate limiting WAF (EDGE_RATE_LIMIT, devops cấu hình) — chặn ở edge, không gọi Worker.
 export const RATE_LIMITS = {
   contactSuccessPerIp: { max: 5, windowSeconds: 600 },
-  contactAttemptsPerIp: { max: 20, windowSeconds: 600 }, // đếm mọi lần đã qua Turnstile (bẫy, 422, 409, thành công)
+  // Đếm mọi lần ĐÃ QUA Turnstile (bẫy, 422, 409, 429 thành công, thành công). Lần chưa qua Turnstile đã bị 403/415/413
+  // và không bao giờ tới hộp thư; chúng bị luật WAF (EDGE_RATE_LIMIT) chặn dồn dập, không đếm ở D1 (M29: mỗi lần đếm
+  // là một dòng ghi D1). Khớp prd v0.5.1 §6 Chống spam (3) (XQ-PM1/XQ-34 đã đóng: CÓ). 503 HUMAN_CHECK_UNAVAILABLE
+  // không đếm (chưa qua kiểm).
+  contactAttemptsPerIp: { max: 20, windowSeconds: 600 },
   ipv6PrefixBits: 64,
   dedupeWindowSeconds: 600,
   counterTtlSecondsMax: 3600,
 } as const;
 
-// §5 Trần thư (XQ-1 lượt 5: giữ 45/24 giờ — send_email tới địa chỉ đã verify không tính quota)
+// §5 Trần thư (prd v0.5 §6 dòng Chống spam (4)(5); lượt 8: 75/24 giờ = 100 − 24 tóm tắt − 1 giám sát, không còn dự
+// trữ thư đăng nhập CMS). send_email tới địa chỉ đã verify không tính quota nhà cung cấp (ADR-004 [S5b]) ⇒ trần chỉ
+// chống ngập hộp thư GMS. notifyPerHour đếm theo GIỜ TRÒN Asia/Ho_Chi_Minh; notifyPer24h là 24 giờ TRƯỢT.
+// Liên hệ vượt trần ⇒ outbox batch='summary', thư tóm tắt của giờ đó gửi ≤ 120 s sau khi hết giờ tròn.
 export const MAIL_CAPS = {
   notifyPerHour: 30,
-  notifyPer24h: 45,
+  notifyPer24h: 75,
+  hourBoundaryTimeZone: "Asia/Ho_Chi_Minh",
+  // Lượt 9: MỘT thư tóm tắt cho mỗi giờ tròn; thư đó tách "phần k/n" khi vượt CRON_LIMITS (trần số hoặc trần byte).
+  // Mỗi phần ghi một dòng mail_log kind 'summary'. Mốc ≤ 120 s chỉ bảo đảm cho phần 1; phần k gửi ở lượt Cron thứ k
+  // sau đó (mỗi phút một phần). Phần thứ 2 của một giờ ⇒ một cảnh báo không PII (MAIL_ALERT_CODES.summaryParts).
   summaryMaxPerHour: 1,
-  summaryDeliverWithinSeconds: 120,
+  summaryDeliverWithinSecondsAfterHour: 120,
   firstSendWithinSeconds: 120,
+} as const;
+
+// §5b Ngân sách CPU (lượt 8). Workers Free: 10 ms CPU cho MỖI lần gọi, áp cả HTTP lẫn Cron Trigger (trang Limits,
+// cập nhật 29/10/2026, đọc 04/11/2026). Chờ I/O (fetch, D1, send_email) KHÔNG tính. Vượt ⇒ lần gọi bị ngắt
+// (outcome `exceededCpu`; HTTP trả 1102). Trong Worker không đo được CPU lúc chạy (performance.now chỉ nhích sau I/O)
+// ⇒ chặn bằng SỐ LƯỢNG việc mỗi lần gọi, không bằng đồng hồ. Ngân sách từng việc: design.md §6g.
+export const CRON_LIMITS = {
+  cpuBudgetMs: 10,               // trần nhà cung cấp, không phải mục tiêu
+  cpuTargetMs: 7,                // mục tiêu thiết kế (70%); p99 đo được vượt mức này ⇒ đường lui design.md §6g
+  maxSingleSendsPerRun: 5,       // thư báo một người mỗi lượt Cron
+  maxSummaryContacts: 100,       // liên hệ trong MỘT phần thư tóm tắt; quá ⇒ chia phần (design.md §6g bước lui 1)
+  // Lượt 9 (XQ-32(a), M38): trần TỔNG length(body_b64) của một phần (body_b64 chỉ ASCII ⇒ ký tự = byte). Phần dừng ở
+  // trần nào tới trước (số hoặc byte); phần luôn nhận ít nhất 1 liên hệ (một khối ≤ bodyB64MaxBytes < trần). Chọn
+  // 384 KiB ≥ 12 × khối cỡ tối đa của một ContactSubmitRequest hợp lệ (≈ 25 KB: message 5000 ký tự × 3 byte UTF-8,
+  // fullName/company 200 × 3, email, phone, pagePath, utm, nhãn; base64 + CRLF) ⇒ kịch bản "12 liên hệ ⇒ đúng 1 thư tóm tắt" (contact-form.feature dòng 265–270) luôn
+  // là một phần, dù mỗi liên hệ cỡ tối đa. Lọc bằng SQL phía D1 (design.md §6g), isolate không nhận dòng vượt trần.
+  // Ước CPU parse + ghép ở mức này ≈ 1–2 ms (CHƯA ĐO); ca đo §6g quyết, vượt ⇒ hạ số này (bước lui 1).
+  maxSummaryPartB64Bytes: 384 * 1024,
+  // Trần một khối body_b64 (một liên hệ): thân ≤ CONTACT_LIMITS.bodyBytes byte UTF-8 ⇒ base64 + CRLF mỗi 76 ký tự.
+  // POST từ chối dựng khối vượt số này (không xảy ra với ContactSubmitRequest hợp lệ; chặn để trần phần luôn đúng).
+  bodyB64MaxBytes: 46 * 1024,
+  // Lượt 10 (XQ-33(a)): `DELETE … WHERE id IN (SELECT id FROM <bảng> WHERE <điều kiện> LIMIT ?)` — KHÔNG dùng
+  // `DELETE … LIMIT` (cần SQLITE_ENABLE_UPDATE_DELETE_LIMIT, chưa kiểm D1 có). Áp cho outbox, rate_counter, dedupe.
+  maxDeletesPerRun: 200,
+  bodyBlockBytesMultiple: 57,    // khối thân mỗi liên hệ đệm tới bội 57 byte ⇒ base64 tròn dòng 76 ký tự, ghép được
+  // Lượt 10 (XQ-33(a)): số tham số gắn của MỌI câu SQL là hằng số, không phụ thuộc số dòng — cấm `IN (?, ?, …)` dựng
+  // theo danh sách id; danh sách id (nếu cần, đường lui hai câu) đi qua MỘT tham số `json_each(?)`. Câu Cron nhiều tham
+  // số nhất ≤ maxBoundParamsCron; câu nhiều nhất toàn Worker là INSERT outbox (= số cột, < 32). Trần của D1:
+  // d1MaxBoundParamsPerQuery = 100 **[chưa kiểm — trí nhớ model; lượt 10 vai architect không đọc được web: tool
+  // WebFetch không có, Agent web-fetch bị hook chặn]**. Thiết kế không dựa vào số chính xác: chỉ cần trần thật ≥ 32.
+  // backend đọc developers.cloudflare.com/d1/platform/limits/ và ghi số + ngày đọc vào đây trước merge_to_main.
+  maxBoundParamsCron: 8,
+  d1MaxBoundParamsPerQuery: 100,
+  // Lượt 10 (XQ-33(b)): bản ghi đầu hàng tóm tắt (rn = 1) có attempts ≥ số này ⇒ phần kế CHỈ gồm đúng 1 liên hệ (lọc
+  // trong cùng câu window: FIRST_VALUE(attempts) OVER w, design.md §6g). attempts tăng lúc lấy lease ⇒ 3 lượt bị ngắt
+  // liền ⇒ lượt 4 cô lập bản ghi đó; phần sau nó đi tiếp ngay khi lease của nó còn hiệu lực (lease 120 s).
+  summaryHeadAttemptsIsolate: 3,
+  leaseSeconds: 120,
+} as const;
+
+// §5c Cột Cron được đọc (lượt 9, XQ-32(b)). Không `SELECT *` trên outbox ở bất kỳ đường nào của Worker. body_b64 và
+// mọi cột PII KHÔNG bao giờ vào log (console, Workers Logs, last_error, thư cảnh báo); lỗi chỉ log id + mã.
+export const CRON_SELECT_COLUMNS = {
+  // lượt 10 (XQ-33(a)): là cột của `UPDATE … RETURNING` (design.md §6g); created_at để isolate sắp lại và tính "giờ" của phần
+  summaryPart: ["id", "body_b64", "email", "created_at"], // email chỉ dùng khi phần có đúng 1 liên hệ (Reply-To, §8)
+  single: ["id", "body_b64", "email", "full_name"], // full_name cho Subject (§8), email cho Reply-To
+  housekeeping: ["id", "created_at", "batch", "sent_at", "attempts", "alerted_at"], // đếm, cảnh báo, dọn: không PII
+} as const;
+
+// §5d Mã cảnh báo tới ALERT_TO (lượt 9). Thư cảnh báo chỉ có mã + số đếm, không id, không PII. Ghi mail_log kind
+// 'alert' kèm cột code (d1-schema.sql) để giới hạn lặp.
+export const MAIL_ALERT_CODES = {
+  // M29(1): có bản ghi quá hạn gửi > OUTBOX.overdueAlertSeconds. MỘT thư mỗi đợt hỏng: chỉ gửi khi mail_log chưa có
+  // dòng code này với sent_at ≥ hạn gửi của bản ghi quá hạn lâu nhất, và chưa có trong giờ tròn hiện tại. Đợt kéo dài
+  // thì chỉ PENDING_OVERDUE_24H lặp (không 24 thư/ngày khi đường thư chết).
+  overdue15m: "PENDING_OVERDUE_15M",
+  overdue24h: "PENDING_OVERDUE_24H",   // XQ-2: bản ghi chưa gửi quá 24 giờ; lặp mỗi alertRepeatSeconds (alerted_at)
+  expired7d: "UNSENT_DELETED_7D",      // XQ-A2: số liên hệ chưa gửi bị xoá vì quá 7 ngày
+  summaryParts: "SUMMARY_SPLIT",       // XQ-32(d): thư tóm tắt của một giờ cần phần thứ 2; tối đa 1 thư/giờ tròn
 } as const;
 
 // §6 Hàng đợi gửi lại (design.md §6a)
@@ -117,8 +205,14 @@ export const OUTBOX = {
   deleteSentWithinSeconds: 24 * 3600,
   leaseSeconds: 120,
   cronStaleAlertSeconds: 600,
+  // Lượt 9 (M29(1)): "chờ quá 15 phút" do Cron kiểm ở bước 2 (design.md §6g), KHÔNG ở POST (POST không còn đọc D1
+  // trước Turnstile, và không có POST thì không ai biết). Cron chết thì Cron không tự báo được ⇒ health
+  // (oldestOverdueSec, lastCronAgeSec) + smoke devops là lớp thứ hai.
+  overdueAlertSeconds: 15 * 60,
   // XQ-A2 (admin chốt 31/10): tính từ created_at (lúc nhận). Hết hạn ⇒ xoá bản ghi + MỘT cảnh báo chỉ nêu SỐ LƯỢNG đã
   // xoá (không id, không PII). Cộng D1 Time Travel 7 ngày ⇒ bản sao xa nhất ≤ 14 ngày (con số cho Chính sách).
+  // Lượt 9 (prd v0.5.1 §3b): trần này áp cho MỌI dòng outbox, kể cả dòng đã gửi (sent_at có) mà chưa kịp xoá ⇒ không
+  // dòng nào sống quá 7 ngày từ created_at, nên mốc 14 ngày đúng cả khi gửi được ở ngày thứ 7.
   maxRetentionUnsentSeconds: 7 * 24 * 3600,
 } as const;
 
@@ -178,3 +272,34 @@ export const EDGE_RATE_LIMIT = {
 // khi Cloudflare cần tương tác thì ô kiểm hiện trong chỗ đặt sẵn ngay trên nút Gửi. Token dùng một lần ⇒ sau MỌI phản hồi
 // không phải 200 {ok:true} FE gọi turnstile.reset() và chờ token mới trước lần gửi kế.
 export const TURNSTILE_WIDGET = { appearance: "interaction-only", size: "flexible", languageFromLocale: true } as const;
+
+// §12 Luật HumanCheck (lượt 9, XQ-25(b)/M31). Quyết định là hàm thuần trong worker/domain (`judgeSiteverify`); adapter
+// production chỉ gọi fetch. Adapter kiểm thử (test-control.ts op "human-check") chỉ thay PHẢN HỒI siteverify, hàm quyết
+// định vẫn là bản production ⇒ ca qa kiểm đúng luật dưới.
+// Frontend đặt `action: TURNSTILE_ACTION` khi render widget (data-action / render option).
+export const TURNSTILE_ACTION = "contact" as const;
+export const TURNSTILE_SITEVERIFY = {
+  url: "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+  method: "POST",
+  timeoutMs: 5000, // thời gian chờ (I/O, không tính CPU); quá ⇒ HUMAN_CHECK_UNAVAILABLE
+} as const;
+// Đạt KHI VÀ CHỈ KHI: HTTP 200, thân parse được theo SiteverifyResponse, success === true, hostname ∈
+// allowedHostnames (= [new URL(SITE_ORIGIN).hostname], so khớp nguyên văn sau hạ chữ thường; không so hậu tố), và
+// action === TURNSTILE_ACTION. Kết quả:
+//   - lỗi mạng, hết timeoutMs, status ≠ 200, thân không phải JSON hoặc sai schema ⇒ 503 HUMAN_CHECK_UNAVAILABLE
+//     (không đếm lần thử: chưa qua kiểm người thật; log mã TURNSTILE_UNAVAILABLE + status, không token).
+//   - success false, hoặc success true mà hostname/action sai ⇒ 403 HUMAN_CHECK_FAILED (log error-codes + mã
+//     TURNSTILE_HOSTNAME / TURNSTILE_ACTION, không token, không hostname người gửi tự đặt).
+//   - không có nhánh nào khác: mọi ngoại lệ ném ra trong verify ⇒ HUMAN_CHECK_UNAVAILABLE, không bao giờ "đạt".
+export const SiteverifyResponse = z.object({
+  success: z.boolean(),
+  hostname: z.string().optional(),
+  action: z.string().optional(),
+  "error-codes": z.array(z.string()).default([]),
+  challenge_ts: z.string().optional(),
+});
+// Secret thử của Cloudflare (luôn đạt/luôn trượt/token đã dùng…) có dạng "<chữ số>x0…0AA". Điểm vào production
+// (`worker/index.ts`, mọi môi trường deploy, kể cả staging) kiểm ở §6a bước 2, TRƯỚC siteverify: TURNSTILE_SECRET
+// rỗng/thiếu hoặc khớp mẫu dưới ⇒ 503 FORM_DISABLED + log mã TURNSTILE_SECRET_INVALID (không in secret).
+// Điểm vào test (`worker/index.test.ts`) không dùng adapter siteverify thật nên không cần secret.
+export const TURNSTILE_TEST_SECRET = /^[0-9]x0+AA$/;
