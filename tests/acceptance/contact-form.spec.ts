@@ -457,19 +457,22 @@ test('FORM-27 Vượt trần thư theo giờ: 12 liên hệ gộp vào đúng 1 
     for (const s of [`Người ${i}`, `n${i}@vi-du.test`, `Lời nhắn số ${i}`]) expect(mails[0].body, s).toContain(s);
 });
 
-test('FORM-28 Vượt trần thư theo ngày: liên hệ thứ 46 gộp vào thư tóm tắt trước 15:02 (@S21 @risk:spam-flood)', async ({
+// contact-form.feature dòng 273–277 + prd §6 (5) + api.ts MAIL_CAPS.notifyPer24h = 75: đã có 75 thư riêng trong 24 giờ
+// trượt ⇒ liên hệ thứ 76 vào thư tóm tắt. Seed đặt ở 16:00 giờ VN hôm trước (22 giờ 20 phút trước 14:20): trong cửa sổ
+// 24 giờ, không sát mép, và khác giờ tròn hiện tại nên trần 30/giờ không tham gia.
+test('FORM-28 Vượt trần thư theo ngày: liên hệ thứ 76 gộp vào thư tóm tắt trước 15:02 (@S21 @risk:spam-flood)', async ({
   request,
 }) => {
   await control.setNow(ISO(14, 20));
-  await control.seedNotifyCount(45, '2026-10-30T07:20:00Z'); // 45 thư riêng trong 24 giờ trước 14:20 (giờ VN)
-  const r = await postContact(request, { name: 'Người 46', email: 'n46@vi-du.test', message: 'Lời nhắn thứ 46' });
+  await control.seedNotifyCount(75, '2026-10-30T09:00:00Z'); // 75 thư riêng trong 24 giờ trước 14:20 (giờ VN)
+  const r = await postContact(request, { name: 'Người 76', email: 'n76@vi-du.test', message: 'Lời nhắn thứ 76' });
   expect(r.status).toBe(200);
   await control.runCron(ISO(14, 30));
   expect(await inbox(), 'không thư riêng').toHaveLength(0);
   await control.runCron(ISO(15, 1));
   const mails = await inbox();
   expect(mails).toHaveLength(1);
-  for (const s of ['Người 46', 'n46@vi-du.test', 'Lời nhắn thứ 46']) expect(mails[0].body).toContain(s);
+  for (const s of ['Người 76', 'n76@vi-du.test', 'Lời nhắn thứ 76']) expect(mails[0].body).toContain(s);
 });
 
 const TOO_LONG: Array<[string, 'name' | 'company' | 'message' | 'email' | 'phone', number, string]> = [
