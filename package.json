@@ -11,6 +11,7 @@
     "mock": "NEXT_PUBLIC_API_MOCK=1 next dev",
     "content-check": "bun run scripts/content/check.ts",
     "build": "bun run scripts/content/build-site.ts",
+    "build:e2e": "bun run tests/support/build-e2e-site.ts",
     "deploy-prod": "bun run scripts/deploy/deploy-prod.ts",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit --incremental false",
