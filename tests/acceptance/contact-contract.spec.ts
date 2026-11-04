@@ -156,21 +156,127 @@ test('CC-08 Q10-1: 250 liên hệ trong một giờ ⇒ 3 phần qua 3 lượt C
   expect(split, 'đúng 1 cảnh báo SUMMARY_SPLIT trong giờ đó').toHaveLength(1);
 });
 
-// ---- Giới hạn byte: 46 KiB mỗi thư, mail_log.code/summary_hour -------------------------------------------------------
-test('CC-09 CRON_LIMITS: liên hệ lớn ⇒ tách phần, mỗi thư thô ≤ 46 KiB, mỗi phần có hàng mail_log summary + summary_hour (@S19)', async ({ request }) => {
+// ---- Giới hạn byte của thư tóm tắt (api.ts CRON_LIMITS dòng 145–177) ---------------------------------------------------
+// Đọc contract đúng nghĩa (sửa CC-09 cũ, vốn khẳng định "mỗi thư thô ≤ 46 KiB" — sai):
+//  · bodyB64MaxBytes = 46 KiB là trần của MỘT khối liên hệ (dòng 157–159), không phải của cả thư;
+//  · maxSummaryPartB64Bytes = 384 KiB là trần TỔNG length(body_b64) của MỘT phần thư tóm tắt (dòng 150–156);
+//  · maxSummaryContacts = 100 là trần theo SỐ liên hệ; phần dừng ở trần nào tới trước (dòng 149–151).
+// Khối mỗi liên hệ được nối liền trong thân base64 (design.md §6g: "Cron ghép thư chỉ là nối chuỗi"; khối đệm tới bội
+// 57 byte ⇒ 76 ký tự + CRLF = 78 ký tự thô mỗi 57 byte, dòng 163). Thân thô không có ranh giới khối, nên đo khối bằng
+// thân đã giải mã: khoảng giữa hai dấu `[#k]` đầu nội dung của hai liên hệ liền nhau, đổi sang cỡ base64 theo 78/57.
+const CAP_PART = 384 * 1024;
+const CAP_BLOCK = 46 * 1024;
+const MAX_CONTACTS_PER_PART = 100;
+const INTRO_SLACK = 2 * 1024; // dòng đầu thân (số liên hệ, số còn chờ — design.md §6g) nằm ngoài body_b64
+
+const b64Of = (bytes: number) => Math.ceil(bytes / 57) * 78;
+const tag = (k: number) => `[#${k}]`;
+// Liên hệ cỡ tối đa của ContactSubmitRequest (api.ts §1): họ tên/công ty 200 ký tự, nội dung 5000 ký tự, mỗi ký tự 3 byte.
+const maxContact = (k: number) => ({
+  name: `${String(k).padStart(2, '0')}${'ế'.repeat(198)}`,
+  company: 'ế'.repeat(200),
+  email: `an${k}@vi-du.test`,
+  phone: '+84 912 345 678',
+  message: `${tag(k)} ${'ế'.repeat(5000 - tag(k).length - 1)}`,
+  consent: true,
+});
+
+function analyze(mail: { raw: string; text: string }) {
+  const rawBody = mail.raw.split(/\r?\n\r?\n/).slice(1).join('\n\n');
+  const marks = [...mail.text.matchAll(/\[#(\d+)\]/g)].map((m) => ({ k: Number(m[1]), at: m.index ?? 0 }));
+  const blocks = marks.map((m, i) => {
+    const end = i + 1 < marks.length ? (marks[i + 1]?.at ?? mail.text.length) : mail.text.length;
+    return b64Of(Buffer.byteLength(mail.text.slice(m.at, end)));
+  });
+  return { rawBodyBytes: Buffer.byteLength(rawBody), ids: marks.map((m) => m.k), blocks };
+}
+
+async function postMax(request: Parameters<typeof postContact>[0], n: number) {
+  for (let k = 0; k < n; k++) {
+    const r = await postContact(request, maxContact(k), { ip: `203.0.113.${k + 1}` });
+    expect(r.status, `liên hệ ${k}`).toBe(200);
+  }
+}
+
+test('CC-09 CRON_LIMITS (byte): ~400 KiB liên hệ cỡ tối đa (<100 liên hệ) ⇒ tách phần theo BYTE; mỗi khối ≤ 46 KiB, mỗi phần ≤ 384 KiB, mỗi phần có hàng mail_log summary + summary_hour, phần k gửi ở lượt Cron k (@S19 XQ-32)', async ({ request }) => {
   test.setTimeout(240_000);
+  const N = 18; // 18 × ~23 KiB base64 ≈ 400+ KiB; 18 < maxSummaryContacts ⇒ tách chỉ có thể do byte
+  expect(N).toBeLessThan(MAX_CONTACTS_PER_PART);
   await control.setNow(at(1));
-  await control.seedNotifyCount(30, HOUR0);
-  const big = 'x'.repeat(4900);
-  for (let i = 0; i < 16; i++)
-    expect((await postContact(request, { ...VALID, message: `${i} ${big}` }, { ip: `203.0.113.${i + 1}` })).status).toBe(200);
-  for (const k of [61, 62, 63, 64]) await control.runCron(at(k));
+  await control.seedNotifyCount(30, HOUR0); // vượt trần thư riêng ⇒ sang đường tóm tắt
+  await postMax(request, N);
+  expect((await control.mailbox(TO)).filter((m) => m.kind === 'summary'), 'chưa tới giờ Cron ⇒ chưa có thư tóm tắt').toHaveLength(0);
+
+  // Phần k gửi ở lượt Cron thứ k: mỗi lượt đúng 1 phần, cho tới khi hết hàng đợi (không khoảng trống).
+  const increments: number[] = [];
+  for (const k of [61, 62, 63, 64, 65]) {
+    const before = (await control.mailbox(TO)).filter((m) => m.kind === 'summary').length;
+    await control.runCron(at(k));
+    increments.push((await control.mailbox(TO)).filter((m) => m.kind === 'summary').length - before);
+  }
+  expect(increments.slice(0, 2), 'phần 1 ở lượt Cron 1, phần 2 ở lượt Cron 2').toEqual([1, 1]);
+  for (let i = 1; i < increments.length; i++)
+    expect(increments[i], `lượt Cron ${i + 1}`).toBeLessThanOrEqual(increments[i - 1] ?? 0);
   const sums = (await control.mailbox(TO)).filter((m) => m.kind === 'summary');
+  expect(sums.length, 'số phần = tổng các lượt').toBe(increments.reduce((a, b) => a + b, 0));
   expect(sums.length).toBeGreaterThanOrEqual(2);
-  for (const s of sums) expect(Buffer.byteLength(s.raw), 'thư thô ≤ 46 KiB').toBeLessThanOrEqual(46 * 1024);
+
+  const parts = sums.map(analyze);
+  // (i) mỗi khối liên hệ ≤ 46 KiB (bodyB64MaxBytes)
+  for (const [p, part] of parts.entries())
+    for (const [i, size] of part.blocks.entries())
+      expect(size, `phần ${p + 1}, khối thứ ${i + 1} (liên hệ ${part.ids[i]})`).toBeLessThanOrEqual(CAP_BLOCK);
+  // (ii) mỗi phần ≤ 384 KiB (maxSummaryPartB64Bytes): tổng các khối và thân thô
+  for (const [p, part] of parts.entries()) {
+    expect(part.blocks.reduce((a, b) => a + b, 0), `phần ${p + 1}: tổng khối`).toBeLessThanOrEqual(CAP_PART);
+    expect(part.rawBodyBytes, `phần ${p + 1}: thân thô (+ dòng đầu)`).toBeLessThanOrEqual(CAP_PART + INTRO_SLACK);
+  }
+  // (iii) tách do BYTE, không do số: tổng > 384 KiB trong khi < 100 liên hệ, và phần 1 đã "đầy" (thêm khối kế sẽ vượt trần)
+  const total = parts.flatMap((p) => p.blocks).reduce((a, b) => a + b, 0);
+  expect(total, 'tổng thân phải vượt một phần thì tách mới do byte').toBeGreaterThan(CAP_PART);
+  const first = parts[0];
+  const second = parts[1];
+  expect(first?.ids.length ?? 0, 'phần 1 không phải một liên hệ lẻ').toBeGreaterThan(1);
+  expect(first?.ids.length ?? 0, 'phần 1 dừng vì byte, không vì số').toBeLessThan(MAX_CONTACTS_PER_PART);
+  expect((first?.blocks.reduce((a, b) => a + b, 0) ?? 0) + (second?.blocks[0] ?? 0), 'thêm khối kế vào phần 1 sẽ vượt 384 KiB').toBeGreaterThan(CAP_PART);
+  // không mất, không trùng liên hệ nào qua các phần
+  expect(parts.flatMap((p) => p.ids).sort((a, b) => a - b)).toEqual(Array.from({ length: N }, (_, k) => k));
+
+  // mail_log: mỗi phần một hàng summary kèm summary_hour (cùng một giờ, vì mọi liên hệ cùng giờ tròn)
   const rows = ((await control.storeDump()).tables.mail_log ?? []).filter((r) => r.kind === 'summary');
   expect(rows).toHaveLength(sums.length);
   for (const r of rows) expect(r.summary_hour, 'summary_hour phải có').toBeTruthy();
+  expect(new Set(rows.map((r) => String(r.summary_hour))).size, 'mọi phần cùng một summary_hour').toBe(1);
+  // design.md §6g: phần thứ 2 của một giờ ⇒ đúng 1 cảnh báo SUMMARY_SPLIT (không PII)
+  const split = (await control.alerts()).filter((a) => /SUMMARY_SPLIT/.test(a.subject + a.body));
+  expect(split, 'đúng 1 cảnh báo SUMMARY_SPLIT').toHaveLength(1);
+});
+
+test('CC-09b contact-form.feature:265–270 với liên hệ cỡ tối đa: 12 liên hệ ⇒ đúng 1 thư tóm tắt, một phần ≤ 384 KiB, đủ họ tên + cách liên hệ + nội dung của cả 12 (@S21 api.ts:152–156)', async ({ request }) => {
+  test.setTimeout(240_000);
+  await control.setNow(at(1));
+  await control.seedNotifyCount(30, HOUR0);
+  await postMax(request, 12);
+  expect((await control.mailbox(TO)).filter((m) => m.kind === 'notify'), 'không có thư báo riêng nào').toHaveLength(0);
+  for (const k of [61, 62, 63]) await control.runCron(at(k));
+  const sums = (await control.mailbox(TO)).filter((m) => m.kind === 'summary');
+  expect(sums, 'đúng 1 thư tóm tắt').toHaveLength(1);
+  const mail = sums[0];
+  if (!mail) throw new Error('thiếu thư tóm tắt');
+  const part = analyze(mail);
+  expect(part.ids.sort((a, b) => a - b)).toEqual(Array.from({ length: 12 }, (_, k) => k));
+  for (const size of part.blocks) expect(size).toBeLessThanOrEqual(CAP_BLOCK);
+  expect(part.blocks.reduce((a, b) => a + b, 0), '12 khối cỡ tối đa vẫn nằm trong một phần').toBeLessThanOrEqual(CAP_PART);
+  expect(mail.text, 'dòng đầu ghi 12 liên hệ').toMatch(/\b12\b/);
+  for (let k = 0; k < 12; k++) {
+    const c = maxContact(k);
+    expect(mail.text, `họ tên ${k}`).toContain(c.name);
+    expect(mail.text, `email ${k}`).toContain(c.email);
+    expect(mail.text, `nội dung ${k}`).toContain(c.message);
+  }
+  const rows = ((await control.storeDump()).tables.mail_log ?? []).filter((r) => r.kind === 'summary');
+  expect(rows, 'một hàng mail_log summary').toHaveLength(1);
+  expect((await control.alerts()).filter((a) => /SUMMARY_SPLIT/.test(a.subject + a.body)), 'không tách ⇒ không SUMMARY_SPLIT').toHaveLength(0);
 });
 
 // ---- Q10-3: marker không lọt log; last_error chỉ là mã --------------------------------------------------------------
