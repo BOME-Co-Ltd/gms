@@ -150,6 +150,52 @@ export function validatePartnersRaw(items: Array<Record<string, unknown>>): Cont
   return errors;
 }
 
+export type PartnerAssetRef = { image: string; partner: string; type: string };
+
+/** Đọc `partnerAsset` trong meta ảnh; có khoá mà sai dạng ⇒ tên/loại rỗng để luật S33 bắt (không bỏ qua im lặng). */
+export function readPartnerAsset(meta: Record<string, unknown> | null): { partner: string; type: string } | null {
+  const pa = meta?.partnerAsset;
+  if (pa === undefined || pa === null) return null;
+  const o = typeof pa === 'object' ? (pa as Record<string, unknown>) : {};
+  return {
+    partner: typeof o.partner === 'string' ? o.partner.trim() : '',
+    type: typeof o.type === 'string' ? o.type.trim() : '',
+  };
+}
+
+/**
+ * S33 (build.ts §8): tư liệu đối tác của ảnh phải thuộc đối tác có trong partners.yaml và loại phải nằm trong
+ * allowedAssets của đối tác đó. `partners` là bản thô (kể cả đối tác thiếu căn cứ: lỗi đó đã báo riêng).
+ */
+export function validatePartnerAssetRefs(
+  refs: PartnerAssetRef[],
+  partners: Array<Record<string, unknown>>,
+): ContentError[] {
+  const errors: ContentError[] = [];
+  for (const ref of refs) {
+    const found = partners.find((p) => typeof p.name === 'string' && p.name.trim() === ref.partner);
+    if (!found) {
+      errors.push({
+        code: 'PARTNER_UNKNOWN',
+        message: CONTENT_RULE_MESSAGES.PARTNER_UNKNOWN({ ref: ref.image, partner: ref.partner }),
+      });
+      continue;
+    }
+    const allowed = Array.isArray(found.allowedAssets) ? found.allowedAssets.map(String) : [];
+    if (!allowed.includes(ref.type)) {
+      errors.push({
+        code: 'PARTNER_ASSET_NOT_ALLOWED',
+        message: CONTENT_RULE_MESSAGES.PARTNER_ASSET_NOT_ALLOWED({
+          image: ref.image,
+          type: ref.type,
+          partner: ref.partner,
+        }),
+      });
+    }
+  }
+  return errors;
+}
+
 export function validateOutputLinesRaw(items: Array<Record<string, unknown>>): ContentError[] {
   const errors: ContentError[] = [];
   for (const item of items) {
