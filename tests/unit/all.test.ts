@@ -9,6 +9,7 @@ import {
   CONTACT_HEALTH_ENDPOINT,
   CONTACT_HTTP_STATUS,
   CONTACT_LIMITS,
+  CRON_LIMITS,
   ContactSubmitRequest,
   ContactSubmitResponse,
   HEADER_UNSAFE_CHARS,
@@ -179,9 +180,10 @@ function createInMemoryD1(): D1Database {
             policy_version: bound[10],
             consent_at: bound[11],
             dedupe_hash: bound[12],
-            batch: bound[13],
+            body_b64: bound[13],
+            batch: bound[14],
             attempts: 0,
-            next_attempt_at: bound[14],
+            next_attempt_at: bound[15],
             sent_at: null,
             lease_until: null,
           });
@@ -251,6 +253,41 @@ function createInMemoryD1(): D1Database {
         return null;
       },
       async all<T>() {
+        if (q.startsWith('UPDATE outbox SET lease_until') && q.includes('RETURNING')) {
+          // Lấy lease + RETURNING trong MỘT câu (design.md §6g, lượt 10). Thứ tự tham số gắn:
+          //   thư lẻ:    [leaseUntil, nextAttemptAt<=, now, limit]
+          //   tóm tắt:   ?1 đầu giờ tròn, ?2 now, ?3 limit, ?4 trần byte, ?5 leaseUntil, ?6 ngưỡng cô lập attempts
+          const isSummary = q.includes("batch = 'summary'");
+          const now = Number(isSummary ? bound[1] : bound[2]);
+          const leaseUntil = isSummary ? bound[4] : bound[0];
+          const limit = Number(isSummary ? bound[2] : bound[3]);
+          const isDue = (r: Record<string, unknown>) =>
+            isSummary ? Number(r.created_at) < Number(bound[0]) : Number(r.next_attempt_at) <= Number(bound[1]);
+          const eligible = tables.outbox
+            .filter(
+              (r) =>
+                !r.sent_at &&
+                r.batch === (isSummary ? 'summary' : 'single') &&
+                isDue(r) &&
+                (r.lease_until == null || Number(r.lease_until) < now),
+            )
+            .sort((a, b) => Number(a.created_at) - Number(b.created_at) || String(a.id).localeCompare(String(b.id)))
+            .slice(0, limit);
+          let picked = eligible;
+          if (isSummary && eligible.length > 0) {
+            const headIsolated = Number(eligible[0].attempts) >= Number(bound[5]);
+            let cum = 0;
+            picked = eligible.filter((r, i) => {
+              cum += String(r.body_b64 ?? '').length;
+              return i === 0 || (cum <= Number(bound[3]) && !headIsolated);
+            });
+          }
+          for (const r of picked) {
+            r.lease_until = leaseUntil;
+            r.attempts = Number(r.attempts) + 1;
+          }
+          return { results: picked.map((r) => ({ ...r })) as unknown as T[] };
+        }
         if (q.includes("FROM outbox WHERE sent_at IS NULL AND batch = 'single'")) {
           return {
             results: tables.outbox.filter((r) => !r.sent_at && r.batch === 'single') as unknown as T[],
@@ -406,7 +443,14 @@ describe('Contracts & Safe URL', () => {
         public: true,
       }).success,
     ).toBe(true);
-    expect(Partner.safeParse({ name: 'P', permissionOnFile: true }).success).toBe(true);
+    expect(
+      Partner.safeParse({
+        name: 'P',
+        role: { vi: 'Đối tác chuyển giao công nghệ', en: 'Technology transfer partner' },
+        permissionBasis: 'raw 02/11 N22',
+        allowedAssets: [],
+      }).success,
+    ).toBe(true);
     expect(
       Company.safeParse({
         legalName: 'GMS',
@@ -484,8 +528,11 @@ describe('Content Rules & Loader', () => {
     bigJpeg[2] = 0xff;
     expect(validateImageBinary('big.jpg', bigJpeg)).toHaveLength(1);
 
-    expect(validatePartnersRaw([{ name: 'Xanh Asian' }])).toHaveLength(1);
-    expect(validatePartnersRaw([{ name: 'Xanh Asian', permissionOnFile: true }])).toHaveLength(0);
+    const partnerRole = { vi: 'Đối tác chuyển giao công nghệ', en: 'Technology transfer partner' };
+    expect(validatePartnersRaw([{ name: 'Xanh Asian', role: partnerRole, permissionBasis: '' }])).toHaveLength(1);
+    expect(
+      validatePartnersRaw([{ name: 'Xanh Asian', role: partnerRole, permissionBasis: 'raw 02/11 N22' }]),
+    ).toHaveLength(0);
 
     expect(validateOutputLinesRaw([{ key: 'o', name: { vi: 'Dầu', en: 'Oil' }, state: null }])).toHaveLength(1);
 
@@ -708,7 +755,7 @@ describe('Worker Domain, Mail Builder & Adapters', () => {
       new Request('http://localhost/__test__/mailbox', { method: 'POST', body: '{}' }),
       env,
     );
-    const mails = (await mbRes.json()) as unknown[];
+    const mails = ((await mbRes.json()) as { messages: unknown[] }).messages;
     expect(mails.length).toBeGreaterThanOrEqual(1);
 
     // Exercise Cloudflare adapters
@@ -751,21 +798,26 @@ describe('Worker Domain, Mail Builder & Adapters', () => {
     expect(await queue.hasDedupe('h1', 0)).toBe(false);
     await queue.recordDedupe('h1', 1793412900);
     expect(await queue.hasDedupe('h1', 1793412000)).toBe(true);
-    expect((await queue.dueSingle(1793413000)).length).toBeGreaterThanOrEqual(1);
-    expect((await queue.dueSummary(1793413000)).length).toBeGreaterThanOrEqual(0);
+    const leasedSingles = await queue.leaseSingles(
+      1793413000,
+      CRON_LIMITS.leaseSeconds,
+      CRON_LIMITS.maxSingleSendsPerRun,
+    );
+    expect(leasedSingles.length).toBeGreaterThanOrEqual(1);
+    const leasedSummary = await queue.leaseSummaryPart(1793413000, CRON_LIMITS.leaseSeconds, 1793412000);
+    expect(leasedSummary.length).toBeGreaterThanOrEqual(0);
     await queue.acquireLease('id-1', 1793412900, 120);
     await queue.markFailed('id-1', 1, 1793413000, 'ERR');
-    await queue.overdueForAlert(1793500000, 86400, 86400);
-    await queue.markAlerted(['id-1'], 1793500000);
-    await queue.pendingCount();
-    await queue.oldestPendingAgeSec(1793500000);
+    await queue.countOverdueForAlert(1793500000, OUTBOX.alertAfterSeconds, OUTBOX.alertRepeatSeconds);
+    await queue.markAlerted(1793500000, OUTBOX.alertAfterSeconds, OUTBOX.alertRepeatSeconds);
+    await queue.pendingStats(1793500000, OUTBOX.overdueAlertSeconds);
     await queue.recordMailLog('notify', 1793412900);
     await queue.countMailLog('notify', 1793410000);
     await queue.updateHeartbeat('cron', 1793412900);
     await queue.getHeartbeat('cron');
     await queue.dumpAllTables();
     await queue.markSentAndDelete('id-1', 1793412900);
-    await queue.purgeExpiredUnsent(1799000000, 604800);
+    await queue.purgeExpired(1799000000, OUTBOX.maxRetentionUnsentSeconds, CRON_LIMITS.maxDeletesPerRun);
     await queue.purgeSentBefore(1799000000);
     await queue.purgeDedupeBefore(1799000000);
     await queue.resetAllTables();
