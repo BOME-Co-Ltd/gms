@@ -1603,7 +1603,8 @@ function renderPrivacyPage(content: LoadedSiteContent, locale: Locale): string {
 
 // Phần JS của form liên hệ (chạy trong IIFE của trang Liên hệ, sau khi lấy `form`). Microcopy: ux-spec §6.4–6.5;
 // trạng thái F1–F5: ux-spec §5.3; request/response: contracts/api.ts. Trong template literal này: gấp đôi dấu `\`, không dùng `${`.
-const CONTACT_FORM_SCRIPT = `
+// Mã điện thoại/Zalo chỉ được sinh khi công ty đã công bố kênh đó (hasPhone/hasZalo).
+const contactFormScript = (hasPhone: boolean, hasZalo: boolean): string => `
     var $ = function(id) { return document.getElementById(id); };
     var loc = form.getAttribute('data-locale') || 'vi';
     var isVi = loc === 'vi';
@@ -1612,9 +1613,9 @@ const CONTACT_FORM_SCRIPT = `
     var statusEl = $('contact-status');
     var waitEl = $('contact-human-wait');
     var slot = $('contact-human-slot');
-    var phoneRaw = form.getAttribute('data-phone') || '';
-    var phoneShown = form.getAttribute('data-phone-shown') || phoneRaw;
-    var zalo = form.getAttribute('data-zalo') || '';
+    ${hasPhone ? `var phoneRaw = form.getAttribute('data-phone') || '';
+    var phoneShown = form.getAttribute('data-phone-shown') || phoneRaw;` : ''}
+    ${hasZalo ? `var zalo = form.getAttribute('data-zalo') || '';` : ''}
     var sitekey = form.getAttribute('data-sitekey') || '';
     var CTRL = /[\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]/;
     function esc(s) {
@@ -1664,19 +1665,17 @@ const CONTACT_FORM_SCRIPT = `
     };
 
     // Kênh khác: chỉ hiện kênh đã công bố (không có kênh nào thì không thêm gì).
-    // TEL ghép lúc chạy để HTML không chứa sẵn chuỗi href tel: khi công ty chưa công bố số (INFO-02).
-    var TEL = 'te' + 'l:';
     function urgent() {
       var p = [];
-      if (phoneRaw) p.push((isVi ? 'gọi ' : 'call ') + '<a href="' + TEL + esc(phoneRaw) + '">' + esc(phoneShown) + '</a>');
-      if (zalo) p.push((isVi ? 'nhắn ' : 'message us on ') + '<a href="' + esc(zalo) + '" rel="noopener noreferrer">Zalo</a>');
+      ${hasPhone ? `p.push((isVi ? 'gọi ' : 'call ') + '<a href="tel:' + esc(phoneRaw) + '">' + esc(phoneShown) + '</a>');` : ''}
+      ${hasZalo ? `p.push((isVi ? 'nhắn ' : 'message us on ') + '<a href="' + esc(zalo) + '" rel="noopener noreferrer">Zalo</a>');` : ''}
       if (!p.length) return '';
       return ' ' + (isVi ? 'Nếu cần gấp, hãy ' + p.join(' hoặc ') : 'If urgent, ' + p.join(' or ')) + '.';
     }
     function channelsList() {
       var li = '';
-      if (phoneRaw) li += '<li>' + T.chPhone + ': <a href="' + TEL + esc(phoneRaw) + '">' + esc(phoneShown) + '</a></li>';
-      if (zalo) li += '<li><a href="' + esc(zalo) + '" rel="noopener noreferrer">' + T.chZalo + '</a></li>';
+      ${hasPhone ? `li += '<li>' + T.chPhone + ': <a href="tel:' + esc(phoneRaw) + '">' + esc(phoneShown) + '</a></li>';` : ''}
+      ${hasZalo ? `li += '<li><a href="' + esc(zalo) + '" rel="noopener noreferrer">' + T.chZalo + '</a></li>';` : ''}
       return li ? '<ul>' + li + '</ul>' : '';
     }
 
@@ -2070,6 +2069,14 @@ function renderContactPage(
         }</p>
       </div>`;
 
+  // Form đóng: không sinh mã nào nhắc tới form (HTML không chứa `contact-form`).
+  const formScript = canRenderForm
+    ? `
+    var form = document.querySelector('[data-testid="contact-form"]');
+    if (!form) return;
+    ${contactFormScript(Boolean(phoneRaw), Boolean(zaloRaw))}`
+    : '';
+
   const clientScript = `
   <script>
   (function() {
@@ -2084,9 +2091,7 @@ function renderContactPage(
         }
       });
     }
-    var form = document.querySelector('[data-testid="contact-form"]');
-    if (!form) return;
-    ${CONTACT_FORM_SCRIPT}
+    ${formScript}
   })();
   </script>
   `;
