@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type React from 'react';
 import '../styles/globals.css';
+import { FloatingContact } from '../components/ui/FloatingContact.tsx';
 
 export const metadata: Metadata = {
   title: 'GMS Hưng Yên — Giải pháp thông minh, Kiến tạo giá trị xanh',
@@ -35,7 +36,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        {children}
+        <FloatingContact />
+      </body>
     </html>
   );
 }

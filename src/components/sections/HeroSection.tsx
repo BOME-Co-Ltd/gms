@@ -34,7 +34,17 @@ export function HeroSection({
               <li key={p}>{p}</li>
             ))}
           </ul>
-          <h1>{title}</h1>
+          <h1 className="leading-tight text-3xl md:text-5xl font-extrabold tracking-tight">
+            {title.includes("–") || title.includes("-") || title.includes("—") || title.includes("\n") ? (
+              title.split(/\s*[-–—\n]\s*/).map((part) => (
+                <span key={part} className="block mt-1 first:mt-0">
+                  {part}
+                </span>
+              ))
+            ) : (
+              title
+            )}
+          </h1>
           <p>{subtitle}</p>
           <p className="mt-5 flex flex-wrap gap-3">
             <a href={ctaTechHref} className="btn btn-light">
@@ -47,9 +57,15 @@ export function HeroSection({
         </div>
         <figure className="hero-media" data-testid="home-cover">
           <img src={coverSrc} alt={coverAlt} width={1024} height={1024} />
-          <figcaption className="photo-badge" data-testid="photo-label">
-            {photoBadgeLabel}
-          </figcaption>
+          {photoBadgeLabel ? (
+            <figcaption className="photo-badge" data-testid="photo-label">
+              {photoBadgeLabel}
+            </figcaption>
+          ) : (
+            <figcaption className="sr-only" data-testid="photo-label">
+              {coverAlt}
+            </figcaption>
+          )}
         </figure>
       </div>
     </section>

@@ -58,26 +58,25 @@ export function ProductsPageView({ locale }: { locale: Locale }): React.ReactEle
           <h2>{isVi ? 'Sản phẩm từ chu trình sàng tuyển và nhiệt phân' : 'Products from Sorting & Pyrolysis'}</h2>
           <div className="grid-cards">
             {t.items.map((item, i) => (
-              <article key={item.name} className="card" data-testid="product-card">
-                <figure className="mb-3 overflow-hidden rounded-lg">
-                  <img
-                    src={PRODUCT_IMAGES[i] || '/og/default.png'}
-                    alt={item.name}
-                    width={400}
-                    height={260}
-                    className="h-48 w-full object-cover"
-                    loading="lazy"
-                  />
-                </figure>
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-xl font-bold">{item.name}</h3>
-                  <span
-                    className={`badge ${item.state === 'Đã có' || item.state === 'Available' ? 'bg-[#067647]/15 text-[#067647]' : 'bg-[#1D6FB6]/15 text-[#1D6FB6]'}`}
-                  >
-                    {item.state}
-                  </span>
+              <article key={item.name} className="card flex flex-col justify-between" data-testid="product-card">
+                <div>
+                  <figure className="mb-4 overflow-hidden rounded-xl border border-[#0f5838]/10 shadow-xs">
+                    <img
+                      src={PRODUCT_IMAGES[i] || '/og/default.png'}
+                      alt={item.name}
+                      width={400}
+                      height={260}
+                      className="h-48 w-full object-cover transition-transform duration-500 hover:scale-105"
+                      loading="lazy"
+                    />
+                  </figure>
+                  <div className="mb-2.5">
+                    <h3 className="text-lg md:text-xl font-extrabold text-[#0F5838] leading-snug m-0">
+                      {item.name}
+                    </h3>
+                  </div>
+                  <p className="text-sm leading-relaxed text-[#40773F]">{item.desc}</p>
                 </div>
-                <p className="mt-2 text-sm text-[#40773F]">{item.desc}</p>
               </article>
             ))}
           </div>

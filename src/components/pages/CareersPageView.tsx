@@ -56,17 +56,17 @@ export function CareersPageView({ locale }: { locale: Locale }): React.ReactElem
           <div className="grid-cards">
             {t.openPositions.map((pos) => (
               <article key={pos.title} className="card" data-testid="job-card">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-lg font-bold text-[#0F5838]">{pos.title}</h3>
-                  <span className="badge bg-[#9FB43B]/20 text-[#0F5838]">{pos.type}</span>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                  <h3 className="text-lg font-bold text-[#0F5838] leading-snug">{pos.title}</h3>
+                  <span className="badge bg-[#9FB43B]/20 text-[#0F5838] font-semibold">{pos.type}</span>
                 </div>
-                <p className="text-xs font-semibold text-[#1D6FB6]">📍 {pos.location}</p>
-                <p className="mt-2 text-sm text-[#40773F]">{pos.desc}</p>
-                <p className="mt-4">
+                <p className="text-xs font-semibold text-[#1D6FB6] mb-3">📍 {pos.location}</p>
+                <p className="text-sm leading-relaxed text-[#40773F] mb-5">{pos.desc}</p>
+                <div className="mt-auto pt-2">
                   <a href={ROUTES.contact[locale]} className="btn btn-outline" data-testid="cta-contact">
                     {isVi ? 'Ứng tuyển ngay' : 'Apply now'} →
                   </a>
-                </p>
+                </div>
               </article>
             ))}
           </div>

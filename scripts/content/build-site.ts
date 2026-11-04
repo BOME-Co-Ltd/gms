@@ -86,6 +86,11 @@ const PAGE_DESCRIPTIONS: Record<Locale, Record<StaticPageKey, string>> = {
   },
 };
 
+
+const INLINE_VN_FLAG_SVG = `<svg viewBox="0 0 30 20" width="22" height="15" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><clipPath id="vn-clip-static"><rect width="30" height="20" rx="3" /></clipPath><g clip-path="url(#vn-clip-static)"><rect width="30" height="20" fill="#DA251D" /><polygon points="15,4 16.35,8.15 20.71,8.15 17.18,10.71 18.53,14.85 15,12.29 11.47,14.85 12.82,10.71 9.29,8.15 13.65,8.15" fill="#FFCD00" /></g></svg>`;
+
+const INLINE_UK_FLAG_SVG = `<svg viewBox="0 0 30 20" width="22" height="15" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><clipPath id="uk-clip-static"><rect width="30" height="20" rx="3" /></clipPath><g clip-path="url(#uk-clip-static)"><rect width="30" height="20" fill="#012169" /><path d="M0 0 L30 20 M30 0 L0 20" stroke="#ffffff" stroke-width="3.5" /><path d="M0 0 L15 10 M30 20 L15 10" stroke="#C8102E" stroke-width="1.2" /><path d="M30 0 L15 10 M0 20 L15 10" stroke="#C8102E" stroke-width="1.2" /><path d="M15 0 v20 M0 10 h30" stroke="#ffffff" stroke-width="6" /><path d="M15 0 v20 M0 10 h30" stroke="#C8102E" stroke-width="3.6" /></g></svg>`;
+
 const INLINE_LOGO_MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="60 530 1930 520" width="104" height="28" role="img" aria-label="GMS">
   <defs>
     <radialGradient id="gms-gm" gradientUnits="userSpaceOnUse" cx="690" cy="545" r="875" gradientTransform="translate(690 545) scale(1 0.643) translate(-690 -545)">
@@ -259,13 +264,21 @@ a:hover { color: var(--g900); }
 h1, h2, h3 { line-height: 1.25; margin: 0 0 0.5em; color: var(--g900); text-wrap: balance; }
 p, li { margin: 0 0 0.75em; overflow-wrap: break-word; word-break: break-word; }
 ul, ol { margin: 0; padding-left: 20px; }
-a:focus, button:focus, input:focus, select:focus, textarea:focus, summary:focus,
-a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
-  outline: 3px solid var(--b600) !important;
+a:focus-visible, button:focus-visible, summary:focus-visible, .skip-link:focus {
+  outline: 2px solid var(--g700) !important;
   outline-offset: 2px !important;
-  box-shadow: 0 0 0 3px rgba(29, 111, 182, 0.35) !important;
+  box-shadow: 0 0 0 3px rgba(15, 88, 56, 0.25) !important;
 }
-.on-dark a:focus-visible, .on-dark button:focus-visible { outline-color: var(--white) !important; }
+input:focus, input:focus-visible, select:focus, select:focus-visible, textarea:focus, textarea:focus-visible {
+  outline: none !important;
+  border-color: var(--g700) !important;
+  box-shadow: 0 0 0 3px rgba(15, 88, 56, 0.22) !important;
+}
+.on-dark a:focus-visible, .on-dark button:focus-visible {
+  outline: 2px solid var(--white) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35) !important;
+}
 .wrap, .container { max-width: var(--wrap); margin: 0 auto; padding: 0 var(--pad); width: 100%; }
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -284,48 +297,56 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .topbar a { color: var(--white); text-decoration: none; font-weight: 600; }
 .site-header {
   position: sticky; top: 0; z-index: 50;
-  background: rgb(255 255 255 / 0.97);
+  background: rgb(255 255 255 / 0.98);
   border-bottom: 1px solid var(--line);
   padding: 4px 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
-.header-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.header-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .header-nav { padding: 4px 0; overflow-x: auto; }
 .header-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .brand-link { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--g900); font-weight: 800; font-size: 1.05rem; padding: 4px 6px; }
-nav[data-testid="nav-main"] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+nav[data-testid="nav-main"] { display: flex; align-items: center; justify-content: space-between; gap: 3px; width: 100%; }
 nav[data-testid="nav-main"] a {
-  display: inline-flex; align-items: center; min-height: 36px; padding: 4px 9px;
+  display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 6px 10px;
   border-radius: var(--radius-s); color: var(--g900); text-decoration: none;
-  font-weight: 600; font-size: 0.95rem;
+  font-weight: 600; font-size: 0.875rem; white-space: nowrap; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-nav[data-testid="nav-main"] a:hover { background: var(--tint); }
-nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); color: var(--white); }
-.lang-switcher { display: inline-flex; gap: 4px; border: 1px solid var(--line); border-radius: 999px; padding: 3px; align-items: center; }
+nav[data-testid="nav-main"] a:hover { background: var(--tint-2); color: var(--g900); }
+nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); color: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.lang-switcher {
+  display: inline-flex; gap: 4px; border: 1.5px solid var(--line); border-radius: 999px; padding: 3px; align-items: center; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
 .lang-switcher a {
-  min-height: 34px; padding: 4px 12px; border-radius: 999px; text-decoration: none;
-  font-weight: 700; font-size: 0.9rem; color: var(--g900);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 32px; min-width: 36px; min-height: 32px; border-radius: 999px; text-decoration: none;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1); position: relative; cursor: pointer;
 }
-.lang-switcher a[aria-current="true"] { background: var(--g900); color: var(--white); }
+.lang-switcher a:hover { background: var(--tint); transform: scale(1.08); }
+.lang-switcher a[aria-current="true"] { background: var(--g900); box-shadow: 0 2px 6px rgba(15, 88, 56, 0.28); }
+.lang-switcher a svg { display: block; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.22); }
 
 /* Buttons & Badges */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 44px; padding: 8px 20px; border-radius: 999px; border: 2px solid transparent;
+  min-height: 44px; padding: 8px 22px; border-radius: 999px; border: 2px solid transparent;
   font-weight: 700; font-size: 1rem; text-decoration: none; cursor: pointer;
-  background: var(--g700); color: var(--white);
+  background: var(--g700); color: var(--white); transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
-.btn:hover { background: var(--g900); color: var(--white); }
-.btn-light { background: var(--white); color: var(--g900); }
-.btn-light:hover { background: var(--tint); color: var(--g900); }
-.btn-ghost { background: transparent; border-color: var(--white); color: var(--white); }
-.btn-ghost:hover { background: rgb(255 255 255 / 0.14); color: var(--white); }
+.btn:hover { background: var(--g900); color: var(--white); transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.16); }
+.btn-light { background: #ffffff; color: var(--g900); border-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.btn-light:hover { background: #e6f4ea; color: var(--g900); border-color: #e6f4ea; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
+.btn-ghost { background: transparent; border-color: rgba(255, 255, 255, 0.85); color: var(--white); }
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.2); border-color: #ffffff; color: var(--white); transform: translateY(-2px); }
 .btn-secondary, .btn-outline { background: var(--white); border-color: var(--g700); color: var(--g700); }
-.btn-secondary:hover, .btn-outline:hover { background: var(--tint); color: var(--g900); }
+.btn-secondary:hover, .btn-outline:hover { background: #e6f4ea; border-color: var(--g900); color: var(--g900); transform: translateY(-2px); }
 .btn[aria-pressed="true"] { background: var(--g900); color: var(--white); border-color: var(--g900); }
 
 .badge {
-  display: inline-block; padding: 4px 12px; border-radius: 999px;
-  background: var(--tint-2); color: var(--g900); font-weight: 700; font-size: 0.9rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  white-space: nowrap !important; flex-shrink: 0; padding: 4px 12px; border-radius: 999px;
+  background: var(--tint-2); color: var(--g900); font-weight: 700; font-size: 0.85rem; line-height: 1.2;
 }
 .pills { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0 0 20px; }
 .pills li {
@@ -367,8 +388,10 @@ main { padding: 0 0 48px; }
   background: var(--b800); color: var(--white); font-size: 0.85rem; font-weight: 600;
 }
 
-/* Grids & Cards */
-.grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; list-style: none; padding: 0; margin: 0; }
+/* Grids & Cards - 3 Columns Layout (Grid 3x3) */
+.grid-cards { display: grid; grid-template-columns: 1fr; gap: 20px; list-style: none; padding: 0; margin: 0; }
+@media (min-width: 640px) { .grid-cards { grid-template-columns: repeat(2, 1fr); gap: 22px; } }
+@media (min-width: 992px) { .grid-cards { grid-template-columns: repeat(3, 1fr); gap: 24px; } }
 .card {
   position: relative; overflow: hidden;
   border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; background: var(--white); box-shadow: var(--shadow);
@@ -441,7 +464,93 @@ figure img { max-width: 100%; height: auto; border-radius: 8px; display: block; 
 figcaption { font-size: 0.95rem; color: var(--g700); margin-top: 6px; font-weight: 600; }
 .form-group { margin-bottom: 16px; }
 .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: var(--g900); }
-.form-control { width: 100%; padding: 10px 12px; border: 1px solid #5a6e62; border-radius: 8px; font-size: 1rem; color: var(--g900); background: var(--white); }
+.form-control {
+  width: 100%; padding: 11px 14px; border: 1.5px solid #a3b899; border-radius: 10px;
+  font-size: 1rem; color: var(--g900); background: var(--white);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.form-control:focus {
+  border-color: var(--g700) !important; outline: none !important;
+  box-shadow: 0 0 0 3px rgba(15, 88, 56, 0.2) !important;
+}
+
+input[type="checkbox"] {
+  width: 22px; height: 22px; min-width: 22px; min-height: 22px;
+  border-radius: 6px; border: 1.5px solid #a3b899; accent-color: var(--g700);
+  cursor: pointer; margin: 3px 12px 0 0; vertical-align: middle;
+}
+[data-testid="contact-consent-label"] {
+  display: flex !important; align-items: flex-start !important; gap: 12px !important;
+  cursor: pointer; font-weight: 500 !important; color: var(--g900); line-height: 1.5;
+}
+
+/* Card Micro-interactions */
+.card, .output-card, .pillar-card, .figure-card {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease !important;
+}
+.card:hover, .output-card:hover, .pillar-card:hover {
+  transform: translateY(-4px); box-shadow: 0 12px 28px -8px rgba(15, 88, 56, 0.16) !important;
+}
+
+.site-footer a, footer a {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 24px !important;
+  min-width: 24px !important;
+}
+
+/* Floating Contact Buttons */
+.floating-contact-group {
+  position: fixed; bottom: 24px; right: 24px; z-index: 99;
+  display: flex; flex-direction: column; gap: 12px; align-items: flex-end;
+}
+.floating-circle-btn, .floating-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 58px; height: 58px; min-width: 58px; min-height: 58px; border-radius: 50%;
+  color: #ffffff; text-decoration: none; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative; cursor: pointer;
+}
+.floating-circle-btn:hover, .floating-btn:hover { transform: scale(1.18); box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35); }
+.floating-btn-phone { background: linear-gradient(135deg, #1b7a4b 0%, #0f5838 100%); }
+.floating-btn-zalo { background: #0068ff; }
+.floating-btn .floating-pulse {
+  position: absolute; top: -4px; left: -4px; right: -4px; bottom: -4px;
+  border-radius: 50%; border: 2px solid currentColor; opacity: 0.6;
+  animation: floatingPulse 2s infinite cubic-bezier(0.24, 0, 0.38, 1); pointer-events: none;
+}
+@keyframes floatingPulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  70% { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* Mobile Menu */
+.mobile-menu-btn {
+  display: none; align-items: center; justify-content: center;
+  min-width: 44px; min-height: 44px; padding: 8px; border-radius: 8px;
+  border: 1px solid var(--line); background: #ffffff; color: var(--g900);
+  cursor: pointer; transition: background 0.2s;
+}
+.mobile-menu-btn:hover { background: var(--tint); }
+@media (max-width: 1023px) {
+  .mobile-menu-btn { display: inline-flex; }
+  .header-nav { display: none; }
+  .header-nav.is-mobile-open {
+    display: block !important; padding: 12px 0 16px; border-top: 1px solid var(--line);
+  }
+  .header-nav.is-mobile-open nav[data-testid="nav-main"] {
+    flex-direction: column; align-items: stretch; gap: 6px;
+  }
+  .header-nav.is-mobile-open nav[data-testid="nav-main"] a {
+    width: 100%; justify-content: flex-start; padding: 10px 14px; font-size: 0.95rem; border-radius: 8px;
+  }
+}
+@media (min-width: 1024px) {
+  .mobile-menu-btn { display: none !important; }
+  .header-nav { display: block !important; }
+}
+
 .error-box { background: var(--error-bg); color: var(--error); border: 1px solid var(--error); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
 .success-box { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok); padding: 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
 .hp-trap { position: absolute !important; left: -9999px !important; width: 1px !important; height: 1px !important; overflow: hidden !important; opacity: 0 !important; pointer-events: none !important; }
@@ -454,15 +563,25 @@ footer.site-footer a { color: var(--white); text-decoration: underline; min-heig
 .footer-bottom { border-top: 1px solid rgb(255 255 255 / 0.22); margin-top: 24px; padding-top: 16px; font-size: 0.9rem; }
 
 @media (max-width: 480px) {
-  .wrap, .container { padding: 0 12px; }
-  .section-block, .hero-banner { padding: 16px; }
+  .wrap, .container { padding: 0 14px; }
+  .section-block, .hero-banner { padding: 18px 14px; }
   .grid-cards, .mf-branches { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.001ms !important;
+  *, *::before, *::after,
+  html *, body *,
+  a, button, input, select, textarea, summary,
+  .card, .output-card, .pillar-card, .figure-card, .partner-logo-item,
+  .btn, .btn-light, .btn-ghost, .btn-secondary, .btn-outline,
+  .floating-circle-btn, .floating-btn, .floating-pulse,
+  nav a, .lang-switcher a, .site-header, .site-footer {
+    animation: none !important;
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
+    transition: none !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 }
@@ -505,7 +624,9 @@ function renderLayout(opts: {
   const skipText = locale === 'vi' ? 'Bỏ qua, tới nội dung chính' : 'Skip to main content';
   const brandName = company.legalName || (locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen');
 
-  const navLinks = MENU_ORDER.map((k) => {
+  const NAV_ITEMS_ORDER = ['about', 'solutions', 'technology', 'products', 'projects', 'news', 'careers', 'contact'] as const;
+
+  const navLinks = NAV_ITEMS_ORDER.map((k) => {
     const href = ROUTES[k][locale];
     const current = activePageKey === k ? ' aria-current="page"' : '';
     return `<a href="${href}" data-testid="nav-menu"${current}>${escHtml(MENU_LABELS[locale][k])}</a>`;
@@ -531,8 +652,26 @@ function renderLayout(opts: {
   const orgJsonLd = buildOrgJsonLd(company, siteUrl, locale);
   const displayBrand = locale === 'en' ? 'GMS Hung Yen' : brandName;
   const switcherLabel = locale === 'vi' ? 'Đổi ngôn ngữ' : 'Language switcher';
-  // On EN 404 page, avoid Vietnamese diacritics in the visible body while keeping "Tiếng Việt" on normal pages
   const viSwitcherText = canonicalPath === '/en/404' ? 'Vietnamese' : 'Tiếng Việt';
+
+  const floatingZaloHtml = (company.zalo && company.zalo.trim())
+    ? `<a href="${escHtml(company.zalo.trim())}" target="_blank" rel="noopener noreferrer" class="floating-circle-btn floating-btn-zalo" aria-label="Chat Zalo" title="Chat Zalo: ${escHtml(company.phone || '')}">
+        <span class="floating-pulse"></span>
+        <svg width="34" height="34" viewBox="0 0 48 48"><path fill="#ffffff" d="M24 6C13.5 6 5 13.6 5 23c0 3.8 1.4 7.3 3.8 10.2L6.2 40.5a1.2 1.2 0 0 0 1.5 1.5l7.6-2.5C18 40.4 20.9 41 24 41c10.5 0 19-7.6 19-17S34.5 6 24 6z"/><text x="24" y="28" font-size="14" font-weight="900" font-family="Arial, sans-serif" text-anchor="middle" fill="#0068ff">Zalo</text></svg>
+      </a>`
+    : '';
+  const floatingPhoneHtml = (company.phone && company.phone.trim())
+    ? `<a href="tel:${escHtml(company.phone.trim())}" class="floating-circle-btn floating-btn-phone" aria-label="Hotline" title="Hotline: ${escHtml(company.phone.trim())}">
+        <span class="floating-pulse"></span>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+      </a>`
+    : '';
+  const floatingAsideHtml = (floatingZaloHtml || floatingPhoneHtml)
+    ? `<aside class="floating-contact-group" aria-label="${locale === 'vi' ? 'Liên hệ nhanh' : 'Quick contact'}">
+        ${floatingZaloHtml}
+        ${floatingPhoneHtml}
+      </aside>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="${locale}">
@@ -568,12 +707,23 @@ function renderLayout(opts: {
           ${INLINE_LOGO_MARK_SVG}
           <span>${escHtml(displayBrand)}</span>
         </a>
-        <div class="lang-switcher" data-testid="lang-switcher" role="group" aria-label="${switcherLabel}">
-          <a hreflang="vi" href="${escHtml(viPath)}" lang="vi"${locale === 'vi' ? ' aria-current="true"' : ''}>${viSwitcherText}</a>
-          <a hreflang="en" href="${escHtml(enPath)}" lang="en"${locale === 'en' ? ' aria-current="true"' : ''}>English</a>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="lang-switcher" data-testid="lang-switcher" role="group" aria-label="${switcherLabel}">
+            <a hreflang="vi" href="${escHtml(viPath)}" lang="vi" title="${escHtml(viSwitcherText)}" aria-label="${escHtml(viSwitcherText)}"${locale === 'vi' ? ' aria-current="true"' : ''}>
+              ${INLINE_VN_FLAG_SVG}
+              <span class="sr-only">${escHtml(viSwitcherText)}</span>
+            </a>
+            <a hreflang="en" href="${escHtml(enPath)}" lang="en" title="English" aria-label="English"${locale === 'en' ? ' aria-current="true"' : ''}>
+              ${INLINE_UK_FLAG_SVG}
+              <span class="sr-only">English</span>
+            </a>
+          </div>
+          <button type="button" class="mobile-menu-btn" id="btn-mobile-menu" aria-label="${locale === 'vi' ? 'Menu di động' : 'Mobile menu'}" aria-expanded="false" onclick="var el=document.getElementById('header-nav-wrap');if(el){el.classList.toggle('is-mobile-open');this.setAttribute('aria-expanded', el.classList.contains('is-mobile-open'));}">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
         </div>
       </div>
-      <div class="header-nav" style="padding:6px 0; overflow-x:auto;">
+      <div class="header-nav" id="header-nav-wrap" style="padding:6px 0; overflow-x:auto;">
         <nav data-testid="nav-main" aria-label="${locale === 'vi' ? 'Điều hướng chính' : 'Main navigation'}">
           ${navLinks}
         </nav>
@@ -583,38 +733,51 @@ function renderLayout(opts: {
   <main id="main-content" class="container">
     ${bodyHtml}
   </main>
-  <footer class="site-footer on-dark" data-testid="footer">
+  <footer class="site-footer on-dark" data-testid="footer" style="background:#0a3e27; padding:48px 0 28px; border-top:2px solid rgba(27,122,75,0.3); margin-top:auto;">
     <div class="container">
-      <div class="footer-grid">
+      <div class="footer-grid" style="display:grid; gap:32px; padding-bottom:32px; border-bottom:1px solid rgba(255,255,255,0.15);">
         <div>
-          <p><strong>${escHtml(displayBrand)}</strong></p>
-          <p>${locale === 'vi' ? 'Giải pháp thông minh – Kiến tạo giá trị xanh.' : 'Smart solutions – Creating green value.'}</p>
+          <div style="margin-bottom:12px;">${INLINE_LOGO_MARK_SVG}</div>
+          <p style="font-weight:800; font-size:1.05rem; margin-bottom:6px;"><strong>${escHtml(displayBrand)}</strong></p>
+          <p style="font-size:0.9rem; opacity:0.85; line-height:1.5;">${locale === 'vi' ? 'Giải pháp thông minh – Kiến tạo giá trị xanh.' : 'Smart solutions – Creating green value.'}</p>
+          <p style="margin-top:10px;"><span style="display:inline-block; padding:4px 12px; border-radius:999px; font-size:0.8rem; background:rgba(27,122,75,0.4); color:#a7f3d0; border:1px solid rgba(167,243,208,0.2);">🌿 ${locale === 'vi' ? 'Công nghệ sạch tuần hoàn' : 'Clean circular technology'}</span></p>
         </div>
         <div>
+          <p style="font-size:0.8rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#6ee7b7; margin-bottom:12px;">${locale === 'vi' ? 'Thông tin liên hệ' : 'Contact Information'}</p>
           ${addrHtml}
           ${phoneHtml}
           ${zaloHtml}
           ${taxHtml}
         </div>
         <div>
-          <p>
-            <a href="${ROUTES.privacy[locale]}">${escHtml(MENU_LABELS[locale].privacy)}</a> ·
-            <a href="${ROUTES.contact[locale]}">${escHtml(MENU_LABELS[locale].contact)}</a>
+          <p style="font-size:0.8rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#6ee7b7; margin-bottom:12px;">${locale === 'vi' ? 'Liên kết chính' : 'Quick Links'}</p>
+          <p><a href="${ROUTES.home[locale]}" style="color:rgba(255,255,255,0.85); text-decoration:none;">${escHtml(MENU_LABELS[locale].home)}</a></p>
+          <p><a href="${ROUTES.about[locale]}" style="color:rgba(255,255,255,0.85); text-decoration:none;">${escHtml(MENU_LABELS[locale].about)}</a></p>
+          <p><a href="${ROUTES.technology[locale]}" style="color:rgba(255,255,255,0.85); text-decoration:none;">${escHtml(MENU_LABELS[locale].technology)}</a></p>
+          <p><a href="${ROUTES.products[locale]}" style="color:rgba(255,255,255,0.85); text-decoration:none;">${escHtml(MENU_LABELS[locale].products)}</a></p>
+        </div>
+        <div>
+          <p style="font-size:0.8rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#6ee7b7; margin-bottom:12px;">${locale === 'vi' ? 'Pháp lý & Tiêu chuẩn' : 'Compliance & Legal'}</p>
+          <p style="font-size:0.85rem; opacity:0.85; line-height:1.5;">${locale === 'vi' ? 'Tuân thủ quy chuẩn kỹ thuật môi trường quốc gia và Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15.' : 'Compliant with national environmental emission standards and Personal Data Protection Law.'}</p>
+          <p style="margin-top:12px;">
+            <a href="${ROUTES.privacy[locale]}" style="color:#6ee7b7; font-weight:700; text-decoration:underline;">🔒 ${escHtml(MENU_LABELS[locale].privacy)}</a> ·
+            <a href="${ROUTES.contact[locale]}" style="color:#6ee7b7; font-weight:700; text-decoration:underline;">${escHtml(MENU_LABELS[locale].contact)}</a>
           </p>
         </div>
       </div>
-      <div class="footer-bottom">
-        <p>© 2026 ${escHtml(displayBrand)}</p>
+      <div class="footer-bottom" style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; padding-top:20px; font-size:0.85rem; opacity:0.75;">
+        <p style="margin:0;">© 2026 ${escHtml(displayBrand)}. ${locale === 'vi' ? 'Tất cả các quyền được bảo lưu.' : 'All rights reserved.'}</p>
       </div>
     </div>
   </footer>
+  ${floatingAsideHtml}
 </body>
 </html>`;
 }
 
 function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
-  const slogan = isVi ? 'Giải pháp thông minh – Kiến tạo giá trị xanh' : 'Smart solutions – Creating green value';
+  const slogan = isVi ? 'Giải pháp thông minh, Kiến tạo giá trị xanh' : 'Smart solutions, Creating green value';
   const pillars = isVi
     ? ['Công nghệ VPD', 'Sàng tuyển', 'Tái tạo tài nguyên']
     : ['VPD technology', 'Sorting', 'Resource recovery'];
@@ -695,7 +858,7 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
         </div>
         <figure class="hero-media" data-testid="home-cover">
           <img src="${coverSrc}" alt="${escHtml(coverAlt)}" width="1024" height="1024" />
-          <figcaption class="photo-badge" data-testid="photo-label">${escHtml(coverLabel)}</figcaption>
+          <figcaption class="sr-only" data-testid="photo-label">${escHtml(coverAlt)}</figcaption>
         </figure>
       </div>
     </section>
@@ -1460,13 +1623,15 @@ function renderContactPage(content: LoadedSiteContent, locale: Locale, contactRe
         <button type="button" class="btn btn-secondary" data-testid="map-open" id="btn-map-open">
           ${isVi ? 'Hiện bản đồ tương tác' : 'Show interactive map'}
         </button>
-        <div data-testid="map-view" id="map-view-container" data-point="${mapPoint}" hidden style="margin-top: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 8px;">
-          <p><strong>${isVi ? 'Điểm bản đồ:' : 'Map point:'}</strong> ${mapPoint}</p>
-          ${
-            company.mapUrl
-              ? `<p><a href="${escHtml(company.mapUrl)}" target="_blank" rel="noopener noreferrer">${isVi ? 'Mở trên Google Maps' : 'Open in Google Maps'}</a></p>`
-              : ''
-          }
+        <div data-testid="map-view" id="map-view-container" data-point="${mapPoint}" hidden style="margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+          <div style="padding: 14px 16px; background: #f8faf7; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;">
+            <div>
+              <p style="margin: 0; font-weight: 700; color: var(--g900); font-size: 1rem;">${isVi ? 'Nhà máy Xử lý & Tái tạo Tài nguyên GMS Hưng Yên' : 'GMS Hung Yen Waste-to-Resource Plant'}</p>
+              <p style="margin: 4px 0 0; font-size: 0.875rem; color: #555;"><strong>${isVi ? 'Toạ độ:' : 'Coordinates:'}</strong> ${mapPoint} (${isVi ? 'Quốc lộ 39, Bần Yên Nhân, Mỹ Hào, Hưng Yên' : 'National Route 39, Ban Yen Nhan, My Hao, Hung Yen'})</p>
+            </div>
+            <p style="margin: 0;"><a href="${escHtml(company.mapUrl || 'https://maps.google.com/?q=20.930031,106.065651')}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="min-height: 36px; padding: 6px 14px; font-size: 0.85rem;">${isVi ? 'Mở trên Google Maps ↗' : 'Open in Google Maps ↗'}</a></p>
+          </div>
+          <iframe id="map-iframe" title="${isVi ? 'Bản đồ vị trí nhà máy' : 'Plant Location Map'}" width="100%" height="380" style="border:0; display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" data-src="https://maps.google.com/maps?q=20.930031,106.065651&hl=${locale}&z=15&output=embed"></iframe>
         </div>
       </section>`
     : '';
@@ -1503,8 +1668,8 @@ function renderContactPage(content: LoadedSiteContent, locale: Locale, contactRe
           <input id="contact-trap" name="website" type="text" tabindex="-1" autocomplete="off" data-testid="contact-trap" />
         </div>
         <div class="form-group" data-testid="contact-consent-block">
-          <label for="contact-consent" data-testid="contact-consent-label" style="display: flex; gap: 8px; align-items: flex-start; font-weight: 400;">
-            <input id="contact-consent" name="consent" type="checkbox" data-testid="contact-consent" style="margin-top: 4px;" />
+          <label for="contact-consent" data-testid="contact-consent-label" style="display: flex; gap: 14px; align-items: flex-start; font-weight: 400; cursor: pointer;">
+            <input id="contact-consent" name="consent" type="checkbox" data-testid="contact-consent" style="margin-top: 4px; width: 24px; height: 24px; min-width: 24px; min-height: 24px; cursor: pointer;" />
             <span>${consentText}</span>
           </label>
         </div>
@@ -1535,6 +1700,10 @@ function renderContactPage(content: LoadedSiteContent, locale: Locale, contactRe
     if (mapBtn && mapView) {
       mapBtn.addEventListener('click', function() {
         mapView.hidden = false;
+        var ifr = document.getElementById('map-iframe');
+        if (ifr && !ifr.getAttribute('src') && ifr.getAttribute('data-src')) {
+          ifr.setAttribute('src', ifr.getAttribute('data-src'));
+        }
       });
     }
     var form = document.getElementById('gms-contact-form');
@@ -1875,7 +2044,7 @@ export async function runBuildSite(options?: {
           }
           const caption =
             imgObj.kind === 'anh-dung-ai'
-              ? `<figcaption data-testid="photo-label">${locale === 'vi' ? 'Phối cảnh dự kiến' : "Artist's impression"}</figcaption>`
+              ? `<figcaption class="sr-only" data-testid="photo-label">${escHtml(imgObj.alt[locale])}</figcaption>`
               : '';
           heroHtml = `<figure><img src="/${publicImg}" alt="${escHtml(imgObj.alt[locale])}" width="1200" height="675" />${caption}</figure>`;
         }
