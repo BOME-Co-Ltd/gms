@@ -23,6 +23,8 @@ export interface Env {
   MAIL_FROM?: string;
   ALERT_TO?: string;
   CONTACT_RECIPIENT?: string;
+  /** Biến build (build.ts §9). "false" ⇒ form tạm đóng ⇒ POST 503 FORM_DISABLED; thiếu = không chặn ở Worker. */
+  CONTACT_MAIL_READY?: string;
   TURNSTILE_SECRET?: string;
   IP_HMAC_KEY?: string;
   DEPLOY_HOOK_URL?: string;
@@ -54,7 +56,7 @@ function makeProdDeps(env: Env): ContactDeps {
     ipKey,
     logger,
     config: () => ({
-      formEnabled: env.FORM_ENABLED !== 'false',
+      formEnabled: env.FORM_ENABLED !== 'false' && env.CONTACT_MAIL_READY !== 'false',
       policyVersion: env.POLICY_VERSION ?? '1.0',
       siteOrigin: env.SITE_ORIGIN ?? '',
       mailFrom: env.MAIL_FROM ?? 'thongbao@thongbao.gmshungyen.vn',

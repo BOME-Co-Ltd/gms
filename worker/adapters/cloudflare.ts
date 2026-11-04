@@ -1,4 +1,4 @@
-import { CLIENT_IP_HEADER, TURNSTILE_SITEVERIFY } from '../../contracts/api.ts';
+import { CLIENT_IP_HEADER, CRON_LIMITS, MAIL_CAPS, TURNSTILE_SITEVERIFY } from '../../contracts/api.ts';
 import { judgeSiteverify } from '../domain/human-check.ts';
 import type {
   AppLogger,
@@ -153,6 +153,27 @@ function rowToOutbox(r: D1Row): OutboxRecord {
   };
 }
 
+/** Hàng chỉ có cột CRON_SELECT_COLUMNS: các trường không đọc để rỗng, không bao giờ log. */
+function leasedRow(r: D1Row): OutboxRecord {
+  const str = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
+  return {
+    id: String(r.id),
+    createdAt: Number(r.created_at ?? 0),
+    locale: 'vi',
+    fullName: str(r.full_name) ?? '',
+    email: str(r.email),
+    message: '',
+    pagePath: '',
+    policyVersion: '',
+    consentAt: 0,
+    dedupeHash: '',
+    bodyB64: str(r.body_b64) ?? '',
+    batch: r.created_at === undefined ? 'single' : 'summary',
+    attempts: Number(r.attempts ?? 0),
+    nextAttemptAt: 0,
+  };
+}
+
 export class D1ContactQueue implements ContactQueue {
   private db: D1Database;
   public shouldFailEnqueue = false;
@@ -259,30 +280,58 @@ export class D1ContactQueue implements ContactQueue {
     await this.db.prepare('INSERT OR REPLACE INTO dedupe (hash, created_at) VALUES (?, ?)').bind(hash, nowSec).run();
   }
 
-  async dueSingle(nowSec: number): Promise<OutboxRecord[]> {
+  async leaseSingles(nowSec: number, leaseSec: number, limit: number): Promise<OutboxRecord[]> {
     const res = await this.db
       .prepare(
-        `SELECT * FROM outbox
-         WHERE sent_at IS NULL AND batch = 'single' AND next_attempt_at <= ?
-           AND (lease_until IS NULL OR lease_until < ?)
-         ORDER BY created_at ASC`,
+        `UPDATE outbox SET lease_until = ?, attempts = attempts + 1
+         WHERE id IN (
+           SELECT id FROM outbox
+           WHERE sent_at IS NULL AND batch = 'single' AND next_attempt_at <= ?
+             AND (lease_until IS NULL OR lease_until < ?)
+           ORDER BY created_at, id LIMIT ?)
+         RETURNING id, body_b64, email, full_name, attempts`,
       )
-      .bind(nowSec, nowSec)
+      .bind(nowSec + leaseSec, nowSec, nowSec, limit)
       .all<D1Row>();
-    return (res.results ?? []).map(rowToOutbox);
+    return (res.results ?? []).map(leasedRow);
   }
 
-  async dueSummary(nowSec: number): Promise<OutboxRecord[]> {
+  async oldestSummaryCreatedAt(): Promise<number | null> {
+    const row = await this.db
+      .prepare("SELECT MIN(created_at) AS oldest FROM outbox WHERE sent_at IS NULL AND batch = 'summary'")
+      .first<{ oldest: number | null }>();
+    return row?.oldest === null || row?.oldest === undefined ? null : Number(row.oldest);
+  }
+
+  async leaseSummaryPart(nowSec: number, leaseSec: number, hourStart: number): Promise<OutboxRecord[]> {
+    // Một câu, 7 tham số cố định (≤ maxBoundParamsCron). Lọc trần số/byte và cô lập đầu hàng attempts ≥ 3 phía D1.
     const res = await this.db
       .prepare(
-        `SELECT * FROM outbox
-         WHERE sent_at IS NULL AND batch = 'summary'
-           AND (lease_until IS NULL OR lease_until < ?)
-         ORDER BY created_at ASC`,
+        `UPDATE outbox SET lease_until = ?, attempts = attempts + 1
+         WHERE id IN (
+           SELECT id FROM (
+             SELECT id,
+                    ROW_NUMBER() OVER w AS rn,
+                    SUM(length(body_b64)) OVER w AS cum,
+                    FIRST_VALUE(attempts) OVER w AS head_attempts
+             FROM outbox
+             WHERE sent_at IS NULL AND batch = 'summary' AND created_at >= ? AND created_at < ?
+               AND (lease_until IS NULL OR lease_until < ?)
+             WINDOW w AS (ORDER BY created_at, id))
+           WHERE rn = 1 OR (rn <= ? AND cum <= ? AND head_attempts < ?))
+         RETURNING id, body_b64, email, created_at, attempts`,
       )
-      .bind(nowSec)
+      .bind(
+        nowSec + leaseSec,
+        hourStart,
+        hourStart + 3600,
+        nowSec,
+        CRON_LIMITS.maxSummaryContacts,
+        CRON_LIMITS.maxSummaryPartB64Bytes,
+        CRON_LIMITS.summaryHeadAttemptsIsolate,
+      )
       .all<D1Row>();
-    return (res.results ?? []).map(rowToOutbox);
+    return (res.results ?? []).map(leasedRow).sort((x, y) => x.createdAt - y.createdAt || x.id.localeCompare(y.id));
   }
 
   async acquireLease(id: string, nowSec: number, leaseSec: number): Promise<boolean> {
@@ -301,6 +350,24 @@ export class D1ContactQueue implements ContactQueue {
     await this.db.prepare('DELETE FROM outbox WHERE id = ?').bind(id).run();
   }
 
+  async markManySentAndDelete(ids: string[], nowSec: number): Promise<void> {
+    const json = JSON.stringify(ids);
+    await this.db
+      .prepare('UPDATE outbox SET sent_at = ? WHERE id IN (SELECT value FROM json_each(?))')
+      .bind(nowSec, json)
+      .run();
+    await this.db.prepare('DELETE FROM outbox WHERE id IN (SELECT value FROM json_each(?))').bind(json).run();
+  }
+
+  async releaseLeases(ids: string[], nextAttemptAt: number, errorCode: string): Promise<void> {
+    await this.db
+      .prepare(
+        'UPDATE outbox SET lease_until = NULL, next_attempt_at = ?, last_error = ? WHERE id IN (SELECT value FROM json_each(?))',
+      )
+      .bind(nextAttemptAt, errorCode, JSON.stringify(ids))
+      .run();
+  }
+
   async markFailed(id: string, attempts: number, nextAttemptAt: number, errorCode: string): Promise<void> {
     await this.db
       .prepare('UPDATE outbox SET attempts = ?, next_attempt_at = ?, lease_until = NULL, last_error = ? WHERE id = ?')
@@ -308,61 +375,95 @@ export class D1ContactQueue implements ContactQueue {
       .run();
   }
 
-  async overdueForAlert(nowSec: number, alertAfterSec: number, alertRepeatSec: number): Promise<OutboxRecord[]> {
-    const res = await this.db
+  async pendingStats(
+    nowSec: number,
+    overdueSec: number,
+  ): Promise<{ pending: number; oldestDueSec: number | null; overdue: number }> {
+    // Hạn gửi: thư riêng = created_at + firstSendWithinSeconds; thư tóm tắt = hết giờ tròn + summaryDeliver…
+    // (giờ tròn VN = UTC+7 là bội số của 3600 ⇒ chia nguyên theo UTC khớp).
+    const row = await this.db
       .prepare(
-        `SELECT * FROM outbox
-         WHERE sent_at IS NULL
-           AND created_at <= ?
-           AND (alerted_at IS NULL OR alerted_at <= ?)
-         ORDER BY created_at ASC`,
+        `SELECT COUNT(*) AS pending, MIN(due) AS oldest_due, COALESCE(SUM(due <= ?), 0) AS overdue FROM (
+           SELECT CASE WHEN batch = 'summary' THEN (created_at / 3600 + 1) * 3600 + ? ELSE created_at + ? END AS due
+           FROM outbox WHERE sent_at IS NULL)`,
+      )
+      .bind(nowSec - overdueSec, MAIL_CAPS.summaryDeliverWithinSecondsAfterHour, MAIL_CAPS.firstSendWithinSeconds)
+      .first<{ pending: number; oldest_due: number | null; overdue: number }>();
+    return {
+      pending: Number(row?.pending ?? 0),
+      oldestDueSec: row?.oldest_due === null || row?.oldest_due === undefined ? null : Number(row.oldest_due),
+      overdue: Number(row?.overdue ?? 0),
+    };
+  }
+
+  async countOverdueForAlert(nowSec: number, alertAfterSec: number, alertRepeatSec: number): Promise<number> {
+    const row = await this.db
+      .prepare(
+        'SELECT COUNT(*) AS cnt FROM outbox WHERE sent_at IS NULL AND created_at <= ? AND (alerted_at IS NULL OR alerted_at <= ?)',
       )
       .bind(nowSec - alertAfterSec, nowSec - alertRepeatSec)
-      .all<D1Row>();
-    return (res.results ?? []).map(rowToOutbox);
-  }
-
-  async markAlerted(ids: string[], nowSec: number): Promise<void> {
-    for (const id of ids) {
-      await this.db.prepare('UPDATE outbox SET alerted_at = ? WHERE id = ?').bind(nowSec, id).run();
-    }
-  }
-
-  async purgeExpiredUnsent(nowSec: number, maxRetentionSec: number): Promise<number> {
-    const res = await this.db
-      .prepare('DELETE FROM outbox WHERE sent_at IS NULL AND created_at <= ?')
-      .bind(nowSec - maxRetentionSec)
-      .run();
-    return res.meta?.changes ?? 0;
-  }
-
-  async purgeSentBefore(beforeSec: number): Promise<void> {
-    await this.db.prepare('DELETE FROM outbox WHERE sent_at IS NOT NULL AND sent_at <= ?').bind(beforeSec).run();
-  }
-
-  async purgeDedupeBefore(beforeSec: number): Promise<void> {
-    await this.db.prepare('DELETE FROM dedupe WHERE created_at <= ?').bind(beforeSec).run();
-  }
-
-  async pendingCount(): Promise<number> {
-    const row = await this.db
-      .prepare('SELECT COUNT(*) AS cnt FROM outbox WHERE sent_at IS NULL')
       .first<{ cnt: number }>();
     return Number(row?.cnt ?? 0);
   }
 
-  async oldestPendingAgeSec(nowSec: number): Promise<number> {
-    const row = await this.db
-      .prepare('SELECT MIN(created_at) AS oldest FROM outbox WHERE sent_at IS NULL')
-      .first<{ oldest: number | null }>();
-    if (!row || row.oldest === null || row.oldest === undefined) return 0;
-    return Math.max(0, nowSec - Number(row.oldest));
+  async markAlerted(nowSec: number, alertAfterSec: number, alertRepeatSec: number): Promise<void> {
+    await this.db
+      .prepare(
+        'UPDATE outbox SET alerted_at = ? WHERE sent_at IS NULL AND created_at <= ? AND (alerted_at IS NULL OR alerted_at <= ?)',
+      )
+      .bind(nowSec, nowSec - alertAfterSec, nowSec - alertRepeatSec)
+      .run();
   }
 
-  async countMailLog(kind: 'notify' | 'summary' | 'alert', sinceSec: number): Promise<number> {
+  async purgeExpired(nowSec: number, maxRetentionSec: number, limit: number): Promise<number> {
+    const res = await this.db
+      .prepare('DELETE FROM outbox WHERE id IN (SELECT id FROM outbox WHERE created_at <= ? LIMIT ?) RETURNING sent_at')
+      .bind(nowSec - maxRetentionSec, limit)
+      .all<{ sent_at: number | null }>();
+    return (res.results ?? []).filter((r) => r.sent_at === null || r.sent_at === undefined).length;
+  }
+
+  async purgeSentBefore(beforeSec: number, limit: number = CRON_LIMITS.maxDeletesPerRun): Promise<void> {
+    await this.db
+      .prepare('DELETE FROM outbox WHERE id IN (SELECT id FROM outbox WHERE sent_at IS NOT NULL AND sent_at <= ? LIMIT ?)')
+      .bind(beforeSec, limit)
+      .run();
+  }
+
+  async purgeDedupeBefore(beforeSec: number, limit: number = CRON_LIMITS.maxDeletesPerRun): Promise<void> {
+    await this.db
+      .prepare('DELETE FROM dedupe WHERE hash IN (SELECT hash FROM dedupe WHERE created_at <= ? LIMIT ?)')
+      .bind(beforeSec, limit)
+      .run();
+  }
+
+  async countNotify(hourStartSec: number, since24hSec: number): Promise<{ hour: number; day: number }> {
     const row = await this.db
-      .prepare('SELECT COUNT(*) AS cnt FROM mail_log WHERE kind = ? AND sent_at >= ?')
-      .bind(kind, sinceSec)
+      .prepare(
+        "SELECT COALESCE(SUM(sent_at >= ?), 0) AS hour, COUNT(*) AS day FROM mail_log WHERE kind = 'notify' AND sent_at >= ?",
+      )
+      .bind(hourStartSec, since24hSec)
+      .first<{ hour: number; day: number }>();
+    return { hour: Number(row?.hour ?? 0), day: Number(row?.day ?? 0) };
+  }
+
+  async countMailLog(
+    kind: 'notify' | 'summary' | 'alert',
+    sinceSec: number,
+    filter: { code?: string; summaryHour?: number } = {},
+  ): Promise<number> {
+    const row = await this.db
+      .prepare(
+        'SELECT COUNT(*) AS cnt FROM mail_log WHERE kind = ? AND sent_at >= ? AND (? IS NULL OR code = ?) AND (? IS NULL OR summary_hour = ?)',
+      )
+      .bind(
+        kind,
+        sinceSec,
+        filter.code ?? null,
+        filter.code ?? null,
+        filter.summaryHour ?? null,
+        filter.summaryHour ?? null,
+      )
       .first<{ cnt: number }>();
     return Number(row?.cnt ?? 0);
   }
@@ -446,7 +547,10 @@ export class D1RateCounter implements RateCounter {
       .run();
     return this.getHits(key, windowStartSec);
   }
-  async purgeBefore(beforeSec: number): Promise<void> {
-    await this.db.prepare('DELETE FROM rate_counter WHERE window_start <= ?').bind(beforeSec).run();
+  async purgeBefore(beforeSec: number, limit: number = CRON_LIMITS.maxDeletesPerRun): Promise<void> {
+    await this.db
+      .prepare('DELETE FROM rate_counter WHERE rowid IN (SELECT rowid FROM rate_counter WHERE window_start <= ? LIMIT ?)')
+      .bind(beforeSec, limit)
+      .run();
   }
 }

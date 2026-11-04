@@ -311,11 +311,8 @@ export async function handleContactPost(req: Request, deps: ContactDeps): Promis
     return jsonResponse({ ok: true }, 200);
   }
 
-  // Check mail caps (30/hour, 45/24h)
-  const sentLastHour = await deps.queue.countMailLog('notify', nowSec - 3600);
-  const sentLast24h = await deps.queue.countMailLog('notify', nowSec - 24 * 3600);
-  const overCap = sentLastHour >= MAIL_CAPS.notifyPerHour || sentLast24h >= MAIL_CAPS.notifyPer24h;
-  const batch: 'single' | 'summary' = overCap ? 'summary' : 'single';
+  // Trần thư báo: notifyPerHour theo giờ tròn VN, notifyPer24h theo 24 giờ trượt (api.ts §5)
+  const batch: 'single' | 'summary' = (await notifyRoom(deps, nowSec)) > 0 ? 'single' : 'summary';
 
   const id = crypto.randomUUID();
   const utmJson = body.utm && typeof body.utm === 'object' ? JSON.stringify(body.utm) : null;
@@ -362,24 +359,63 @@ export async function handleContactPost(req: Request, deps: ContactDeps): Promis
   return jsonResponse({ ok: true }, 200);
 }
 
-export async function trySendSingleRecord(rec: OutboxRecord, deps: ContactDeps, nowSec: number): Promise<void> {
-  const cfg = deps.config();
-  if (!cfg.contactRecipient) return;
-  const leased = await deps.queue.acquireLease(rec.id, nowSec, OUTBOX.leaseSeconds);
-  if (!leased) return;
+/** Số thư báo còn được gửi ngay: min(trần giờ tròn VN, trần 24 giờ trượt). Một câu D1. */
+async function notifyRoom(deps: ContactDeps, nowSec: number): Promise<number> {
+  const hourStart = Math.floor(nowSec / 3600) * 3600; // múi VN = UTC+7 nguyên giờ ⇒ giờ tròn VN trùng giờ tròn UTC
+  const used = await deps.queue.countNotify(hourStart, nowSec - 24 * 3600);
+  return Math.max(0, Math.min(MAIL_CAPS.notifyPerHour - used.hour, MAIL_CAPS.notifyPer24h - used.day));
+}
 
-  const mail = buildNotifyMail(rec, cfg.mailFrom, cfg.contactRecipient, nowSec);
-  const res = await deps.mailer.send(mail);
+/** Gửi một thư báo đã giữ lease (attempts đã +1 lúc lease). Không log nội dung, chỉ id + mã. */
+async function sendLeasedSingle(rec: OutboxRecord, deps: ContactDeps, nowSec: number): Promise<void> {
+  const cfg = deps.config();
+  const res = await deps.mailer.send(buildNotifyMail(rec, cfg.mailFrom, cfg.contactRecipient, nowSec));
   if (res.ok) {
     await deps.queue.recordMailLog('notify', nowSec);
     await deps.queue.markSentAndDelete(rec.id, nowSec);
     deps.logger.info('MAIL_NOTIFY_SENT', { id: rec.id });
   } else {
-    const nextAttempts = rec.attempts + 1;
-    const backoffIdx = Math.min(nextAttempts - 1, OUTBOX.retryBackoffMinutes.length - 1);
+    const backoffIdx = Math.min(Math.max(rec.attempts, 1) - 1, OUTBOX.retryBackoffMinutes.length - 1);
     const delaySec = OUTBOX.retryBackoffMinutes[backoffIdx] * 60;
-    await deps.queue.markFailed(rec.id, nextAttempts, nowSec + delaySec, res.code);
-    deps.logger.error('MAIL_NOTIFY_FAILED', { id: rec.id, attempts: nextAttempts, code: res.code });
+    await deps.queue.markFailed(rec.id, rec.attempts, nowSec + delaySec, res.code);
+    deps.logger.error('MAIL_NOTIFY_FAILED', { id: rec.id, attempts: rec.attempts, code: res.code });
+  }
+}
+
+export async function trySendSingleRecord(rec: OutboxRecord, deps: ContactDeps, nowSec: number): Promise<void> {
+  if (!deps.config().contactRecipient) return;
+  const leased = await deps.queue.acquireLease(rec.id, nowSec, OUTBOX.leaseSeconds);
+  if (!leased) return;
+  await sendLeasedSingle({ ...rec, attempts: rec.attempts + 1 }, deps, nowSec);
+}
+
+async function sendSummaryPart(deps: ContactDeps, nowSec: number): Promise<void> {
+  const cfg = deps.config();
+  const oldest = await deps.queue.oldestSummaryCreatedAt();
+  if (oldest === null) return;
+  const hourStart = Math.floor(oldest / 3600) * 3600;
+  if (nowSec < hourStart + 3600) return; // chỉ gửi giờ tròn ĐÃ HẾT
+  const part = await deps.queue.leaseSummaryPart(nowSec, CRON_LIMITS.leaseSeconds, hourStart);
+  if (part.length === 0) return;
+  const k = (await deps.queue.countMailLog('summary', hourStart, { summaryHour: hourStart })) + 1;
+  const res = await deps.mailer.send(
+    buildSummaryMail(part, cfg.mailFrom, cfg.contactRecipient, nowSec, { hourStart, part: k }),
+  );
+  const ids = part.map((r) => r.id);
+  if (!res.ok) {
+    await deps.queue.releaseLeases(ids, nowSec + 60, res.code);
+    deps.logger.error('MAIL_SUMMARY_FAILED', { count: ids.length, code: res.code });
+    return;
+  }
+  await deps.queue.recordMailLog('summary', nowSec, { summaryHour: hourStart });
+  await deps.queue.markManySentAndDelete(ids, nowSec);
+  deps.logger.info('MAIL_SUMMARY_SENT', { count: ids.length, part: k });
+  if (k === 2 && cfg.alertTo) {
+    // Phần thứ 2 của một giờ ⇒ MỘT cảnh báo không PII (api.ts MAIL_ALERT_CODES.summaryParts)
+    await deps.mailer.send(
+      buildAlertMail({ count: ids.length, reason: 'summary_split' }, cfg.mailFrom, cfg.alertTo, nowSec),
+    );
+    await deps.queue.recordMailLog('alert', nowSec, { code: MAIL_ALERT_CODES.summaryParts });
   }
 }
 
@@ -389,93 +425,68 @@ export async function runCronJob(deps: ContactDeps, nowOverrideSec?: number): Pr
 
   await deps.queue.updateHeartbeat('cron', nowSec);
 
-  // 1. Retry due single records
-  const dueSingles = await deps.queue.dueSingle(nowSec);
-  for (const rec of dueSingles) {
-    const sentLastHour = await deps.queue.countMailLog('notify', nowSec - 3600);
-    const sentLast24h = await deps.queue.countMailLog('notify', nowSec - 24 * 3600);
-    if (sentLastHour >= MAIL_CAPS.notifyPerHour || sentLast24h >= MAIL_CAPS.notifyPer24h) {
-      break;
+  if (cfg.contactRecipient) {
+    // 1. Thư báo tới hạn gửi lại: tối đa maxSingleSendsPerRun, không vượt trần giờ/24 giờ
+    const room = Math.min(CRON_LIMITS.maxSingleSendsPerRun, await notifyRoom(deps, nowSec));
+    if (room > 0) {
+      for (const rec of await deps.queue.leaseSingles(nowSec, CRON_LIMITS.leaseSeconds, room)) {
+        await sendLeasedSingle(rec, deps, nowSec);
+      }
     }
-    await trySendSingleRecord(rec, deps, nowSec);
+    // 2a. Thư tóm tắt của giờ tròn đã hết (một phần mỗi lượt)
+    await sendSummaryPart(deps, nowSec);
   }
 
-  // 2. Process summary records (at most 1 summary per hour, delivered when window clears or summary due)
-  const summaries = await deps.queue.dueSummary(nowSec);
-  if (summaries.length > 0 && cfg.contactRecipient) {
-    const summarySentLastHour = await deps.queue.countMailLog('summary', nowSec - 3600);
-    const oldestCreated = Math.min(...summaries.map((s) => s.createdAt));
-    const hourRolledOver = Math.floor(nowSec / 3600) > Math.floor(oldestCreated / 3600);
-    const readyToSendSummary =
-      summarySentLastHour < MAIL_CAPS.summaryMaxPerHour && (hourRolledOver || nowSec - oldestCreated >= 3600);
-
-    if (readyToSendSummary) {
-      const leasedRecords: OutboxRecord[] = [];
-      for (const s of summaries) {
-        if (await deps.queue.acquireLease(s.id, nowSec, OUTBOX.leaseSeconds)) {
-          leasedRecords.push(s);
-        }
-      }
-      if (leasedRecords.length > 0) {
-        const mail = buildSummaryMail(leasedRecords, cfg.mailFrom, cfg.contactRecipient, nowSec);
-        const res = await deps.mailer.send(mail);
-        if (res.ok) {
-          await deps.queue.recordMailLog('summary', nowSec, {
-            summaryHour: Math.floor((oldestCreated + 7 * 3600) / 3600) * 3600 - 7 * 3600,
-          });
-          for (const s of leasedRecords) {
-            await deps.queue.markSentAndDelete(s.id, nowSec);
-          }
-          deps.logger.info('MAIL_SUMMARY_SENT', { count: leasedRecords.length });
-        } else {
-          for (const s of leasedRecords) {
-            const nextAttempts = s.attempts + 1;
-            await deps.queue.markFailed(s.id, nextAttempts, nowSec + 60, res.code);
-          }
-        }
-      }
+  // 2b. Chờ gửi quá hạn 15 phút: MỘT thư mỗi đợt hỏng, không quá một thư trong giờ tròn hiện tại
+  const stats = await deps.queue.pendingStats(nowSec, OUTBOX.overdueAlertSeconds);
+  if (stats.overdue > 0 && stats.oldestDueSec !== null && cfg.alertTo) {
+    const hourStart = Math.floor(nowSec / 3600) * 3600;
+    const since = Math.min(stats.oldestDueSec, hourStart);
+    if ((await deps.queue.countMailLog('alert', since, { code: MAIL_ALERT_CODES.overdue15m })) === 0) {
+      await deps.mailer.send(
+        buildAlertMail({ count: stats.overdue, reason: 'overdue_15m' }, cfg.mailFrom, cfg.alertTo, nowSec),
+      );
+      await deps.queue.recordMailLog('alert', nowSec, { code: MAIL_ALERT_CODES.overdue15m });
+      deps.logger.info('ALERT_PENDING_15M_SENT', { count: stats.overdue });
     }
   }
 
-  // 3. Alert for overdue (> 24h) unsent records (repeat every 24h, no PII)
-  const overdue = await deps.queue.overdueForAlert(nowSec, OUTBOX.alertAfterSeconds, OUTBOX.alertRepeatSeconds);
-  if (overdue.length > 0 && cfg.alertTo) {
-    const alertMail = buildAlertMail({ count: overdue.length, reason: 'overdue' }, cfg.mailFrom, cfg.alertTo, nowSec);
-    // Alerts go to technical contact even if user notify mail is failing or we record alert directly
-    await deps.mailer.send(alertMail);
+  // 3. Quá 24 giờ chưa gửi: cảnh báo không PII, lặp theo alertRepeatSeconds
+  const overdue = await deps.queue.countOverdueForAlert(nowSec, OUTBOX.alertAfterSeconds, OUTBOX.alertRepeatSeconds);
+  if (overdue > 0 && cfg.alertTo) {
+    await deps.mailer.send(buildAlertMail({ count: overdue, reason: 'overdue' }, cfg.mailFrom, cfg.alertTo, nowSec));
     await deps.queue.recordMailLog('alert', nowSec, { code: MAIL_ALERT_CODES.overdue24h });
-    await deps.queue.markAlerted(
-      overdue.map((o) => o.id),
-      nowSec,
-    );
-    deps.logger.info('ALERT_OVERDUE_SENT', { count: overdue.length });
+    await deps.queue.markAlerted(nowSec, OUTBOX.alertAfterSeconds, OUTBOX.alertRepeatSeconds);
+    deps.logger.info('ALERT_OVERDUE_SENT', { count: overdue });
   }
 
-  // 4. Purge unsent > 7 days & send alert with count only
-  const purgedCount = await deps.queue.purgeExpiredUnsent(nowSec, OUTBOX.maxRetentionUnsentSeconds);
+  // 4. Quá 7 ngày: xoá (tối đa maxDeletesPerRun) + MỘT cảnh báo chỉ nêu số lượng chưa gửi đã xoá
+  const purgedCount = await deps.queue.purgeExpired(
+    nowSec,
+    OUTBOX.maxRetentionUnsentSeconds,
+    CRON_LIMITS.maxDeletesPerRun,
+  );
   if (purgedCount > 0 && cfg.alertTo) {
-    const alertMail = buildAlertMail(
-      { count: purgedCount, reason: 'expired_purged' },
-      cfg.mailFrom,
-      cfg.alertTo,
-      nowSec,
+    await deps.mailer.send(
+      buildAlertMail({ count: purgedCount, reason: 'expired_purged' }, cfg.mailFrom, cfg.alertTo, nowSec),
     );
-    await deps.mailer.send(alertMail);
     await deps.queue.recordMailLog('alert', nowSec, { code: MAIL_ALERT_CODES.expired7d });
     deps.logger.info('ALERT_PURGED_SENT', { count: purgedCount });
   }
 
-  // 5. Purge sent records older than deleteSentWithinSeconds & stale dedupe/rate counters
-  await deps.queue.purgeSentBefore(nowSec - OUTBOX.deleteSentWithinSeconds);
-  await deps.queue.purgeDedupeBefore(nowSec - RATE_LIMITS.counterTtlSecondsMax);
-  await deps.rate.purgeBefore(nowSec - RATE_LIMITS.counterTtlSecondsMax);
+  // 5. Dọn dòng đã gửi, dedupe, bộ đếm hết hạn: mỗi bảng một câu có LIMIT
+  const cap = CRON_LIMITS.maxDeletesPerRun;
+  await deps.queue.purgeSentBefore(nowSec - OUTBOX.deleteSentWithinSeconds, cap);
+  await deps.queue.purgeDedupeBefore(nowSec - RATE_LIMITS.counterTtlSecondsMax, cap);
+  await deps.rate.purgeBefore(nowSec - RATE_LIMITS.counterTtlSecondsMax, cap);
 }
 
 export async function handleContactHealth(deps: ContactDeps): Promise<Response> {
   const nowSec = deps.clock.nowSec();
   const lastCron = await deps.queue.getHeartbeat('cron');
   const lastCronAgeSec = lastCron !== null ? Math.max(0, nowSec - lastCron) : 0;
-  const pending = await deps.queue.pendingCount();
-  const oldestOverdueSec = await deps.queue.oldestPendingAgeSec(nowSec);
-  return jsonResponse({ ok: true, lastCronAgeSec, pending, oldestOverdueSec }, 200);
+  const stats = await deps.queue.pendingStats(nowSec, OUTBOX.overdueAlertSeconds);
+  // oldestOverdueSec đo từ HẠN GỬI (không từ created_at): 0 khi chưa bản ghi nào quá hạn gửi
+  const oldestOverdueSec = stats.oldestDueSec === null ? 0 : Math.max(0, nowSec - stats.oldestDueSec);
+  return jsonResponse({ ok: true, lastCronAgeSec, pending: stats.pending, oldestOverdueSec }, 200);
 }

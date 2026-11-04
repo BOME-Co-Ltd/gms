@@ -28,6 +28,9 @@
     "SITE_ORIGIN": "http://localhost:8787",
     "MAIL_FROM": "thongbao@thongbao.gmshungyen.vn",
     "ALERT_TO": "kythuat@gmshungyen.vn",
-    "CONTACT_RECIPIENT": "lienhe@vi-du.test"
+    "CONTACT_RECIPIENT": "lienhe@vi-du.test",
+    "CONTACT_MAIL_READY": "true",
+    "TURNSTILE_SECRET": "test-turnstile-secret-not-a-cloudflare-dummy",
+    "IP_HMAC_KEY": "test-hmac-key-0123456789abcdef"
   }
 }
