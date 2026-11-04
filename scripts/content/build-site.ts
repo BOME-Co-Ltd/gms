@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import sharp from 'sharp';
+import { formStatusOf } from '../../contracts/build.ts';
 import { PAGE_SIZE, ROUTES } from '../../contracts/routes.ts';
 import {
   type LoadedCompany,
@@ -1583,12 +1584,18 @@ function renderPrivacyPage(content: LoadedSiteContent, locale: Locale): string {
   `;
 }
 
-function renderContactPage(content: LoadedSiteContent, locale: Locale, contactRecipientEnv: string): string {
+function renderContactPage(
+  content: LoadedSiteContent,
+  locale: Locale,
+  contactRecipientEnv: string,
+  formOpen: boolean,
+): string {
   const isVi = locale === 'vi';
   const company = content.company;
   const hasRecipient = contactRecipientEnv.trim() !== '';
   const hasLegalName = Boolean(company.legalName && company.legalName.trim() !== '');
-  const canRenderForm = hasRecipient && hasLegalName;
+  // FormStatus (build.ts §9): thiếu mail sẵn sàng / email yêu cầu riêng tư / mã số thuế ⇒ form tạm đóng (F4), build vẫn xanh
+  const canRenderForm = formOpen && hasRecipient && hasLegalName;
   const polVer = content.policies[locale][0]?.version ?? '1.0';
   const phoneRaw = company.phone?.trim() ?? '';
   const phoneShown = phoneRaw ? formatPublicPhone(phoneRaw, locale) : '';
@@ -1892,6 +1899,13 @@ export async function runBuildSite(options?: {
   }
   mkdirSync(outDir, { recursive: true });
 
+  const formStatus = formStatusOf({
+    mailReady: (process.env.CONTACT_MAIL_READY ?? 'false') === 'true',
+    privacyRequestEmail: loaded.company.privacyRequestEmail?.trim(),
+    taxId: loaded.company.taxId?.trim(),
+  });
+  writeFileSync(join(outDir, 'form-status.json'), `${JSON.stringify(formStatus)}\n`);
+
   const ogDir = join(outDir, 'og');
   mkdirSync(ogDir, { recursive: true });
   const defaultOgBytes = await sharp({
@@ -1978,7 +1992,7 @@ export async function runBuildSite(options?: {
           bodyHtml = renderFaqPage(loaded, locale);
           break;
         case 'contact':
-          bodyHtml = renderContactPage(loaded, locale, contactRecipientEnv);
+          bodyHtml = renderContactPage(loaded, locale, contactRecipientEnv, formStatus.open);
           break;
         case 'privacy':
           bodyHtml = renderPrivacyPage(loaded, locale);

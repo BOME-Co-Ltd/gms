@@ -124,7 +124,7 @@ export function buildNotifyMail(rec: OutboxRecord, from: string, to: string, now
   const cleanName = rec.fullName.replace(/[\r\n]+/g, ' ').trim();
   const displaySubject = `${MAIL_SUBJECT_PREFIX.notify}${cleanName}`;
   const subjectHeaderValue = encodeRfc2047B(displaySubject);
-  const text = notifyBodyText(rec);
+  const text = rec.bodyB64 ? decodeBodyB64(rec.bodyB64) : notifyBodyText(rec);
   const sentAtDate = new Date(nowSec * 1000);
   const rawMime = buildRawMime({
     from,
@@ -147,26 +147,31 @@ export function buildNotifyMail(rec: OutboxRecord, from: string, to: string, now
   };
 }
 
-export function buildSummaryMail(records: OutboxRecord[], from: string, to: string, nowSec: number): MailSendInput {
-  const displaySubject = `${MAIL_SUBJECT_PREFIX.summary}${records.length} liên hệ mới`;
+/** Giải mã khối body_b64 (chỉ để hiển thị/kiểm; đường gửi dùng thẳng chuỗi base64). */
+export function decodeBodyB64(b64: string): string {
+  return Buffer.from(b64.replace(/\r?\n/g, ''), 'base64').toString('utf8');
+}
+
+/**
+ * Thư tóm tắt một phần: thân = đầu thư (đệm bội 57 byte) + các body_b64 của liên hệ, ghép bằng CRLF (không giải mã,
+ * không dựng lại từ cột PII). `part` ≥ 2 ⇒ Subject có "phần k"; khoảng giờ theo Asia/Ho_Chi_Minh.
+ */
+export function buildSummaryMail(
+  records: OutboxRecord[],
+  from: string,
+  to: string,
+  nowSec: number,
+  opts: { hourStart: number; part: number } = { hourStart: Math.floor(nowSec / 3600) * 3600, part: 1 },
+): MailSendInput {
+  const range = `${formatVnTimestamp(opts.hourStart)}–${formatVnTimestamp(opts.hourStart + 3600).slice(-5)}`;
+  const partLabel = opts.part > 1 ? ` (phần ${opts.part})` : '';
+  const displaySubject = `${MAIL_SUBJECT_PREFIX.summary}${records.length} liên hệ mới, ${range}${partLabel}`;
   const subjectHeaderValue = encodeRfc2047B(displaySubject);
-  const parts: string[] = [`Tóm tắt ${records.length} liên hệ mới từ website GMS Hưng Yên:`, ''];
-  records.forEach((rec, idx) => {
-    const pageLabel = resolvePageLabelVi(rec.pagePath);
-    const consentTime = formatVnTimestamp(rec.consentAt);
-    parts.push(`--- Liên hệ #${idx + 1} ---`);
-    parts.push(`Họ và tên: ${rec.fullName}`);
-    if (rec.company) parts.push(`Công ty / Tổ chức: ${rec.company}`);
-    if (rec.email) parts.push(`Email: ${rec.email}`);
-    if (rec.phone) parts.push(`Số điện thoại: ${rec.phone}`);
-    parts.push(`Ngôn ngữ (locale): ${rec.locale}`);
-    parts.push(`Trang nơi gửi: ${pageLabel} (${rec.pagePath})`);
-    parts.push(`Thời điểm đồng ý: ${consentTime}`);
-    parts.push(`Phiên bản chính sách: ${rec.policyVersion}`);
-    parts.push(`Nội dung: ${rec.message}`);
-    parts.push('');
-  });
-  const text = `${parts.join('\n')}\n`;
+  const head = `Tóm tắt ${records.length} liên hệ mới từ website GMS Hưng Yên (${range})${partLabel}:\n`;
+  // Bản ghi có body_b64 ⇒ ghép nguyên khối (không giải mã); chỉ bản ghi thiếu khối mới dựng từ trường
+  const blocks = records.map((r) => r.bodyB64 || encodeBodyB64(notifyBodyText(r)));
+  const bodyB64 = [encodeBodyB64(head), ...blocks].join('\r\n');
+  const text = `${head}${records.map((r) => (r.bodyB64 ? '' : notifyBodyText(r))).join('')}`;
   const sentAtDate = new Date(nowSec * 1000);
   const replyTo = records.length === 1 && records[0].email ? records[0].email : undefined;
   const rawMime = buildRawMime({
@@ -176,6 +181,7 @@ export function buildSummaryMail(records: OutboxRecord[], from: string, to: stri
     subjectHeaderValue,
     dateUtc: sentAtDate,
     bodyText: text,
+    bodyB64,
   });
   return {
     kind: 'summary',
@@ -190,20 +196,26 @@ export function buildSummaryMail(records: OutboxRecord[], from: string, to: stri
 }
 
 export function buildAlertMail(
-  opts: { count: number; reason: 'overdue' | 'expired_purged' },
+  opts: { count: number; reason: 'overdue' | 'overdue_15m' | 'expired_purged' | 'summary_split' },
   from: string,
   to: string,
   nowSec: number,
 ): MailSendInput {
-  const displaySubject =
-    opts.reason === 'overdue'
-      ? `${MAIL_SUBJECT_PREFIX.alert}Có liên hệ chưa gửi được thư báo (${opts.count} mục quá 24 giờ)`
-      : `${MAIL_SUBJECT_PREFIX.alert}Đã xoá ${opts.count} liên hệ quá hạn 7 ngày chưa gửi được`;
+  const subjects = {
+    overdue: `Có liên hệ chưa gửi được thư báo (${opts.count} mục quá 24 giờ)`,
+    overdue_15m: `Có liên hệ chờ gửi quá 15 phút (${opts.count} mục)`,
+    expired_purged: `Đã xoá ${opts.count} liên hệ quá hạn 7 ngày chưa gửi được`,
+    summary_split: `Thư tóm tắt của một giờ phải tách nhiều phần (${opts.count} liên hệ trong giờ đó)`,
+  } as const;
+  const bodies = {
+    overdue: `hiện có liên hệ chưa gửi được thư báo (${opts.count} mục sau hơn 24 giờ). Liên hệ vẫn được giữ trong hàng đợi để tiếp tục thử gửi lại.`,
+    overdue_15m: `hiện có ${opts.count} liên hệ chờ gửi quá 15 phút. Liên hệ vẫn được giữ trong hàng đợi để tiếp tục thử gửi lại.`,
+    expired_purged: `đã xoá ${opts.count} liên hệ chưa gửi được thư báo do quá hạn lưu 7 ngày.`,
+    summary_split: `thư tóm tắt của một giờ vượt trần kích thước nên được gửi thành nhiều phần (${opts.count} liên hệ trong phần đầu).`,
+  } as const;
+  const displaySubject = `${MAIL_SUBJECT_PREFIX.alert}${subjects[opts.reason]}`;
   const subjectHeaderValue = encodeRfc2047B(displaySubject);
-  const text =
-    opts.reason === 'overdue'
-      ? `Cảnh báo kỹ thuật (không chứa dữ liệu cá nhân): hiện có liên hệ chưa gửi được thư báo (${opts.count} mục sau hơn 24 giờ). Liên hệ vẫn được giữ trong hàng đợi để tiếp tục thử gửi lại.\n`
-      : `Cảnh báo kỹ thuật (không chứa dữ liệu cá nhân): đã xoá ${opts.count} liên hệ chưa gửi được thư báo do quá hạn lưu 7 ngày.\n`;
+  const text = `Cảnh báo kỹ thuật (không chứa dữ liệu cá nhân): ${bodies[opts.reason]}\n`;
   const sentAtDate = new Date(nowSec * 1000);
   const rawMime = buildRawMime({
     from,

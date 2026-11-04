@@ -27,19 +27,38 @@ export interface ContactQueue {
   enqueue(rec: Omit<OutboxRecord, 'attempts' | 'leaseUntil' | 'lastError' | 'alertedAt' | 'sentAt'>): Promise<void>;
   hasDedupe(hash: string, sinceSec: number): Promise<boolean>;
   recordDedupe(hash: string, nowSec: number): Promise<void>;
-  dueSingle(nowSec: number): Promise<OutboxRecord[]>;
-  dueSummary(nowSec: number): Promise<OutboxRecord[]>;
+  /** Lease bằng MỘT `UPDATE … RETURNING` (attempts+1 ngay lúc lấy); chỉ các cột CRON_SELECT_COLUMNS.single. */
+  leaseSingles(nowSec: number, leaseSec: number, limit: number): Promise<OutboxRecord[]>;
+  /** created_at nhỏ nhất của bản ghi tóm tắt chưa gửi (null nếu không có). */
+  oldestSummaryCreatedAt(): Promise<number | null>;
+  /** Lease MỘT phần thư tóm tắt của giờ tròn [hourStart, hourStart+3600) (cột CRON_SELECT_COLUMNS.summaryPart). */
+  leaseSummaryPart(nowSec: number, leaseSec: number, hourStart: number): Promise<OutboxRecord[]>;
   acquireLease(id: string, nowSec: number, leaseSec: number): Promise<boolean>;
   markSentAndDelete(id: string, nowSec: number): Promise<void>;
+  /** Gửi xong cả phần: ghi sent_at rồi xoá, mỗi bước MỘT câu (id qua json_each(?)). */
+  markManySentAndDelete(ids: string[], nowSec: number): Promise<void>;
   markFailed(id: string, attempts: number, nextAttemptAt: number, errorCode: string): Promise<void>;
-  overdueForAlert(nowSec: number, alertAfterSec: number, alertRepeatSec: number): Promise<OutboxRecord[]>;
-  markAlerted(ids: string[], nowSec: number): Promise<void>;
-  purgeExpiredUnsent(nowSec: number, maxRetentionSec: number): Promise<number>;
-  purgeSentBefore(beforeSec: number): Promise<void>;
-  purgeDedupeBefore(beforeSec: number): Promise<void>;
-  pendingCount(): Promise<number>;
-  oldestPendingAgeSec(nowSec: number): Promise<number>;
-  countMailLog(kind: 'notify' | 'summary' | 'alert', sinceSec: number): Promise<number>;
+  /** Nhả lease cả phần để lượt Cron sau thử lại (attempts đã tăng lúc lease). */
+  releaseLeases(ids: string[], nextAttemptAt: number, errorCode: string): Promise<void>;
+  /** Số bản ghi chưa gửi, hạn gửi sớm nhất, số bản ghi quá hạn gửi > overdueSec. Một câu, không PII. */
+  pendingStats(
+    nowSec: number,
+    overdueSec: number,
+  ): Promise<{ pending: number; oldestDueSec: number | null; overdue: number }>;
+  countOverdueForAlert(nowSec: number, alertAfterSec: number, alertRepeatSec: number): Promise<number>;
+  markAlerted(nowSec: number, alertAfterSec: number, alertRepeatSec: number): Promise<void>;
+  /** Xoá tối đa `limit` dòng quá hạn lưu; trả số dòng CHƯA gửi bị xoá. */
+  purgeExpired(nowSec: number, maxRetentionSec: number, limit: number): Promise<number>;
+  purgeSentBefore(beforeSec: number, limit?: number): Promise<void>;
+  purgeDedupeBefore(beforeSec: number, limit?: number): Promise<void>;
+  /** Số thư báo trong giờ tròn hiện tại (VN) và trong 24 giờ trượt. */
+  countNotify(hourStartSec: number, since24hSec: number): Promise<{ hour: number; day: number }>;
+  /** Số dòng mail_log; `code` lọc cho kind='alert', `summaryHour` lọc cho kind='summary'. */
+  countMailLog(
+    kind: 'notify' | 'summary' | 'alert',
+    sinceSec: number,
+    filter?: { code?: string; summaryHour?: number },
+  ): Promise<number>;
   /** `code` bắt buộc khi kind='alert'; `summaryHour` bắt buộc khi kind='summary' (CHECK của d1-schema.sql). */
   recordMailLog(
     kind: 'notify' | 'summary' | 'alert',
@@ -53,7 +72,7 @@ export interface ContactQueue {
 export interface RateCounter {
   getHits(key: string, windowStartSec: number): Promise<number>;
   increment(key: string, windowStartSec: number, delta?: number): Promise<number>;
-  purgeBefore(beforeSec: number): Promise<void>;
+  purgeBefore(beforeSec: number, limit?: number): Promise<void>;
 }
 
 export type MailSendInput = {

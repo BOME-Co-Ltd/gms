@@ -8,6 +8,7 @@ import {
 import { isUsableTurnstileSecret, judgeSiteverify } from './domain/human-check.ts';
 import { CfClientIp, D1ContactQueue, D1RateCounter, WebCryptoIpKey } from './adapters/cloudflare.ts';
 import { type ContactDeps, handleContactHealth, handleContactPost, runCronJob } from './domain/contact-service.ts';
+import { decodeBodyB64 } from './domain/mail-builder.ts';
 import type { Env } from './index.ts';
 import type { AppLogger, Clock, HumanCheck, Mailer, MailSendInput, MailSendResult } from './ports.ts';
 
@@ -132,14 +133,17 @@ class TestMailer implements Mailer {
       'content-transfer-encoding': 'base64',
     };
     if (msg.replyTo) headers['reply-to'] = msg.replyTo;
+    // Hộp thư giả đọc thân thư như hộp thư thật: giải mã phần base64 của MIME (prod không giải mã, chỉ ghép khối)
+    const mimeBody = msg.rawMime.split('\r\n\r\n').slice(1).join('\r\n\r\n');
+    const shownText = mimeBody.trim() ? decodeBodyB64(mimeBody) : msg.text;
     (msg.kind === 'alert' ? state.alerts : state.mailbox).push({
       kind: msg.kind,
       to: msg.to,
       from: msg.from,
       replyTo: msg.replyTo,
       subject: msg.subject,
-      body: msg.text,
-      text: msg.text,
+      body: shownText,
+      text: shownText,
       raw: msg.rawMime,
       contentType: 'text/plain; charset=utf-8',
       sentAt: msg.sentAtIso,
