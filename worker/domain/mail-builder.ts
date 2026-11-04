@@ -1,4 +1,4 @@
-import { MAIL_SUBJECT_PREFIX } from '../../contracts/api.ts';
+import { MAIL_ALERT_CODES, MAIL_SUBJECT_PREFIX } from '../../contracts/api.ts';
 import { ROUTES } from '../../contracts/routes.ts';
 import type { MailSendInput, OutboxRecord } from '../ports.ts';
 
@@ -196,22 +196,23 @@ export function buildSummaryMail(
 }
 
 export function buildAlertMail(
-  opts: { count: number; reason: 'overdue' | 'overdue_15m' | 'expired_purged' | 'summary_split' },
+  opts: { count: number; reason: 'overdue' | 'overdue_15m' | 'expired_purged' | 'summary_split'; parts?: number },
   from: string,
   to: string,
   nowSec: number,
 ): MailSendInput {
+  // summary_split: count = số liên hệ còn chờ của giờ đó, parts = số phần đã gửi (design.md §6g); chỉ số đếm, không PII
   const subjects = {
     overdue: `Có liên hệ chưa gửi được thư báo (${opts.count} mục quá 24 giờ)`,
     overdue_15m: `Có liên hệ chờ gửi quá 15 phút (${opts.count} mục)`,
     expired_purged: `Đã xoá ${opts.count} liên hệ quá hạn 7 ngày chưa gửi được`,
-    summary_split: `Thư tóm tắt của một giờ phải tách nhiều phần (${opts.count} liên hệ trong giờ đó)`,
+    summary_split: `${MAIL_ALERT_CODES.summaryParts}: thư tóm tắt của một giờ phải tách nhiều phần (còn ${opts.count} liên hệ chờ)`,
   } as const;
   const bodies = {
     overdue: `hiện có liên hệ chưa gửi được thư báo (${opts.count} mục sau hơn 24 giờ). Liên hệ vẫn được giữ trong hàng đợi để tiếp tục thử gửi lại.`,
     overdue_15m: `hiện có ${opts.count} liên hệ chờ gửi quá 15 phút. Liên hệ vẫn được giữ trong hàng đợi để tiếp tục thử gửi lại.`,
     expired_purged: `đã xoá ${opts.count} liên hệ chưa gửi được thư báo do quá hạn lưu 7 ngày.`,
-    summary_split: `thư tóm tắt của một giờ vượt trần kích thước nên được gửi thành nhiều phần (${opts.count} liên hệ trong phần đầu).`,
+    summary_split: `mã ${MAIL_ALERT_CODES.summaryParts}: thư tóm tắt của một giờ vượt trần kích thước nên được gửi thành nhiều phần (đã gửi ${opts.parts ?? 1} phần, còn ${opts.count} liên hệ chờ).`,
   } as const;
   const displaySubject = `${MAIL_SUBJECT_PREFIX.alert}${subjects[opts.reason]}`;
   const subjectHeaderValue = encodeRfc2047B(displaySubject);

@@ -412,8 +412,9 @@ async function sendSummaryPart(deps: ContactDeps, nowSec: number): Promise<void>
   deps.logger.info('MAIL_SUMMARY_SENT', { count: ids.length, part: k });
   if (k === 2 && cfg.alertTo) {
     // Phần thứ 2 của một giờ ⇒ MỘT cảnh báo không PII (api.ts MAIL_ALERT_CODES.summaryParts)
+    const remaining = await deps.queue.countSummaryPending(hourStart);
     await deps.mailer.send(
-      buildAlertMail({ count: ids.length, reason: 'summary_split' }, cfg.mailFrom, cfg.alertTo, nowSec),
+      buildAlertMail({ count: remaining, parts: k, reason: 'summary_split' }, cfg.mailFrom, cfg.alertTo, nowSec),
     );
     await deps.queue.recordMailLog('alert', nowSec, { code: MAIL_ALERT_CODES.summaryParts });
   }

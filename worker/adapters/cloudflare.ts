@@ -447,6 +447,16 @@ export class D1ContactQueue implements ContactQueue {
     return { hour: Number(row?.hour ?? 0), day: Number(row?.day ?? 0) };
   }
 
+  async countSummaryPending(hourStartSec: number): Promise<number> {
+    const row = await this.db
+      .prepare(
+        "SELECT COUNT(*) AS cnt FROM outbox WHERE sent_at IS NULL AND batch = 'summary' AND created_at >= ? AND created_at < ?",
+      )
+      .bind(hourStartSec, hourStartSec + 3600)
+      .first<{ cnt: number }>();
+    return Number(row?.cnt ?? 0);
+  }
+
   async countMailLog(
     kind: 'notify' | 'summary' | 'alert',
     sinceSec: number,

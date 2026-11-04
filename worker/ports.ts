@@ -53,6 +53,8 @@ export interface ContactQueue {
   purgeDedupeBefore(beforeSec: number, limit?: number): Promise<void>;
   /** Số thư báo trong giờ tròn hiện tại (VN) và trong 24 giờ trượt. */
   countNotify(hourStartSec: number, since24hSec: number): Promise<{ hour: number; day: number }>;
+  /** Số liên hệ batch 'summary' chưa gửi có created_at trong giờ tròn [hourStart, hourStart + 3600). Chỉ số đếm. */
+  countSummaryPending(hourStartSec: number): Promise<number>;
   /** Số dòng mail_log; `code` lọc cho kind='alert', `summaryHour` lọc cho kind='summary'. */
   countMailLog(
     kind: 'notify' | 'summary' | 'alert',
