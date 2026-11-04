@@ -15,6 +15,8 @@
     "lint": "biome check .",
     "typecheck": "tsc --noEmit --incremental false",
     "test": "vitest run --passWithNoTests",
+    "e2e": "playwright test --config tests/playwright.config.ts --project acceptance",
+    "perf": "playwright test --config tests/playwright.config.ts --project perf",
     "db:migrate:test": "bun x wrangler d1 execute gms_contact --local --config wrangler.test.jsonc --file=contracts/d1-schema.sql"
   },
   "dependencies": {
