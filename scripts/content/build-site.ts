@@ -87,11 +87,6 @@ const PAGE_DESCRIPTIONS: Record<Locale, Record<StaticPageKey, string>> = {
   },
 };
 
-
-const INLINE_VN_FLAG_SVG = `<svg viewBox="0 0 30 20" width="22" height="15" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><clipPath id="vn-clip-static"><rect width="30" height="20" rx="3" /></clipPath><g clip-path="url(#vn-clip-static)"><rect width="30" height="20" fill="#DA251D" /><polygon points="15,4 16.35,8.15 20.71,8.15 17.18,10.71 18.53,14.85 15,12.29 11.47,14.85 12.82,10.71 9.29,8.15 13.65,8.15" fill="#FFCD00" /></g></svg>`;
-
-const INLINE_UK_FLAG_SVG = `<svg viewBox="0 0 30 20" width="22" height="15" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><clipPath id="uk-clip-static"><rect width="30" height="20" rx="3" /></clipPath><g clip-path="url(#uk-clip-static)"><rect width="30" height="20" fill="#012169" /><path d="M0 0 L30 20 M30 0 L0 20" stroke="#ffffff" stroke-width="3.5" /><path d="M0 0 L15 10 M30 20 L15 10" stroke="#C8102E" stroke-width="1.2" /><path d="M30 0 L15 10 M0 20 L15 10" stroke="#C8102E" stroke-width="1.2" /><path d="M15 0 v20 M0 10 h30" stroke="#ffffff" stroke-width="6" /><path d="M15 0 v20 M0 10 h30" stroke="#C8102E" stroke-width="3.6" /></g></svg>`;
-
 const INLINE_LOGO_MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="60 530 1930 520" width="104" height="28" role="img" aria-label="GMS">
   <defs>
     <radialGradient id="gms-gm" gradientUnits="userSpaceOnUse" cx="690" cy="545" r="875" gradientTransform="translate(690 545) scale(1 0.643) translate(-690 -545)">
@@ -303,15 +298,22 @@ input:focus, input:focus-visible, select:focus, select:focus-visible, textarea:f
   padding: 4px 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
-.header-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
-.header-nav { padding: 4px 0; overflow-x: auto; }
+/* Thứ tự DOM = thứ tự tab ux-spec §5.1 (logo → menu chính → ngôn ngữ); bố cục nhìn thấy do grid-area quyết định. */
+.header-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand tools" "nav nav";
+  align-items: center; column-gap: 12px; padding-top: 8px; padding-bottom: 8px;
+}
+.header-grid > .brand-link { grid-area: brand; min-width: 0; min-height: 44px; }
+.brand-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.header-tools { grid-area: tools; display: flex; align-items: center; gap: 8px; }
+.header-nav { grid-area: nav; padding: 4px 0; }
 .header-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .brand-link { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--g900); font-weight: 800; font-size: 1.05rem; padding: 4px 6px; }
-nav[data-testid="nav-main"] { display: flex; align-items: center; justify-content: space-between; gap: 3px; width: 100%; }
+nav[data-testid="nav-main"] { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 3px; width: 100%; }
 nav[data-testid="nav-main"] a {
-  display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 6px 10px;
+  display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 6px 8px;
   border-radius: var(--radius-s); color: var(--g900); text-decoration: none;
-  font-weight: 600; font-size: 0.875rem; white-space: nowrap; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-weight: 600; font-size: 0.85rem; white-space: nowrap; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 nav[data-testid="nav-main"] a:hover { background: var(--tint-2); color: var(--g900); }
 nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); color: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
@@ -320,12 +322,12 @@ nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); co
 }
 .lang-switcher a {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 36px; height: 32px; min-width: 36px; min-height: 32px; border-radius: 999px; text-decoration: none;
+  min-width: 44px; min-height: 40px; padding: 0 10px; border-radius: 999px; text-decoration: none;
+  color: var(--g900); font-weight: 600; font-size: 0.85rem; white-space: nowrap;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1); position: relative; cursor: pointer;
 }
-.lang-switcher a:hover { background: var(--tint); transform: scale(1.08); }
-.lang-switcher a[aria-current="true"] { background: var(--g900); box-shadow: 0 2px 6px rgba(15, 88, 56, 0.28); }
-.lang-switcher a svg { display: block; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.22); }
+.lang-switcher a:hover { background: var(--tint); }
+.lang-switcher a[aria-current="true"] { background: var(--g900); color: var(--white); text-decoration: underline; text-underline-offset: 3px; box-shadow: 0 2px 6px rgba(15, 88, 56, 0.28); }
 
 /* Buttons & Badges */
 .btn {
@@ -384,6 +386,11 @@ main { padding: 0 0 48px; }
 @media (min-width: 900px) { .hero-grid { grid-template-columns: 6fr 5fr; } }
 .hero-media { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--g900); margin: 0; }
 .hero-media img { width: 100%; height: auto; display: block; object-fit: cover; }
+.photo-label {
+  position: absolute; left: 10px; bottom: 10px; margin: 0; max-width: calc(100% - 20px);
+  background: rgb(0 0 0 / 0.72); color: #fff; font-size: 0.8rem; font-weight: 600; line-height: 1.3;
+  padding: 4px 10px; border-radius: 6px;
+}
 .photo-badge {
   display: inline-block; margin-top: 8px; padding: 4px 10px; border-radius: 6px;
   background: var(--b800); color: var(--white); font-size: 0.85rem; font-weight: 600;
@@ -553,6 +560,15 @@ input[type="checkbox"] {
 }
 
 .error-box { background: var(--error-bg); color: var(--error); border: 1px solid var(--error); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
+.notice-box { background: var(--tint); color: var(--g900); border: 1px solid var(--line); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
+.notice-box[hidden] { display: none; }
+.field-error { color: var(--error); font-size: 0.9rem; font-weight: 600; margin: 4px 0 0; }
+.field-error::before { content: "⚠ "; }
+.field-error[hidden] { display: none; }
+[aria-invalid="true"] { border-color: var(--error) !important; }
+.human-slot { min-height: 65px; margin-bottom: 12px; }
+.error-box ul, .notice-box ul { margin: 0; padding-left: 20px; }
+.error-box a { color: inherit; text-decoration: underline; }
 .success-box { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok); padding: 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
 .hp-trap { position: absolute !important; left: -9999px !important; width: 1px !important; height: 1px !important; overflow: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 
@@ -625,9 +641,8 @@ function renderLayout(opts: {
   const skipText = locale === 'vi' ? 'Bỏ qua, tới nội dung chính' : 'Skip to main content';
   const brandName = company.legalName || (locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen');
 
-  const NAV_ITEMS_ORDER = ['about', 'solutions', 'technology', 'products', 'projects', 'news', 'careers', 'contact'] as const;
-
-  const navLinks = NAV_ITEMS_ORDER.map((k) => {
+  // prd.md §4 S1: menu chính đủ 11 trang, theo thứ tự MENU_ORDER
+  const navLinks = MENU_ORDER.map((k) => {
     const href = ROUTES[k][locale];
     const current = activePageKey === k ? ' aria-current="page"' : '';
     return `<a href="${href}" data-testid="nav-menu"${current}>${escHtml(MENU_LABELS[locale][k])}</a>`;
@@ -703,31 +718,25 @@ function renderLayout(opts: {
   <a href="#main-content" class="skip-link" data-testid="nav-menu">${escHtml(skipText)}</a>
   <header class="site-header">
     <div class="container">
-      <div class="header-top" style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line);">
+      <div class="header-grid">
         <a href="${ROUTES.home[locale]}" class="brand-link" data-testid="nav-menu">
           ${INLINE_LOGO_MARK_SVG}
           <span>${escHtml(displayBrand)}</span>
         </a>
-        <div style="display:flex; align-items:center; gap:8px;">
+        <div class="header-nav" id="header-nav-wrap">
+          <nav data-testid="nav-main" aria-label="${locale === 'vi' ? 'Điều hướng chính' : 'Main navigation'}">
+            ${navLinks}
+          </nav>
+        </div>
+        <div class="header-tools">
           <div class="lang-switcher" data-testid="lang-switcher" role="group" aria-label="${switcherLabel}">
-            <a hreflang="vi" href="${escHtml(viPath)}" lang="vi" title="${escHtml(viSwitcherText)}" aria-label="${escHtml(viSwitcherText)}"${locale === 'vi' ? ' aria-current="true"' : ''}>
-              ${INLINE_VN_FLAG_SVG}
-              <span class="sr-only">${escHtml(viSwitcherText)}</span>
-            </a>
-            <a hreflang="en" href="${escHtml(enPath)}" lang="en" title="English" aria-label="English"${locale === 'en' ? ' aria-current="true"' : ''}>
-              ${INLINE_UK_FLAG_SVG}
-              <span class="sr-only">English</span>
-            </a>
+            <a hreflang="vi" href="${escHtml(viPath)}" lang="vi"${locale === 'vi' ? ' aria-current="true"' : ''}>${escHtml(viSwitcherText)}</a>
+            <a hreflang="en" href="${escHtml(enPath)}" lang="en"${locale === 'en' ? ' aria-current="true"' : ''}>English</a>
           </div>
-          <button type="button" class="mobile-menu-btn" id="btn-mobile-menu" aria-label="${locale === 'vi' ? 'Menu di động' : 'Mobile menu'}" aria-expanded="false" onclick="var el=document.getElementById('header-nav-wrap');if(el){el.classList.toggle('is-mobile-open');this.setAttribute('aria-expanded', el.classList.contains('is-mobile-open'));}">
-            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          <button type="button" class="mobile-menu-btn" id="btn-mobile-menu" aria-label="${locale === 'vi' ? 'Menu di động' : 'Mobile menu'}" aria-expanded="false" aria-controls="header-nav-wrap" onclick="var el=document.getElementById('header-nav-wrap');if(el){var o=el.classList.toggle('is-mobile-open');this.setAttribute('aria-expanded', o);if(o){var f=el.querySelector('a');if(f)f.focus();}}">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
           </button>
         </div>
-      </div>
-      <div class="header-nav" id="header-nav-wrap" style="padding:6px 0; overflow-x:auto;">
-        <nav data-testid="nav-main" aria-label="${locale === 'vi' ? 'Điều hướng chính' : 'Main navigation'}">
-          ${navLinks}
-        </nav>
       </div>
     </div>
   </header>
@@ -801,6 +810,8 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
 
   const coverLabel = isVi ? 'Phối cảnh dự kiến' : "Artist's impression";
   const coverImg = content.images.get('images/hero-plant.jpg');
+  // Ảnh dựng/AI (hoặc ảnh thay thế chưa phải ảnh thật) luôn có nhãn nhìn thấy trên ảnh (S17, ux-spec §7)
+  const coverIsRender = !coverImg || coverImg.kind === 'anh-dung-ai';
   const coverSrc = coverImg && coverImg.allowedInBuild ? '/img/hero-plant.jpg' : '/og/default.png';
   const coverAlt = coverImg
     ? coverImg.alt[locale]
@@ -859,7 +870,7 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
         </div>
         <figure class="hero-media" data-testid="home-cover">
           <img src="${coverSrc}" alt="${escHtml(coverAlt)}" width="1024" height="1024" />
-          <figcaption class="sr-only" data-testid="photo-label">${escHtml(coverAlt)}</figcaption>
+          ${coverIsRender ? `<figcaption class="photo-label" data-testid="photo-label">${escHtml(coverLabel)}</figcaption>` : ''}
         </figure>
       </div>
     </section>
@@ -1584,6 +1595,346 @@ function renderPrivacyPage(content: LoadedSiteContent, locale: Locale): string {
   `;
 }
 
+// Phần JS của form liên hệ (chạy trong IIFE của trang Liên hệ, sau khi lấy `form`). Microcopy: ux-spec §6.4–6.5;
+// trạng thái F1–F5: ux-spec §5.3; request/response: contracts/api.ts. Trong template literal này: gấp đôi dấu `\`, không dùng `${`.
+const CONTACT_FORM_SCRIPT = `
+    var $ = function(id) { return document.getElementById(id); };
+    var loc = form.getAttribute('data-locale') || 'vi';
+    var isVi = loc === 'vi';
+    var feedback = $('contact-feedback-area');
+    var submitBtn = $('contact-submit-btn');
+    var statusEl = $('contact-status');
+    var waitEl = $('contact-human-wait');
+    var slot = $('contact-human-slot');
+    var phoneRaw = form.getAttribute('data-phone') || '';
+    var phoneShown = form.getAttribute('data-phone-shown') || phoneRaw;
+    var zalo = form.getAttribute('data-zalo') || '';
+    var sitekey = form.getAttribute('data-sitekey') || '';
+    var CTRL = /[\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]/;
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+    }
+
+    var T = isVi ? {
+      send: 'Gửi liên hệ', sending: 'Đang gửi…', okTitle: 'Đã gửi liên hệ',
+      ok: 'Cảm ơn bạn. GMS đã nhận được thông tin và sẽ liên hệ lại.', again: 'Gửi liên hệ khác', home: 'Về trang chủ',
+      errName: 'Vui lòng nhập họ và tên.', errContact: 'Vui lòng nhập email hoặc số điện thoại',
+      errEmail: 'Email chưa đúng dạng. Ví dụ: ten@congty.vn',
+      errPhone: 'Số điện thoại chưa đúng. Nhập 8–20 ký tự gồm số, có thể có dấu + ở đầu, dấu cách, dấu chấm hoặc gạch ngang.',
+      errMsg: 'Vui lòng nhập nội dung bạn muốn gửi.', errConsent: 'Vui lòng đồng ý với việc xử lý thông tin để gửi liên hệ.',
+      errLong: function(n) { return 'Nội dung dài quá ' + n + ' ký tự. Vui lòng rút gọn.'; },
+      errChars: function(l) { return 'Ô “' + l + '” có ký tự không dùng được, ví dụ ký tự xuống dòng hoặc ký tự ẩn khi dán. Vui lòng xoá đi và gõ lại bằng chữ, số và dấu câu thông thường.'; },
+      sum: function(n) { return 'Cần sửa ' + n + ' mục trước khi gửi:'; },
+      rate: function(s) { return 'Bạn đã gửi quá nhiều lần. Vui lòng thử lại sau ' + (s ? Math.ceil(s / 60) + ' phút' : 'ít phút') + '. Chữ bạn đã nhập vẫn còn.'; },
+      human: 'Chưa xác minh được bạn là người thật. Vui lòng thử gửi lại. Chữ bạn đã nhập vẫn còn.',
+      humanWait: 'Vui lòng hoàn tất bước xác minh bên dưới để gửi liên hệ.',
+      origin: 'Liên hệ chưa được gửi vì yêu cầu không đến từ trang web của GMS. Vui lòng mở form liên hệ trên trang web chính thức của GMS rồi gửi lại. Chữ bạn đã nhập vẫn còn trên trang này.',
+      policy: 'Chính sách bảo mật vừa được cập nhật. Vui lòng đọc lại và tick ô đồng ý, rồi gửi lại. Chữ bạn đã nhập vẫn còn.',
+      policyLink: 'Chính sách bảo mật',
+      tooBig: 'Nội dung gửi quá lớn. Vui lòng rút gọn rồi gửi lại.',
+      fail: 'Chưa gửi được liên hệ của bạn, GMS chưa nhận được. Chữ bạn đã nhập vẫn còn; vui lòng thử lại sau ít phút.',
+      off: 'Form liên hệ tạm thời chưa mở. Bạn có thể liên hệ GMS qua các kênh dưới đây.',
+      chPhone: 'Điện thoại', chZalo: 'Nhắn Zalo'
+    } : {
+      send: 'Send message', sending: 'Sending…', okTitle: 'Message sent',
+      ok: 'Thank you. GMS has received your details and will get back to you.', again: 'Send another message', home: 'Back to home page',
+      errName: 'Please enter your full name.', errContact: 'Please enter an email or a phone number',
+      errEmail: "That email doesn't look right. Example: name@company.com",
+      errPhone: "That phone number doesn't look right. Use 8–20 characters: digits, an optional leading +, spaces, dots or hyphens.",
+      errMsg: 'Please enter your message.', errConsent: 'Please agree to the processing of your details to send your message.',
+      errLong: function(n) { return 'This is longer than ' + n + ' characters. Please shorten it.'; },
+      errChars: function(l) { return 'The “' + l + '” field contains characters that can\\'t be used, such as a line break or a hidden character from pasting. Please delete it and retype using ordinary letters, numbers and punctuation.'; },
+      sum: function(n) { return n + ' item(s) to fix before sending:'; },
+      rate: function(s) { return "You've sent too many messages. Please try again " + (s ? 'in ' + Math.ceil(s / 60) + ' minute(s)' : 'in a few minutes') + '. What you typed is still here.'; },
+      human: "We couldn't verify that you're a person. Please try sending again. What you typed is still here.",
+      humanWait: 'Please complete the verification below to send your message.',
+      origin: "Your message wasn't sent because the request did not come from the GMS website. Please open the contact form on the official GMS website and send it again. What you typed is still on this page.",
+      policy: 'The privacy policy has just been updated. Please read it again, tick the consent box, then send again. What you typed is still here.',
+      policyLink: 'Privacy policy',
+      tooBig: "What you're sending is too large. Please shorten it and try again.",
+      fail: "We couldn't send your message and GMS has not received it. What you typed is still here; please try again in a few minutes.",
+      off: 'The contact form is temporarily unavailable. You can reach GMS through the channels below.',
+      chPhone: 'Phone', chZalo: 'Message on Zalo'
+    };
+
+    // Kênh khác: chỉ hiện kênh đã công bố (không có kênh nào thì không thêm gì)
+    function urgent() {
+      var p = [];
+      if (phoneRaw) p.push((isVi ? 'gọi ' : 'call ') + '<a href="tel:' + esc(phoneRaw) + '">' + esc(phoneShown) + '</a>');
+      if (zalo) p.push((isVi ? 'nhắn ' : 'message us on ') + '<a href="' + esc(zalo) + '" rel="noopener noreferrer">Zalo</a>');
+      if (!p.length) return '';
+      return ' ' + (isVi ? 'Nếu cần gấp, hãy ' + p.join(' hoặc ') : 'If urgent, ' + p.join(' or ')) + '.';
+    }
+    function channelsList() {
+      var li = '';
+      if (phoneRaw) li += '<li>' + T.chPhone + ': <a href="tel:' + esc(phoneRaw) + '">' + esc(phoneShown) + '</a></li>';
+      if (zalo) li += '<li><a href="' + esc(zalo) + '" rel="noopener noreferrer">' + T.chZalo + '</a></li>';
+      return li ? '<ul>' + li + '</ul>' : '';
+    }
+
+    // ---- trường & lỗi từng trường (F3a) ----
+    var FIELDS = {
+      fullName: { id: 'contact-name', label: isVi ? 'Họ và tên' : 'Full name', max: 200 },
+      email: { id: 'contact-email', max: 254 },
+      phone: { id: 'contact-phone', max: 20 },
+      company: { id: 'contact-company', label: isVi ? 'Công ty / Tổ chức' : 'Company / Organisation', max: 200 },
+      message: { id: 'contact-message', max: 5000 },
+      consent: { id: 'contact-consent' }
+    };
+    var ORDER = ['fullName', 'email', 'phone', 'company', 'message', 'consent'];
+    var errs = {};
+    function fieldEl(k) { return $(FIELDS[k].id); }
+    function val(k) { return (fieldEl(k).value || '').trim(); }
+    function paint(k) {
+      var f = fieldEl(k);
+      var h = $('err-' + k);
+      if (errs[k]) {
+        h.textContent = errs[k];
+        h.hidden = false;
+        f.setAttribute('aria-invalid', 'true');
+        f.setAttribute('aria-describedby', 'err-' + k);
+      } else {
+        h.textContent = '';
+        h.hidden = true;
+        f.removeAttribute('aria-invalid');
+        f.removeAttribute('aria-describedby');
+      }
+    }
+    function localMsg(k) {
+      var v = k === 'consent' ? '' : val(k);
+      var max = FIELDS[k].max;
+      if (k === 'fullName' && !v) return T.errName;
+      if (k === 'message' && !v) return T.errMsg;
+      if (k === 'consent') return fieldEl(k).checked ? '' : T.errConsent;
+      if ((k === 'fullName' || k === 'company') && CTRL.test(v)) return T.errChars(FIELDS[k].label);
+      if (k === 'email' && v && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v)) return T.errEmail;
+      if (k === 'phone' && v && !/^\\+?[0-9 .-]{8,20}$/.test(v)) return T.errPhone;
+      if (max && v.length > max) return T.errLong(max);
+      return '';
+    }
+    function validateAll() {
+      errs = {};
+      ORDER.forEach(function(k) { var m = localMsg(k); if (m) errs[k] = m; });
+      if (!val('email') && !val('phone')) { errs.email = T.errContact; errs.phone = T.errContact; }
+      ORDER.forEach(paint);
+      return Object.keys(errs).length;
+    }
+    function summaryHtml() {
+      var items = [];
+      ORDER.forEach(function(k) {
+        if (!errs[k]) return;
+        if (k === 'phone' && errs.phone === errs.email) return;
+        items.push('<li><a href="#' + FIELDS[k].id + '" data-focus="' + FIELDS[k].id + '">' + esc(errs[k]) + '</a></li>');
+      });
+      return '<p style="margin:0 0 6px"><strong>' + T.sum(items.length) + '</strong></p><ul>' + items.join('') + '</ul>';
+    }
+    function showBlock(html, tone) {
+      feedback.innerHTML = '<div class="' + (tone === 'info' ? 'notice-box' : 'error-box') + '" data-testid="contact-error" id="contact-summary" role="alert" tabindex="-1">' + html + '</div>';
+      $('contact-summary').focus();
+    }
+    function refreshSummary() {
+      var box = $('contact-summary');
+      if (!box || !box.hasAttribute('data-fields')) return;
+      if (!Object.keys(errs).length) { feedback.innerHTML = ''; return; }
+      box.innerHTML = summaryHtml();
+    }
+    function showFieldSummary() {
+      showBlock(summaryHtml());
+      $('contact-summary').setAttribute('data-fields', '1');
+    }
+    feedback.addEventListener('click', function(e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[data-focus]') : null;
+      if (!a) return;
+      e.preventDefault();
+      var t = $(a.getAttribute('data-focus'));
+      if (t) t.focus();
+    });
+    function recheck(k) {
+      var group = (k === 'email' || k === 'phone') ? ['email', 'phone'] : [k];
+      group.forEach(function(g) {
+        if (!errs[g]) return;
+        var m = localMsg(g);
+        if (!m && errs[g] === T.errContact && !val('email') && !val('phone')) m = T.errContact;
+        if (m) errs[g] = m; else delete errs[g];
+        paint(g);
+      });
+      refreshSummary();
+    }
+    ORDER.forEach(function(k) {
+      var f = fieldEl(k);
+      f.addEventListener('blur', function() { recheck(k); });
+      f.addEventListener(k === 'consent' ? 'change' : 'input', function() { recheck(k); });
+    });
+
+    // Mã lỗi trường của máy chủ → chữ (ux-spec §6.5); không map được ⇒ null (coi như F3c)
+    function serverFieldMsgs(fields) {
+      var out = {};
+      for (var k in fields) {
+        if (!Object.prototype.hasOwnProperty.call(fields, k) || !FIELDS[k]) return null;
+        var c = fields[k];
+        var m = null;
+        if (c === 'REQUIRED') m = k === 'fullName' ? T.errName : k === 'message' ? T.errMsg : k === 'consent' ? T.errConsent : (k === 'email' || k === 'phone') ? T.errContact : null;
+        else if (c === 'TOO_LONG') m = FIELDS[k].max ? T.errLong(FIELDS[k].max) : null;
+        else if (c === 'INVALID_EMAIL') m = k === 'email' ? T.errEmail : null;
+        else if (c === 'INVALID_PHONE') m = k === 'phone' ? T.errPhone : null;
+        else if (c === 'CONTACT_REQUIRED') { out.email = T.errContact; out.phone = T.errContact; continue; }
+        else if (c === 'CONSENT_REQUIRED') m = T.errConsent;
+        else if (c === 'INVALID_CHARS') m = (k === 'fullName' || k === 'company') ? T.errChars(FIELDS[k].label) : null;
+        if (!m) return null;
+        out[k] = m;
+      }
+      return Object.keys(out).length ? out : null;
+    }
+
+    // ---- Turnstile (Managed, interaction-only, flexible; token dùng một lần ⇒ reset sau mọi phản hồi khác 200 {ok:true}) ----
+    var busy = false;
+    var pending = false;
+    var formOff = false;
+    var token = '';
+    var widgetId = null;
+    var tsState = 'idle';
+    function setBusy(b) {
+      busy = b;
+      submitBtn.disabled = b || formOff;
+      submitBtn.textContent = b ? T.sending : T.send;
+      form.setAttribute('aria-busy', b ? 'true' : 'false');
+      statusEl.textContent = b ? T.sending : '';
+      if (!b) showWait(false);
+    }
+    function showWait(on) {
+      waitEl.textContent = on ? T.humanWait : '';
+      waitEl.hidden = !on;
+    }
+    function resetWidget() {
+      token = '';
+      if (window.turnstile && widgetId !== null) { try { window.turnstile.reset(widgetId); } catch (e) { /* widget đã gỡ */ } }
+    }
+    function failNoToken() {
+      pending = false;
+      resetWidget();
+      setBusy(false);
+      showBlock(esc(T.fail) + urgent());
+    }
+    function renderWidget() {
+      if (widgetId !== null || !window.turnstile) return;
+      widgetId = window.turnstile.render(slot, {
+        sitekey: sitekey,
+        action: 'contact',
+        appearance: 'interaction-only',
+        size: 'flexible',
+        language: loc,
+        callback: function(t) { token = t; showWait(false); if (pending) send(); },
+        'error-callback': function() { token = ''; if (pending) failNoToken(); return true; },
+        'expired-callback': function() { token = ''; },
+        'timeout-callback': function() { token = ''; },
+        'before-interactive-callback': function() { if (pending) showWait(true); else slot.setAttribute('data-challenge', 'shown'); },
+        'after-interactive-callback': function() { showWait(false); slot.removeAttribute('data-challenge'); }
+      });
+    }
+    function loadTurnstile() {
+      if (tsState !== 'idle' || !sitekey) return;
+      tsState = 'loading';
+      window.__gmsTurnstileReady = function() { tsState = 'ready'; renderWidget(); };
+      var s = document.createElement('script');
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__gmsTurnstileReady';
+      s.async = true;
+      s.defer = true;
+      s.onerror = function() { tsState = 'failed'; if (pending) failNoToken(); };
+      document.head.appendChild(s);
+    }
+    // Script bên thứ ba chỉ nạp khi người dùng chạm vào form (ux-spec §5.3, design.md §6d)
+    ['focusin', 'pointerdown', 'touchstart'].forEach(function(ev) { form.addEventListener(ev, loadTurnstile, { once: true, passive: true }); });
+
+    // ---- gửi ----
+    function showSuccess() {
+      pending = false;
+      setBusy(false);
+      var kids = form.children;
+      for (var i = 0; i < kids.length; i++) { if (kids[i] !== feedback) kids[i].hidden = true; }
+      feedback.innerHTML = '<div class="success-box" data-testid="contact-success" id="contact-ok" role="status" tabindex="-1"><h2 style="margin:0 0 6px;font-size:1.1rem">' + T.okTitle + '</h2><p style="margin:0 0 10px">' + T.ok + '</p><p style="margin:0"><button type="button" class="btn btn-secondary" id="contact-again">' + T.again + '</button> <a href="' + esc(form.getAttribute('data-home') || '/') + '">' + T.home + '</a></p></div>';
+      $('contact-ok').focus();
+      $('contact-again').addEventListener('click', function() {
+        form.reset();
+        errs = {};
+        ORDER.forEach(paint);
+        for (var j = 0; j < kids.length; j++) kids[j].hidden = false;
+        feedback.innerHTML = '';
+        waitEl.hidden = true;
+        resetWidget();
+        $('contact-name').focus();
+      });
+    }
+    function onResult(status, data) {
+      if (status === 200 && data && data.ok === true) { showSuccess(); return; }
+      resetWidget();
+      setBusy(false);
+      var code = data && data.code;
+      if (status === 503 && code === 'FORM_DISABLED') {
+        formOff = true;
+        submitBtn.disabled = true;
+        showBlock('<p style="margin:0 0 6px">' + T.off + '</p>' + channelsList(), 'info');
+      } else if (status === 422 && code === 'VALIDATION' && data.fields && serverFieldMsgs(data.fields)) {
+        errs = serverFieldMsgs(data.fields);
+        ORDER.forEach(paint);
+        showFieldSummary();
+      } else if (status === 403 && code === 'HUMAN_CHECK_FAILED') {
+        showBlock(esc(T.human));
+      } else if (status === 403 && code === 'ORIGIN_REJECTED') {
+        showBlock(esc(T.origin) + urgent());
+      } else if (status === 429 && code === 'RATE_LIMITED') {
+        showBlock(esc(T.rate(data.retryAfterSeconds)));
+      } else if (status === 409 && code === 'POLICY_CHANGED') {
+        if (data.policyVersion) form.setAttribute('data-policy-version', data.policyVersion);
+        fieldEl('consent').checked = false;
+        var pl = form.querySelector('[data-testid="contact-consent-label"] a');
+        if (pl) pl.setAttribute('target', '_blank');
+        showBlock(esc(T.policy) + (pl ? ' <a href="' + esc(pl.getAttribute('href')) + '" target="_blank" rel="noopener">' + T.policyLink + '</a>' : ''));
+      } else if (status === 413 && code === 'PAYLOAD_TOO_LARGE') {
+        showBlock(esc(T.tooBig));
+      } else {
+        // STORE_FAILED, HUMAN_CHECK_UNAVAILABLE, 415, JSON sai dạng, mã lạ, không có JSON (F3c)
+        showBlock(esc(T.fail) + urgent());
+      }
+    }
+    function send() {
+      pending = false;
+      var t = token;
+      token = '';
+      var trap = $('contact-trap');
+      fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          locale: loc,
+          fullName: val('fullName'),
+          company: val('company') || undefined,
+          email: val('email') || undefined,
+          phone: val('phone') || undefined,
+          message: val('message'),
+          consent: true,
+          policyVersion: form.getAttribute('data-policy-version') || '1.0',
+          turnstileToken: t,
+          pagePath: (window.location.pathname + window.location.search).slice(0, 512),
+          website: (trap && trap.value) || undefined
+        })
+      }).then(function(res) {
+        return res.json().catch(function() { return null; }).then(function(data) { onResult(res.status, data); });
+      }).catch(function() { onResult(0, null); });
+    }
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (busy || formOff) return;
+      if (validateAll() > 0) { showFieldSummary(); return; }
+      feedback.innerHTML = '';
+      setBusy(true);
+      pending = true;
+      loadTurnstile();
+      if (token) { send(); return; }
+      if (tsState === 'failed' || !sitekey) { failNoToken(); return; }
+      if (slot.getAttribute('data-challenge') === 'shown') showWait(true);
+    });
+`;
+
 function renderContactPage(
   content: LoadedSiteContent,
   locale: Locale,
@@ -1600,6 +1951,9 @@ function renderContactPage(
   const phoneRaw = company.phone?.trim() ?? '';
   const phoneShown = phoneRaw ? formatPublicPhone(phoneRaw, locale) : '';
   const zaloRaw = company.zalo?.trim() ?? '';
+  // shortcut: sitekey công khai đọc từ môi trường lúc build; thiếu ⇒ sitekey thử của Cloudflare (luôn qua, chỉ dùng cho local/staging).
+  // Bản deploy_prod phải đặt TURNSTILE_SITE_KEY thật (XQ cho architect/devops: contract chưa nêu nguồn sitekey).
+  const turnstileSiteKey = process.env.TURNSTILE_SITE_KEY?.trim() || '1x00000000000000000000AA';
 
   const channelsHtml = `
     <div data-testid="contact-channels">
@@ -1648,28 +2002,34 @@ function renderContactPage(
     : `I agree that ${escHtml(company.legalName ?? '')} may collect and use the full name, email or phone number, company and message I enter in order to reply and respond to my inquiry. See the <a href="${ROUTES.privacy.en}" tabindex="-1">Privacy policy</a>.`;
 
   const formHtml = canRenderForm
-    ? `<form data-testid="contact-form" id="gms-contact-form" method="post" action="/api/contact" novalidate data-locale="${locale}" data-policy-version="${escHtml(polVer)}" data-phone="${escHtml(phoneRaw)}" data-phone-shown="${escHtml(phoneShown)}">
+    ? `<form data-testid="contact-form" id="gms-contact-form" method="post" action="/api/contact" novalidate data-locale="${locale}" data-policy-version="${escHtml(polVer)}" data-phone="${escHtml(phoneRaw)}" data-phone-shown="${escHtml(phoneShown)}" data-zalo="${escHtml(zaloRaw)}" data-sitekey="${escHtml(turnstileSiteKey)}" data-home="${ROUTES.home[locale]}">
         <div id="contact-feedback-area"></div>
+        <p id="contact-status" class="sr-only" role="status"></p>
         <div class="form-group">
           <label for="contact-name">${isVi ? 'Họ và tên (bắt buộc)' : 'Full name (required)'}</label>
           <input id="contact-name" name="fullName" type="text" class="form-control" data-testid="contact-name" required maxlength="200" autocomplete="name" />
+          <p class="field-error" id="err-fullName" hidden></p>
         </div>
         <p><small>${isVi ? 'Cần điền ít nhất email hoặc số điện thoại.' : 'Please provide at least an email or a phone number.'}</small></p>
         <div class="form-group">
           <label for="contact-email">Email</label>
           <input id="contact-email" name="email" type="email" class="form-control" data-testid="contact-email" maxlength="254" autocomplete="email" />
+          <p class="field-error" id="err-email" hidden></p>
         </div>
         <div class="form-group">
           <label for="contact-phone">${isVi ? 'Số điện thoại' : 'Phone number'}</label>
           <input id="contact-phone" name="phone" type="tel" class="form-control" data-testid="contact-phone" maxlength="20" autocomplete="tel" />
+          <p class="field-error" id="err-phone" hidden></p>
         </div>
         <div class="form-group">
           <label for="contact-company">${isVi ? 'Công ty / Tổ chức (không bắt buộc)' : 'Company / Organisation (optional)'}</label>
           <input id="contact-company" name="company" type="text" class="form-control" data-testid="contact-company" maxlength="200" autocomplete="organization" />
+          <p class="field-error" id="err-company" hidden></p>
         </div>
         <div class="form-group">
           <label for="contact-message">${isVi ? 'Nội dung (bắt buộc)' : 'Message (required)'}</label>
           <textarea id="contact-message" name="message" rows="4" class="form-control" data-testid="contact-message" required maxlength="5000"></textarea>
+          <p class="field-error" id="err-message" hidden></p>
         </div>
         <div class="hp-trap" aria-hidden="true">
           <input id="contact-trap" name="website" type="text" tabindex="-1" autocomplete="off" data-testid="contact-trap" />
@@ -1679,7 +2039,10 @@ function renderContactPage(
             <input id="contact-consent" name="consent" type="checkbox" data-testid="contact-consent" style="margin-top: 4px; width: 24px; height: 24px; min-width: 24px; min-height: 24px; cursor: pointer;" />
             <span>${consentText}</span>
           </label>
+          <p class="field-error" id="err-consent" hidden></p>
         </div>
+        <p id="contact-human-wait" class="notice-box" data-testid="contact-human-wait" hidden></p>
+        <div id="contact-human-slot" class="human-slot" data-testid="contact-human-slot"></div>
         <button type="submit" class="btn" data-testid="contact-submit" id="contact-submit-btn">
           ${isVi ? 'Gửi liên hệ' : 'Send message'}
         </button>
@@ -1713,121 +2076,7 @@ function renderContactPage(
         }
       });
     }
-    var form = document.getElementById('gms-contact-form');
-    if (!form) return;
-    var loc = form.getAttribute('data-locale') || 'vi';
-    var isVi = loc === 'vi';
-    var feedback = document.getElementById('contact-feedback-area');
-    var submitBtn = document.getElementById('contact-submit-btn');
-    var phoneRaw = form.getAttribute('data-phone') || '';
-    var phoneShown = form.getAttribute('data-phone-shown') || phoneRaw;
-
-    function showError(msgHtml) {
-      feedback.innerHTML = '<div class="error-box" data-testid="contact-error" role="alert">' + msgHtml + '</div>';
-    }
-    function showSuccess() {
-      var msg = isVi
-        ? 'Cảm ơn bạn. GMS đã nhận được thông tin và sẽ liên hệ lại.'
-        : 'Thank you. GMS has received your details and will get back to you.';
-      feedback.innerHTML = '<div class="success-box" data-testid="contact-success" role="status">' + msg + '</div>';
-    }
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
-      var nameEl = document.getElementById('contact-name');
-      var emailEl = document.getElementById('contact-email');
-      var phoneEl = document.getElementById('contact-phone');
-      var companyEl = document.getElementById('contact-company');
-      var msgEl = document.getElementById('contact-message');
-      var consentEl = document.getElementById('contact-consent');
-      var trapEl = document.getElementById('contact-trap');
-
-      var fullName = (nameEl.value || '').trim();
-      var email = (emailEl.value || '').trim();
-      var phone = (phoneEl.value || '').trim();
-      var company = (companyEl.value || '').trim();
-      var message = (msgEl.value || '').trim();
-      var consent = Boolean(consentEl.checked);
-      var website = trapEl ? (trapEl.value || '') : '';
-
-      var errs = [];
-      if (!fullName) errs.push(isVi ? 'Vui lòng nhập họ và tên.' : 'Please enter your full name.');
-      if (!email && !phone) {
-        errs.push(isVi ? 'Vui lòng nhập email hoặc số điện thoại' : 'Please enter an email or a phone number');
-      } else if (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
-        errs.push(isVi ? 'Email chưa đúng dạng. Ví dụ: ten@congty.vn' : "That email doesn't look right. Example: name@company.com");
-      }
-      if (!message) errs.push(isVi ? 'Vui lòng nhập nội dung bạn muốn gửi.' : 'Please enter your message.');
-      if (!consent) errs.push(isVi ? 'Vui lòng đồng ý với việc xử lý thông tin để gửi liên hệ.' : 'Please agree and give consent to the processing of your details to send your message.');
-
-      if (errs.length > 0) {
-        showError(errs.join('<br/>'));
-        return;
-      }
-
-      var policyVersion = form.getAttribute('data-policy-version') || '1.0';
-      submitBtn.disabled = true;
-      fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          locale: loc,
-          fullName: fullName,
-          company: company || undefined,
-          email: email || undefined,
-          phone: phone || undefined,
-          message: message,
-          consent: true,
-          policyVersion: policyVersion,
-          turnstileToken: 'XXXX.DUMMY.TOKEN.XXXX',
-          pagePath: window.location.pathname + window.location.search,
-          website: website || undefined
-        })
-      }).then(function(res) {
-        return res.json().catch(function() { return {}; }).then(function(data) {
-          return { status: res.status, data: data };
-        });
-      }).then(function(resObj) {
-        if (resObj.status === 200 && resObj.data && resObj.data.ok === true) {
-          submitBtn.disabled = false;
-          showSuccess();
-          return;
-        }
-        var telAttr = 'href' + '="tel:' + phoneRaw + '"';
-        if (resObj.data && resObj.data.code === 'FORM_DISABLED') {
-          var offMsg = isVi
-            ? 'Form liên hệ tạm thời chưa mở. Bạn có thể liên hệ GMS qua các kênh dưới đây.'
-            : 'The contact form is temporarily unavailable. You can reach GMS through the channels below.';
-          if (phoneRaw) {
-            offMsg += ' <a ' + telAttr + '>' + phoneShown + '</a>';
-          }
-          showError(offMsg);
-          submitBtn.disabled = true;
-          return;
-        }
-        if (resObj.data && resObj.data.code === 'POLICY_CHANGED' && resObj.data.policyVersion) {
-          form.setAttribute('data-policy-version', resObj.data.policyVersion);
-          consentEl.checked = false;
-        }
-        submitBtn.disabled = false;
-        var failMsg = isVi
-          ? 'Chưa gửi được liên hệ của bạn, GMS chưa nhận được. Chữ bạn đã nhập vẫn còn; vui lòng thử lại sau ít phút.'
-          : "We couldn't send your message and GMS has not received it. What you typed is still here; please try again in a few minutes.";
-        if (phoneRaw) {
-          failMsg += ' <a ' + telAttr + '>' + phoneShown + '</a>';
-        }
-        showError(failMsg);
-      }).catch(function() {
-        submitBtn.disabled = false;
-        var telAttr = 'href' + '="tel:' + phoneRaw + '"';
-        var failMsg = isVi
-          ? 'Chưa gửi được liên hệ của bạn, GMS chưa nhận được.'
-          : "We couldn't send your message.";
-        if (phoneRaw) {
-          failMsg += ' <a ' + telAttr + '>' + phoneShown + '</a>';
-        }
-        showError(failMsg);
-      });
-    });
+    ${CONTACT_FORM_SCRIPT}
   })();
   </script>
   `;
@@ -2058,9 +2307,9 @@ export async function runBuildSite(options?: {
           }
           const caption =
             imgObj.kind === 'anh-dung-ai'
-              ? `<figcaption class="sr-only" data-testid="photo-label">${escHtml(imgObj.alt[locale])}</figcaption>`
+              ? `<figcaption class="photo-label" data-testid="photo-label">${locale === 'vi' ? 'Phối cảnh dự kiến' : "Artist's impression"}</figcaption>`
               : '';
-          heroHtml = `<figure><img src="/${publicImg}" alt="${escHtml(imgObj.alt[locale])}" width="1200" height="675" />${caption}</figure>`;
+          heroHtml = `<figure style="position:relative; margin:0 0 16px;"><img src="/${publicImg}" alt="${escHtml(imgObj.alt[locale])}" width="1200" height="675" />${caption}</figure>`;
         }
       }
 
