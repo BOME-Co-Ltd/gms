@@ -1,5 +1,45 @@
 # contracts/ — gms-hungyen-web
 
+## Lượt 10 (04/11/2026): theo spec v0.5.1 / story-map v0.4 / priorities v4; trả XQ-33 (appsec)
+
+| File | Đổi | Vì sao |
+|---|---|---|
+| `content-model.ts` | `Partner` = {name, role, description?, permissionBasis, allowedAssets}, bỏ `logo` + `permissionOnFile`; `PARTNER_ASSET_TYPES`; `ImageMeta.partnerAsset`, `keepTitleBlock`, `.strict()`; `ComparisonCell`/`ComparisonTable`; `JOURNEY_STATUSES`/`JourneyStep`; `NewsFront.gmsSelectedBasis`; `VN_PHONE`; `Company.taxId?`, `zaloPhone` (thay URL `zalo`), `mapPoint?`, `privacyRequestEmail?` | S33 ×6, lộ trình, fanpage, contact-info (design.md §6h) |
+| `build.ts` | §8 `CONTENT_RULE_MESSAGES` (thông báo nguyên văn); §9 `FormStatus`/`formStatusOf`/`CONTACT_MAIL_READY`; `DEPLOY_RESULT.formStatusMismatch` | build đỏ nêu tên đối tác/trường/dòng; form tạm đóng |
+| `api.ts` | `CRON_LIMITS.maxBoundParamsCron`, `d1MaxBoundParamsPerQuery` (**chưa kiểm**), `summaryHeadAttemptsIsolate`, `leaseSeconds`; comment `maxDeletesPerRun`; `CRON_SELECT_COLUMNS.summaryPart` thêm `created_at` | XQ-33 (a)(b)(c) |
+| `d1-schema.sql` | `mail_log.summary_hour` + CHECK | XQ-33 (c) |
+| `safe-url.ts` | chỉ comment (bỏ `zalo`) | — |
+| `content-model.md` | bảng + luật theo trên; bỏ "thiếu ô ⇒ ẩn bảng" | mâu thuẫn S33 |
+
+Lựa chọn khi có ≥ 2 phương án (để appsec soát):
+- **XQ-33 (a):** chọn MỘT câu `UPDATE … RETURNING` có subquery window thay vì SELECT rồi UPDATE — không có khe giữa hai câu, số tham số hằng (6). Đường lui hai câu dùng `json_each(?)` (một tham số) thay `IN (?,…)`. Xoá dùng `WHERE id IN (SELECT … LIMIT ?)` (`rate_counter` dùng `rowid`, `dedupe` dùng `hash`) — loại `DELETE … LIMIT` vì phụ thuộc cờ biên dịch SQLite chưa kiểm trên D1.
+- **XQ-33 (b):** lọc trong câu window bằng `FIRST_VALUE(attempts) OVER w` (loại: lọc ở isolate — phải nhận cả phần về rồi mới bỏ, tốn CPU đúng lúc đang có bản ghi gây vượt CPU). Ngưỡng 3 = số lần bị ngắt liền trước khi cô lập.
+- **XQ-33 (c):** "giờ" = giờ tròn VN của bản ghi ĐẦU phần (loại: giờ Cron chạy — phần tồn đọng sẽ mang nhãn giờ sai, k đếm lẫn giữa các giờ). Subject ghi khoảng giờ thật. k đếm bằng `mail_log.summary_hour` (loại: đếm theo `sent_at` trong giờ Cron — sai khi phần 2 rơi sang giờ kế).
+- **Form thiếu MST/email quyền riêng tư:** build xanh + form đóng (loại: build đỏ — chặn bàn giao nội dung vì dữ liệu ngoài nội dung, trái ưu tiên 5; loại: form mở — trái ưu tiên 2).
+
+## Lượt 9 (04/11/2026): trả lời appsec lượt soát 9 (threat-model §00000), prd v0.5.1
+
+| File | Đổi | Finding |
+|---|---|---|
+| `api.ts` §2–§3 | Content-Type thiếu/khác `application/json` ⇒ **415 `UNSUPPORTED_MEDIA_TYPE`** (mã mới). `VALIDATION` chỉ đi với 422. qa so cả status lẫn `code` | XQ-32 (e) |
+| `api.ts` §5b `CRON_LIMITS` | `maxSummaryPartB64Bytes` = 384 KiB (tổng `length(body_b64)` một phần), `bodyB64MaxBytes` = 46 KiB (một khối; POST từ chối dựng khối lớn hơn) | XQ-32 (a), M38 |
+| `api.ts` §5c `CRON_SELECT_COLUMNS` (mới) | cột Cron được đọc theo đường; cấm `SELECT *` trên outbox; `body_b64`/PII không vào log | XQ-32 (b), `body_b64` không log |
+| `api.ts` §5, §5d `MAIL_ALERT_CODES` (mới) | tóm tắt tách "phần k", mỗi phần một dòng `mail_log` kind `summary`; phần 2 trong giờ ⇒ `SUMMARY_SPLIT`; `PENDING_OVERDUE_15M` một thư mỗi đợt hỏng | XQ-32 (d), M29 (1) |
+| `api.ts` §3 `ContactHealth`, §6 `OUTBOX` | `oldestOverdueSec`, `overdueAlertSeconds` = 15 phút (Cron kiểm, không phải POST); trần 7 ngày áp mọi dòng outbox | M29 (1), S19 |
+| `api.ts` §12 (mới) | luật HumanCheck: đạt khi 200 + schema + `success` + hostname của `SITE_ORIGIN` + `action` = `"contact"`; lỗi mạng/timeout 5 s/≠ 200/thân hỏng/ngoại lệ ⇒ 503 `HUMAN_CHECK_UNAVAILABLE`; secret rỗng hoặc secret thử ⇒ 503 `FORM_DISABLED` | XQ-25 (b), M31 |
+| `d1-schema.sql` | `dedupe_hash`/`dedupe.hash` = HMAC với `IP_HMAC_KEY`; `mail_log.code` + CHECK; chú thích `body_b64` | XQ-25 (g)/M37, XQ-32 (d) |
+| `test-control.ts` | `human-check` 8 mode khớp §12; op `turnstile-secret` | M31 |
+| `build.ts` §1, §7 (mới) | ghi điều kiện XQ-31.1 cho nhánh (2); luật import bundle Worker (`WORKER_ALLOWED_PACKAGES`, `WORKER_ALLOWED_PLATFORM_MODULES`, `TRUSTED_DEPENDENCIES`) | XQ-31.1, XQ-25 (f)/T7 |
+
+### Vì sao chọn như vậy — lượt 9 (cho appsec soát)
+- **(e) 415, không 422.** Hai phương án: gộp vào `VALIDATION` 422 hoặc mã riêng 415. Chọn 415: Content-Type sai không có lỗi trường nào để trả `fields`, và qa cần phân biệt "client gửi sai kiểu" với "dữ liệu sai". Một mã ứng đúng một status trong `CONTACT_HTTP_STATUS`.
+- **(a) Trần byte lọc phía D1** (window function, design.md §6g), không lọc trong isolate. Lọc trong isolate nghĩa là isolate vẫn nhận và parse cả 2 MB, chính là chỗ M38 vượt CPU. Phương án dự phòng hai câu (`SELECT id, length(body_b64)` rồi `WHERE id IN`) cũng không đưa thân thư thừa vào isolate. 384 KiB chọn để kịch bản 12 liên hệ cỡ tối đa vẫn là một thư; ca đo §6g quyết, vượt thì hạ.
+- **M29 (1) ở Cron, không ở POST.** POST đọc D1 để kiểm hàng chờ là I/O trước Turnstile (trái M29). Cảnh báo một thư mỗi đợt hỏng thay vì một thư mỗi giờ: đường thư chết 24 giờ sẽ không thành 24 thư.
+- **M31 secret thử chặn ở mọi môi trường deploy.** Staging cũng dùng secret thật; điểm vào test không gọi siteverify thật nên không cần ngoại lệ theo env.
+
+### Hệ quả mới tự lộ ra (nộp appsec soát; không tự vá)
+Xem design.md "Câu hỏi liên vai (lượt 9)" mục "Hệ quả tự lộ ra" (i)–(iv): Time Travel phụ thuộc gói ⇒ mốc 14 ngày; `oldestOverdueSec` công khai; 2 cảnh báo khác mã khi đường thư hỏng 24 giờ (XQ-PM3); cảnh báo dùng cùng `send_email`.
+
 ## Lượt 6b (31/10/2026): trả lời appsec XQ-29 (T8 vòng 2) và M30-b
 
 | File | Đổi | Finding |
@@ -61,7 +101,29 @@
 | `content-model.ts` (mới) + `content-model.md` | Nội dung dạng file trong `content/**`: schema frontmatter/YAML, ảnh, xác nhận GMS (`Approval`), `IMAGE_LIMITS` | backend (loader + kiểm lúc build) · frontend_web | tsc + build |
 | `routes.ts` | route vi/en, tất cả `static` | frontend_web | tsc |
 | `safe-url.ts` | `safeHref` (+ mailto chỉ `subject`/`body`, XQ-24), `MARKDOWN_ALLOWED_TOKENS` thay Lexical | backend (build) · frontend_web (render) | tsc |
-| `ops-tables.sql`, `test-control.ts` | **Không còn dùng**, xoá khi `design_approved` | — | — |
+| `test-control.ts` (lượt 6; số phận chốt lượt 8: **DÙNG**) | Cổng `/__test__/<op>` của Worker chỉ dưới `wrangler dev --local --config wrangler.test.jsonc`; tên op + thân từng op; chuỗi cấm trong bundle production | backend (cổng) · qa (gọi) · devops (ca CI bundle) | tsc |
+| `build.ts` (lượt 6) | Biến build, `isProductionBuild`/`productionEnvMismatch`/`mayDeployProduction`, `DATE_OVERRIDE` chỉ ngày, `out/`, `_redirects`/`_headers` | backend · devops · qa | tsc |
+| `ops-tables.sql` | **Đã bỏ** (bỏ CMS). Hook chặn `rm` với architect ⇒ tệp còn 2 dòng báo đã bỏ, admin `git rm` | — | — |
+
+### Lượt 8 (04/11/2026, prd v0.5 + review 04/11)
+| Đổi | Ở đâu |
+|---|---|
+| `DATE_OVERRIDE` chỉ ngày `YYYY-MM-DD` (`BuildDate`) | build.ts §1, design.md §5b XQ-4 |
+| Build do Deploy Hook kích có thể không có `WORKERS_CI_BRANCH` ⇒ thiếu nhánh thì tin `SITE_ENV`; deploy cần nhánh `production` hoặc (không nhánh + `WORKERS_CI="1"`) | build.ts §1 `productionEnvMismatch`, `mayDeployProduction`; design.md §5b XQ-4 (nguồn tài liệu) |
+| Ngân sách CPU 10 ms (Free) cho Cron và POST; base64 thân thư làm lúc nhận | api.ts `CRON_LIMITS`, d1-schema.sql `outbox.body_b64`, design.md §6g |
+| Chỉ nhận `application/json` (bỏ urlencoded) | api.ts `CONTACT_CONTENT_TYPES`, design.md §6a bước 1 |
+| `MAIL_CAPS`: 30/giờ tròn (Asia/Ho_Chi_Minh), **75**/24 giờ, tóm tắt ≤ 120 s sau khi giờ kết thúc | api.ts, design.md §5 câu 6, XQ-1 |
+| Giữ liên hệ chưa gửi được 7 ngày (XQ-A2, admin chốt 04/11), Cron dọn | d1-schema.sql đầu tệp, design.md XQ-2 |
+| `Common` được export | content-model.ts |
+| Đích thư production = `destination_address` của binding `MAIL`; `CONTACT_RECIPIENT` chỉ ở `wrangler.test.jsonc` | build.ts đầu tệp, test-control.ts `recipient`, design.md §4b, ADR-006 |
+| Dọn Payload/ISR/Lexical: safe-url.ts (giữ — dùng cho URL trong YAML/Markdown), routes.ts (site tĩnh, `_redirects`), ADR-001/002/003 hết hiệu lực | các tệp đó |
+
+**Vì sao chọn (lượt 8):**
+- *Deploy Hook:* có hai cách — (a) giữ luật cũ và bắt devops đặt `WORKERS_CI_BRANCH` bằng tay ở biến build production; (b) thiếu nhánh thì dựa `SITE_ENV`. Chọn (b): (a) ghi đè biến hệ thống, build đẩy từ nhánh khác vẫn mang nhãn `production` ⇒ mất lớp kiểm nhánh. (b) vẫn đỏ khi nhánh có mặt mà khác `production`.
+- *Đếm 20/10 phút sau Turnstile:* giữ M29 (không ghi D1 trước Turnstile); lệch chữ prd ⇒ XQ-PM1 (design.md cuối tệp).
+- *75/24 giờ:* đúng phép tính prd v0.5 §6 (100 − 24 − 1), không còn dự trữ đăng nhập CMS.
+
+**Hệ quả mới tự lộ ra (nộp appsec):** (1) `WORKERS_CI="1"` + `SITE_ENV=production` cho phép deploy khi không có nhánh — ai đặt được hai biến này ngoài Workers Builds (máy local có token Cloudflare) vượt được lớp kiểm nhánh; lớp chặn còn lại là token deploy chỉ ở §3.4 ADR-005. (2) `outbox.body_b64` là bản sao PII thứ hai trong cùng dòng (cùng hạn xoá). (3) Thư tóm tắt tách "phần k/n" ⇒ một lượt quá trần có thể ra nhiều thư hơn `summaryMaxPerHour` cũ — cần soát lại cách đếm.
 
 ### Đổi ở lượt 5
 - Bỏ khỏi `api.ts`: `/lang`, `/api/jobs/run`, `JOB_AUTH`, bước kiểm thêm đăng nhập (ADR-003), REST CMS, `PAYLOAD_AUTH_ENDPOINTS`, `FILE_ROUTE_*`, `ADMIN_CSP_FIXED`, `login*` trong `RATE_LIMITS` (XQ-14), `MAIL_BUDGET` (thay bằng `MAIL_CAPS`: 30/giờ, 45/24 giờ, XQ-1).
@@ -69,9 +131,17 @@
 
 ### Vì sao chọn như vậy (cho appsec soát)
 - **Đếm chống spam ở D1, không dùng Rate Limiting binding.** Binding chỉ có cửa sổ 10/60 s và đếm theo từng PoP, gần đúng (ADR-004 [S4]). Ngưỡng 5/600 s và 20/600 s cần một nơi đếm. Đã cân Durable Objects: có ở Free **[chưa kiểm]**, nhưng thêm một loại hạ tầng mà không cần.
-- **Turnstile kiểm sau zod, trước bộ đếm thành công** (design.md §6a bước 7). Token sai không tốn lượt "thành công" của người thật cùng NAT. Lần thử vẫn bị đếm ở bước 3, trước mọi subrequest.
+- **Thứ tự kiểm (lượt 8 soát theo `api.ts`, nguồn duy nhất: design.md §6a):** Origin (bước 3, không I/O) → parse JSON + lấy token (4) → Turnstile (5) → đếm lần thử 20/600 s (6, ghi D1 đầu tiên) → honeypot (7) → zod (8) → chính sách (9) → đếm thành công 5/600 s (10). Token sai bị chặn trước mọi ghi D1 và không tốn lượt của người thật cùng NAT.
 - **Gộp trùng ở bảng `dedupe` riêng**, vì outbox bị xoá ngay khi gửi xong. Nếu gộp trùng dựa vào outbox thì bấm gửi lại sau khi thư đã đi sẽ thành thư thứ hai.
 - **Hệ quả mới, chưa ai hỏi (nộp appsec):** (1) D1 Time Travel giữ bản DB 7 ngày, nên PII "đã xoá" còn khôi phục được trong 7 ngày (XQ-A3). (2) `send_email` chỉ gửi từ routing domain: thư báo đi ra từ tên miền GMS, nên SPF/DKIM do Cloudflare đặt khi bật Email Routing **[chưa kiểm]**. (3) Thư báo chứa dữ liệu người gửi nhập. Thư là text/plain, nhưng tiêu đề thư lấy từ `fullName` phải bỏ CR/LF (chặn chèn header). Backend làm, qa thêm ca.
+
+**Mock cho frontend_web (còn hiệu lực):** `ContactSubmitResponse` là discriminated union — mock sinh mỗi nhánh `code` một phản hồi (fixture `tests/fixtures/<endpoint>/<code>.json`, lãnh địa qa).
+
+---
+
+## ĐÃ BỎ — lịch sử lượt 2–4 (CMS/Payload, bỏ raw 31/10)
+
+> Mọi thứ dưới dòng này (REST CMS, `LOGIN_LOG_ENDPOINT`, `CmsErrorCode`, `loginAlert`, `StepUpVerifyResponse`, `ops-tables.sql`, Payload, ISR, Lexical, `/api/test-control`) là ghi chú **đã bỏ**, không vai nào hiện thực theo. Contract hiện hành là bảng ở đầu tệp + mục "Lượt 8".
 
 | File | Ràng buộc gì | Ai hiện thực | Máy validate |
 |---|---|---|---|

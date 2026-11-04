@@ -1,9 +1,10 @@
-// Lượt 5: "CMS" bên dưới = nội dung file trong content/** (kiểm lúc build, không kiểm lúc lưu); "serializer Lexical" = renderer markdown-it.
-// Luật URL trong nội dung CMS (trả lời appsec XQ-17, threat-model T3 (a)). MỘT nguồn cho cả hai phía:
-//   backend  — hook beforeChange của MỌI collection/global có trường URL hoặc rich text (content-model.md "Luật URL")
-//   frontend_web — serializer Lexical → JSX và mọi chỗ render chuỗi CMS thành href
+// Luật URL trong nội dung file content/** của site tĩnh (trả lời appsec XQ-17, threat-model T3 (a)).
+// Lượt 8 (04/11): phần CMS đã bỏ (raw 31/10, ADR-004). File GIỮ vì còn dùng: content-model.ts (`mapUrl`, `social[].url`;
+// lượt 10: `zalo` URL thay bằng `zaloPhone`, URL Zalo sinh từ số) và mọi liên kết trong thân Markdown. MỘT nguồn cho cả hai phía:
+//   backend  — loader src/content/** + luật build (design.md §6f): URL sai ⇒ build đỏ
+//   frontend_web — renderer markdown-it → JSX và mọi chỗ render chuỗi từ content/** thành href
 // Cả hai import file này từ src/contracts/ (bản chép), không viết lại luật.
-// Máy validate: `bun x tsc --noEmit -p 02-design/contracts` (chưa kiểm — chờ admin, README.md).
+// Máy validate: `bun x tsc --noEmit` (design.md "Đã kiểm").
 //
 // Chỉ nhận: https: · http: · mailto: · tel: · đường dẫn nội bộ bắt đầu bằng MỘT "/".
 // Mọi thứ khác (javascript:, data:, vbscript:, file:, blob:, "//host", đường tương đối, "#…", rỗng) ⇒ từ chối.
@@ -62,7 +63,7 @@ export function safeHref(raw: unknown): SafeHrefResult {
 }
 export const MAILTO_ALLOWED_PARAMS = ["subject", "body"] as const;
 
-// Dùng trong zod (trường URL của collection/global và block). Lỗi ⇒ backend trả 400 UNSAFE_URL (api.ts §6).
+// Dùng trong zod (trường URL của content-model.ts). Lỗi ⇒ loader báo issue UNSAFE_URL kèm đường tệp ⇒ build đỏ.
 export const SafeHref = z.string().transform((v, ctx) => {
   const r = safeHref(v);
   if (!r.ok) {
@@ -72,7 +73,7 @@ export const SafeHref = z.string().transform((v, ctx) => {
   return r.href;
 });
 
-// Lượt 5: Lexical bỏ (không CMS). Token markdown-it được phép (G1: markdown-it `html: false`, `linkify: false`).
+// Token markdown-it được phép (G1: markdown-it `html: false`, `linkify: false`).
 // Loader gặp token ngoài danh sách (html_block, html_inline, fence, table…) ⇒ build đỏ, không lặng lẽ bỏ.
 export const MARKDOWN_ALLOWED_TOKENS = [
   "paragraph_open", "paragraph_close", "inline", "text", "softbreak", "hardbreak",
@@ -84,5 +85,5 @@ export const MARKDOWN_HEADING_TAGS = ["h2", "h3", "h4"] as const; // "#" (h1) �
 // image: src phải là ImageRef của content-model.ts (ảnh trong repo), không URL ngoài.
 
 // Thuộc tính khi render liên kết (frontend): href = safeHref(...).href; không hợp lệ ⇒ render chữ, không <a>.
-// Liên kết ra ngoài site (http/https khác SITE_URL): rel="noopener noreferrer"; target="_blank" chỉ khi node có newTab.
+// Liên kết ra ngoài site (http/https khác SITE_URL): rel="noopener noreferrer"; không bao giờ target="_blank" (Markdown không có cú pháp newTab).
 export const EXTERNAL_LINK_REL = "noopener noreferrer" as const;

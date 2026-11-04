@@ -1,6 +1,8 @@
-// Cổng điều khiển kiểm thử của Worker `gms-contact` (lượt 6, 31/10/2026 — trả lời qa XQ-QA20). Thay bản lượt 3–4
-// (Next route handler + Payload Local API, đã bỏ cùng CMS; còn trong lịch sử git).
-// Máy validate: `bun x tsc --noEmit -p 02-design/contracts` (chưa kiểm — chờ admin).
+// Cổng điều khiển kiểm thử của Worker `gms-contact` (lượt 6, 31/10/2026 — trả lời qa XQ-QA20).
+// Lượt 9 (04/11): human-check thêm mode; thêm op turnstile-secret (M31).
+// SỐ PHẬN (lượt 8, 04/11): DÙNG, là contract hiện hành giữa backend và qa. Không xoá khi design_approved. Bản lượt 3–4
+// (gắn với CMS, đã bỏ raw 31/10) chỉ còn trong lịch sử git.
+// Máy validate: `bun x tsc --noEmit` (design.md "Đã kiểm").
 //
 // Chạy ở đâu: CHỈ dưới `wrangler dev --local --config wrangler.test.jsonc` (devops). Không có ở bản deploy nào.
 // Hai lớp giữ cổng khỏi production (appsec soát — họ M4/M21/M31(2)):
@@ -46,16 +48,27 @@ export const MailboxMessage = z.object({
 
 export const TestControlOps = {
   // Xoá mọi bảng D1, hộp thư giả, cảnh báo, log; tắt mọi lỗi tiêm; đồng hồ về giờ thật; policyVersion và
-  // người nhận về giá trị của wrangler.test.jsonc; HumanCheck về "pass".
+  // người nhận về giá trị của wrangler.test.jsonc; HumanCheck về "pass"; TURNSTILE_SECRET về giá trị test.
   reset: z.object({}),
   "set-now": z.object({ iso: Iso.nullable() }),                    // Clock giả; null = giờ thật
   "policy-version": z.object({ v: z.string().min(1).max(40) }),    // ghi đè POLICY_VERSION của Worker test
-  recipient: z.object({ to: Email }),                              // ghi đè đích thư báo (CONTACT_RECIPIENT)
+  // ghi đè đích thư báo của Mailer giả (`CONTACT_RECIPIENT` của wrangler.test.jsonc). Production không có biến này:
+  // đích là `destination_address` của binding MAIL (design.md §4b).
+  recipient: z.object({ to: Email }),
   mailbox: z.object({ to: Email.optional() }),                     // ⇒ { messages: MailboxMessage[] } (kind notify|summary)
   alerts: z.object({}),                                            // ⇒ { messages: MailboxMessage[] } (kind alert, tới ALERT_TO)
   "fail-mail": z.object({ on: z.boolean(), mode: z.enum(["temporary", "permanent", "slow"]).default("temporary") }),
   "fail-store": z.object({ on: z.boolean() }),                     // ContactQueue.enqueue ném ⇒ 503 STORE_FAILED
-  "human-check": z.object({ mode: z.enum(["pass", "fail", "error", "wrong-hostname"]) }), // M31: error ⇒ siteverify lỗi mạng
+  // Lượt 9 (M31, api.ts §12): mode chỉ thay PHẢN HỒI siteverify; hàm quyết định là bản production. Kỳ vọng:
+  //   pass ⇒ 200 · fail (success false) / wrong-hostname / wrong-action ⇒ 403 HUMAN_CHECK_FAILED ·
+  //   error (lỗi mạng) / timeout (quá TURNSTILE_SITEVERIFY.timeoutMs) / http-error (status 500) / bad-body (không JSON)
+  //   ⇒ 503 HUMAN_CHECK_UNAVAILABLE, không ghi D1.
+  "human-check": z.object({
+    mode: z.enum(["pass", "fail", "error", "timeout", "http-error", "bad-body", "wrong-hostname", "wrong-action"]),
+  }),
+  // Lượt 9 (M31): ghi đè TURNSTILE_SECRET mà handler production thấy (mặc định của wrangler.test.jsonc là chuỗi không phải
+  // secret thử). "" hoặc khớp api.ts TURNSTILE_TEST_SECRET (vd "1x0000000000000000000000000000000AA") ⇒ 503 FORM_DISABLED.
+  "turnstile-secret": z.object({ value: z.string().max(200) }),
   "run-cron": z.object({ cron: z.enum(["* * * * *", "5 17 * * *"]).default("* * * * *"), nowIso: Iso.optional() }),
   // ⇒ { outbox, rate_counter, dedupe, mail_log, heartbeat } — dòng D1 thô (có PII: chỉ tồn tại trong bản test)
   "store-dump": z.object({}),
