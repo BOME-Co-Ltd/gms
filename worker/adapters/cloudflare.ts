@@ -399,7 +399,9 @@ export class D1ContactQueue implements ContactQueue {
 
   async purgeSentBefore(beforeSec: number, limit: number = CRON_LIMITS.maxDeletesPerRun): Promise<void> {
     await this.db
-      .prepare('DELETE FROM outbox WHERE id IN (SELECT id FROM outbox WHERE sent_at IS NOT NULL AND sent_at <= ? LIMIT ?)')
+      .prepare(
+        'DELETE FROM outbox WHERE id IN (SELECT id FROM outbox WHERE sent_at IS NOT NULL AND sent_at <= ? LIMIT ?)',
+      )
       .bind(beforeSec, limit)
       .run();
   }
@@ -533,7 +535,9 @@ export class D1RateCounter implements RateCounter {
   }
   async purgeBefore(beforeSec: number, limit: number = CRON_LIMITS.maxDeletesPerRun): Promise<void> {
     await this.db
-      .prepare('DELETE FROM rate_counter WHERE rowid IN (SELECT rowid FROM rate_counter WHERE window_start <= ? LIMIT ?)')
+      .prepare(
+        'DELETE FROM rate_counter WHERE rowid IN (SELECT rowid FROM rate_counter WHERE window_start <= ? LIMIT ?)',
+      )
       .bind(beforeSec, limit)
       .run();
   }

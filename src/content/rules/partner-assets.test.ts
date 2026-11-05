@@ -8,7 +8,11 @@ import { loadSiteContent } from '../loader.ts';
 import { readPartnerAsset, validatePartnerAssetRefs } from './index.ts';
 
 const PARTNERS = [
-  { name: 'Xanh Asian', permissionBasis: 'raw 02/11 N22', allowedAssets: ['sơ đồ quy trình', 'bảng so sánh', 'bản vẽ 3D'] },
+  {
+    name: 'Xanh Asian',
+    permissionBasis: 'raw 02/11 N22',
+    allowedAssets: ['sơ đồ quy trình', 'bảng so sánh', 'bản vẽ 3D'],
+  },
 ];
 
 describe('validatePartnerAssetRefs', () => {
@@ -91,9 +95,7 @@ describe('loadSiteContent + partnerAsset', () => {
 
   it('loại ngoài allowedAssets ⇒ lỗi S33; loại đúng ⇒ không lỗi S33 và ảnh mang partnerAsset', () => {
     const bad = messages(content({ partner: 'Xanh Asian', type: 'logo' }, true));
-    expect(bad).toContain(
-      'PARTNER_ASSET_NOT_ALLOWED: "tl" loại "logo" không thuộc tư liệu được phép của "Xanh Asian"',
-    );
+    expect(bad).toContain('PARTNER_ASSET_NOT_ALLOWED: "tl" loại "logo" không thuộc tư liệu được phép của "Xanh Asian"');
     const dir = content({ partner: 'Xanh Asian', type: 'sơ đồ quy trình' }, true);
     const ok = loadSiteContent(dir);
     expect(ok.errors.filter((e) => e.code.startsWith('PARTNER_'))).toEqual([]);
@@ -103,7 +105,9 @@ describe('loadSiteContent + partnerAsset', () => {
   it('đối tác không có trong partners.yaml hoặc không có file ⇒ PARTNER_UNKNOWN', () => {
     for (const withPartners of [true, false]) {
       const msgs = messages(content({ partner: 'Không Có', type: 'sơ đồ quy trình' }, withPartners));
-      expect(msgs.some((m) => m.startsWith('PARTNER_UNKNOWN:') && m.includes('không có Đối tác này trong partners.yaml'))).toBe(true);
+      expect(
+        msgs.some((m) => m.startsWith('PARTNER_UNKNOWN:') && m.includes('không có Đối tác này trong partners.yaml')),
+      ).toBe(true);
     }
   });
 });

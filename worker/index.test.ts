@@ -26,15 +26,7 @@ type CapturedMail = {
   headers: Record<string, string>;
 };
 
-type HumanMode =
-  | 'pass'
-  | 'fail'
-  | 'error'
-  | 'timeout'
-  | 'http-error'
-  | 'bad-body'
-  | 'wrong-hostname'
-  | 'wrong-action';
+type HumanMode = 'pass' | 'fail' | 'error' | 'timeout' | 'http-error' | 'bad-body' | 'wrong-hostname' | 'wrong-action';
 
 const TEST_DEFAULT_TURNSTILE_SECRET = 'test-turnstile-secret-not-a-cloudflare-dummy';
 
