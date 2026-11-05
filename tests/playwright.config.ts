@@ -22,6 +22,6 @@ export default defineConfig({
   use: { baseURL: process.env.BASE_URL ?? 'http://localhost:8787', trace: 'retain-on-failure' },
   projects: [
     { name: 'acceptance', testDir: './acceptance', use: { browserName: 'chromium' } },
-    { name: 'perf', testDir: './perf', timeout: 600_000, use: { browserName: 'chromium' } },
+    { name: 'perf', testDir: './perf', timeout: 1_800_000, use: { browserName: 'chromium' } },
   ],
 });

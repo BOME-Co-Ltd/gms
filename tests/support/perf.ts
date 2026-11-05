@@ -21,6 +21,8 @@ export const NOT_FOUND_SAMPLE: Record<Locale, string> = {
   en: '/en/this-page-does-not-exist-xyz',
 };
 
+export const NOT_FOUND_LABEL = '404';
+
 /** 11 trang cố định + 3 trang chi tiết + 404, mỗi trang ở vi và en = 30 dòng. */
 export function listTargets(): Target[] {
   const out: Target[] = [];
@@ -29,7 +31,7 @@ export function listTargets(): Target[] {
     out.push({ label: 'Chi tiết Tin', locale: l, url: detailPath('news', MEASURE_SLUGS.news[l], l) });
     out.push({ label: 'Chi tiết Mục Thư viện', locale: l, url: detailPath('projects', MEASURE_SLUGS.projects[l], l) });
     out.push({ label: 'Chi tiết Tuyển dụng', locale: l, url: detailPath('careers', MEASURE_SLUGS.careers[l], l) });
-    out.push({ label: '404', locale: l, url: NOT_FOUND_SAMPLE[l] });
+    out.push({ label: NOT_FOUND_LABEL, locale: l, url: NOT_FOUND_SAMPLE[l] });
   }
   return out;
 }
@@ -60,7 +62,7 @@ export interface Row {
   metric: string;
   median: number;
   limit: string;
-  verdict: 'Đạt' | 'Không đạt';
+  verdict: 'Đạt' | 'Không đạt' | 'Không xét';
 }
 export interface Report {
   rows: Row[];
@@ -72,20 +74,24 @@ export const median = (xs: number[]) => {
   return s[Math.floor(s.length / 2)];
 };
 
-/** Tổng hợp: mỗi (trang, locale, chỉ số) là một dòng; MỘT dòng "Không đạt" ⇒ kết luận chung "Không đạt". */
+/**
+ * Tổng hợp: mỗi (trang, locale, chỉ số) là một dòng; MỘT dòng "Không đạt" ⇒ kết luận chung "Không đạt".
+ * Spec v0.5.3: trang 404 không xét SEO ⇒ dòng SEO của 404 vẫn có trong báo cáo, ghi "Không xét", không tính vào kết luận.
+ */
 export function aggregate(results: Array<{ page: string; locale: Locale; runs: Run[] }>): Report {
   const rows: Row[] = [];
   for (const r of results) {
     const m = (k: keyof Run) => median(r.runs.map((x) => x[k]));
     const score = (k: 'performance' | 'accessibility' | 'best-practices' | 'seo', name: string) => {
       const v = m(k);
+      const skipped = k === 'seo' && r.page === NOT_FOUND_LABEL;
       rows.push({
         page: r.page,
         locale: r.locale,
         metric: name,
         median: v,
-        limit: `>= ${THRESHOLD[k]}`,
-        verdict: v >= THRESHOLD[k] ? 'Đạt' : 'Không đạt',
+        limit: skipped ? 'không xét (404, spec v0.5.3)' : `>= ${THRESHOLD[k]}`,
+        verdict: skipped ? 'Không xét' : v >= THRESHOLD[k] ? 'Đạt' : 'Không đạt',
       });
     };
     score('performance', 'Performance');
@@ -120,5 +126,5 @@ export function aggregate(results: Array<{ page: string; locale: Locale; runs: R
       verdict: tbt < THRESHOLD.tbtMs ? 'Đạt' : 'Không đạt',
     });
   }
-  return { rows, verdict: rows.every((x) => x.verdict === 'Đạt') ? 'Đạt' : 'Không đạt' };
+  return { rows, verdict: rows.some((x) => x.verdict === 'Không đạt') ? 'Không đạt' : 'Đạt' };
 }

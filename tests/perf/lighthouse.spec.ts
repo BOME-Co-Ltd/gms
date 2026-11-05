@@ -60,7 +60,7 @@ async function lighthouseRuns(url: string, expected = 200): Promise<Run[]> {
   }
 }
 
-test('PERF-01 Mỗi trang đạt ngưỡng Lighthouse mobile — 30 dòng (@S3)', async () => {
+test('PERF-01 Mỗi trang đạt ngưỡng Lighthouse mobile — 28 trang đủ 7 ngưỡng, 404 không xét SEO (@S3)', async () => {
   const targets = listTargets();
   expect(targets).toHaveLength(30); // 15 trang x 2 locale (Bối cảnh)
   const wrongStatus: string[] = [];
@@ -74,6 +74,10 @@ test('PERF-01 Mỗi trang đạt ngưỡng Lighthouse mobile — 30 dòng (@S3)'
   for (const t of targets)
     results.push({ page: t.label, locale: t.locale, runs: await lighthouseRuns(t.url, expectedStatus(t)) });
   const report = aggregate(results);
+  // 28 trang x 7 + 2 trang 404 x 6 = 208 dòng chấm; 2 dòng SEO của 404 ghi "Không xét" (spec v0.5.3), không biến mất.
+  expect(report.rows.filter((r) => r.verdict !== 'Không xét')).toHaveLength(208);
+  const skipped = report.rows.filter((r) => r.verdict === 'Không xét').map((r) => `${r.page}/${r.locale}/${r.metric}`);
+  expect(skipped).toEqual(['404/vi/SEO', '404/en/SEO']);
   mkdirSync(RESULTS_DIR, { recursive: true });
   writeFileSync(join(RESULTS_DIR, 'lighthouse-report.json'), JSON.stringify(report, null, 2));
   const failed = report.rows
@@ -148,4 +152,32 @@ test('PERF-04 Một trang vượt ngưỡng làm cả lần nghiệm thu "Không
   // đối chứng xanh: toàn bộ đạt ⇒ kết luận Đạt; một lần chạy xấu lẻ (trung vị vẫn tốt) không kéo đỏ
   expect(aggregate([{ page: 'A', locale: 'vi', runs: [ok, ok, ok] }]).verdict).toBe('Đạt');
   expect(aggregate([{ page: 'A', locale: 'vi', runs: [ok, bad, ok] }]).verdict).toBe('Đạt');
+});
+
+test('PERF-04b Bộ tổng hợp: 404 không xét SEO nhưng vẫn chấm 6 ngưỡng còn lại; trang khác vẫn chấm SEO (@S3)', () => {
+  const ok: Run = {
+    performance: 99,
+    accessibility: 99,
+    'best-practices': 99,
+    seo: 99,
+    lcpMs: 1800,
+    cls: 0.01,
+    tbtMs: 50,
+  };
+  const lowSeo: Run = { ...ok, seo: 60 };
+  // 404 SEO thấp ⇒ dòng SEO "Không xét", kết luận vẫn Đạt; dòng không biến mất
+  const r404 = aggregate([{ page: '404', locale: 'vi', runs: [lowSeo, lowSeo, lowSeo] }]);
+  expect(r404.rows).toHaveLength(7);
+  expect(r404.rows.find((r) => r.metric === 'SEO')?.verdict).toBe('Không xét');
+  expect(r404.rows.filter((r) => r.verdict === 'Đạt')).toHaveLength(6);
+  expect(r404.verdict).toBe('Đạt');
+  // đối chứng âm: trang khác SEO thấp ⇒ Không đạt
+  const other = aggregate([{ page: 'Trang chủ', locale: 'vi', runs: [lowSeo, lowSeo, lowSeo] }]);
+  expect(other.rows.find((r) => r.metric === 'SEO')?.verdict).toBe('Không đạt');
+  expect(other.verdict).toBe('Không đạt');
+  // đối chứng âm: 404 vẫn bị chấm Performance/LCP
+  const slow: Run = { ...ok, lcpMs: 2700 };
+  const bad404 = aggregate([{ page: '404', locale: 'en', runs: [slow, slow, slow] }]);
+  expect(bad404.rows.find((r) => r.metric === 'LCP')?.verdict).toBe('Không đạt');
+  expect(bad404.verdict).toBe('Không đạt');
 });
