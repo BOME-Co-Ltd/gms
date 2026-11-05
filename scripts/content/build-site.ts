@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 import { parse as parseYaml } from 'yaml';
@@ -206,6 +206,46 @@ async function processAndWriteImage(img: LoadedImage, outDir: string): Promise<v
     mkdirSync(dirname(publicDest), { recursive: true });
     writeFileSync(publicDest, outBuf);
   } catch {}
+}
+
+/**
+ * Ảnh tĩnh dựng tay trong public/img (không có content/images/*.yaml) → out/img.
+ * File đã có siêu dữ liệu (key `images/<tên>` trong loaded.images) do processAndWriteImage lo,
+ * kể cả khi allowedInBuild=false: không chép bản cũ còn sót trong public/img.
+ */
+export function copyStaticImages(publicImgDir: string, outImgDir: string, managedKeys: ReadonlySet<string>): string[] {
+  if (!existsSync(publicImgDir)) return [];
+  const copied: string[] = [];
+  for (const f of readdirSync(publicImgDir)) {
+    if (managedKeys.has(`images/${f}`)) continue;
+    mkdirSync(outImgDir, { recursive: true });
+    copyFileSync(join(publicImgDir, f), join(outImgDir, f));
+    copied.push(f);
+  }
+  return copied;
+}
+
+function listHtmlFiles(dir: string): string[] {
+  const found: string[] = [];
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) found.push(...listHtmlFiles(p));
+    else if (e.name.endsWith('.html')) found.push(p);
+  }
+  return found;
+}
+
+/** `<img src="/...">` trỏ tới file không có trong outDir → "trang: /src". */
+export function findBrokenImgRefs(outDir: string): string[] {
+  const broken: string[] = [];
+  for (const file of listHtmlFiles(outDir)) {
+    const html = readFileSync(file, 'utf8');
+    for (const m of html.matchAll(/<img\b[^>]*?\ssrc="(\/[^"/][^"]*)"/g)) {
+      const src = decodeURI(m[1].split(/[?#]/)[0]);
+      if (!existsSync(join(outDir, src))) broken.push(`${file.slice(outDir.length)}: ${m[1]}`);
+    }
+  }
+  return broken;
 }
 
 export function buildOrgJsonLd(company: LoadedCompany, siteUrl: string, locale: Locale = 'vi'): string {
@@ -2270,6 +2310,7 @@ export async function runBuildSite(options?: {
   for (const img of loaded.images.values()) {
     await processAndWriteImage(img, outDir);
   }
+  copyStaticImages(join(process.cwd(), 'public', 'img'), join(outDir, 'img'), new Set(loaded.images.keys()));
 
   const sitemapUrls: string[] = [];
   const addSitemapUrl = (urlPath: string, noindex: boolean) => {
@@ -2536,6 +2577,12 @@ ${uniqueUrls.map((u) => `  <url><loc>${escHtml(u)}</loc></url>`).join('\n')}
     ? `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Robots-Tag: noindex\n`
     : `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/api/*\n  X-Robots-Tag: noindex\n  # /api/*\n`;
   writeFileSync(join(outDir, '_headers'), headersContent);
+
+  const brokenImgs = findBrokenImgRefs(outDir).map((b) => `[IMG_NOT_IN_OUT] ${b}`);
+  if (brokenImgs.length > 0) {
+    for (const m of brokenImgs) console.error(m);
+    return { ok: false, errors: brokenImgs };
+  }
 
   return { ok: true, errors: [], hash };
 }

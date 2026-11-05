@@ -159,7 +159,7 @@ export function buildFooterHtml(input: FooterInput): string {
     <div class="ft-wrap">
       <div class="ft-grid">
         <div class="ft-brand">
-          <span class="ft-logo" aria-hidden="true">GMS</span>
+          <span class="ft-logo"><img src="/brand/logo-gms-mark.svg" alt="GMS" width="119" height="32" /></span>
           <p class="ft-name"${nameAttr}>${name}</p>
           <p class="ft-slogan">${esc(input.slogan)}</p>
         </div>
@@ -179,6 +179,7 @@ export const FOOTER_CSS = `
 .ft a, .ft a:hover { color: var(--white); }
 .ft ul { list-style: none; margin: 0; padding: 0; }
 .ft-logo { display: inline-grid; place-items: center; min-width: 72px; height: 56px; padding: 0 14px; margin-bottom: 14px; border-radius: 12px; background: var(--white); color: var(--g900); font-weight: 800; letter-spacing: 0.04em; }
+.ft-logo > img { display: block; width: auto; height: 32px; }
 .ft-name { margin: 0 0 6px; font-size: 18px; font-weight: 700; line-height: 1.35; color: var(--white); }
 .ft-slogan { margin: 0; max-width: 34ch; font-size: 14px; color: var(--ft-muted); }
 .ft-row { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px; margin: 0 -8px; border-radius: var(--radius-s); text-decoration: none; transform-origin: left center; }
