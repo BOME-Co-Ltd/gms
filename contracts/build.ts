@@ -163,6 +163,10 @@ export const CONTENT_RULE_MESSAGES = {
     `bài fanpage "${p.origin}" ghi "GMS chọn đăng" nhưng thiếu căn cứ`,
   // contact-info.feature dòng 54–57; field ∈ "số điện thoại công khai" | "số Zalo"
   PHONE_INVALID: (p: { field: string }) => `"${p.field}" không phải số điện thoại Việt Nam hợp lệ`,
+  // lượt 11 (05/11), khớp src/content/rules/index.ts (c982bff): company.yaml có mapPoint mà không phải chuỗi khớp
+  // content-model.ts MAP_POINT ⇒ lỗi này, build đỏ; thiếu/null ⇒ không lỗi, không có khối bản đồ (contact-info.feature:21–23).
+  MAP_POINT_INVALID: () =>
+    `company.yaml: điểm bản đồ (mapPoint) phải có dạng "vĩ độ, kinh độ", ví dụ "20.930031, 106.065651"`,
 } as const;
 export type ContentRuleCode = keyof typeof CONTENT_RULE_MESSAGES;
 // Luật S33 (đọc kèm content-model.ts Partner, ImageMeta, ComparisonTable):

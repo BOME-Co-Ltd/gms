@@ -1,5 +1,19 @@
 # contracts/ — gms-hungyen-web
 
+## Lượt 11 (05/11/2026): change_api_contract người dùng duyệt 05/11 (phương án A), biên 900 s, MAP_POINT_INVALID
+
+| File | Đổi | Vì sao |
+|---|---|---|
+| `test-control.ts` | op `seed-outbox` `{ rows: [{ batch, createdAtIso, attempts?, sentAtIso?, leaseUntilIso?, bodyB64? }] }` ⇒ `{ ids }`; mô tả `reset` ghi rõ xoá `outbox`; import `CRON_LIMITS` từ `./api` | CC-13 (Q10-2), CC-14 (§6g, `summaryHeadAttemptsIsolate`) cần dựng hàng chờ mà POST không dựng được (phần đầy 100, dòng > 7 ngày, `attempts` ≥ 3) |
+| `api.ts` §5d | comment `overdue15m`: `>` ⇒ `≥` `overdueAlertSeconds` | khớp contact-form.feature:98–102 (admin chốt 05/11) và code `pendingStats` (`due <= now - 900`) |
+| `build.ts` §8 | `MAP_POINT_INVALID` (không tham số; câu chữ nguyên văn code c982bff) | code đã báo mã này, contract chưa có |
+
+Lựa chọn khi có ≥ 2 phương án (để appsec soát):
+- **`seed-outbox` khác đề xuất backend ở:** (1) trần dòng = `maxSummaryContacts + maxDeletesPerRun + 1` (loại: chỉ `+ vài dòng cũ` — không dựng được ca chạm trần xoá một lượt trong một lần gọi); (2) `bodyB64` thêm `min(1)` + regex ký tự base64/CRLF (loại: chuỗi tự do — khối hỏng làm thư tóm tắt hỏng vì lý do không thuộc ca); (3) `.strict()` mỗi dòng (gõ sai `body_b64` ⇒ 400 thay vì lặng lẽ dùng khối mặc định); (4) trả `{ ids }` để đối chiếu với `store-dump`; (5) không có trường `nextAttemptAtIso` — `next_attempt_at` = `created_at` (câu chọn phần tóm tắt §6g không đọc cột này; ca thư lẻ cần thì thêm sau, D7).
+- **`health.ok` giữ `≤ 900`** (không đồng bộ với cảnh báo `≥ 900`): `ok` là lớp phát hiện Cron chết cho smoke/monitor, không thuộc feature nào; lệch đúng một giây không đổi kết quả của smoke hằng ngày hay monitor ≤ 15 phút. Đồng bộ thì phải sửa thêm code + test biên đã khoá (`overdue-alert.test.ts:180–194`) mà không có yêu cầu nào đòi.
+
+Hai lớp giữ cổng khỏi production (test-control.ts đầu tệp) không đổi: op mới chỉ ở `worker/index.test.ts`, adapter ghi dòng ở `worker/testing/**` (không thêm phương thức vào `ContactQueue` production). Hệ quả tự lộ ra: không thấy finding mới — op ghi PII giả cố định, chỉ có ở bản test.
+
 ## Lượt 10 (04/11/2026): theo spec v0.5.1 / story-map v0.4 / priorities v4; trả XQ-33 (appsec)
 
 | File | Đổi | Vì sao |
