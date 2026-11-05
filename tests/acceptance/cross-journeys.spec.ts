@@ -80,7 +80,7 @@ test('X-03 Có tuyên bố phải qua kiểm lúc build rồi văn bản xác nh
   expect(DEPLOY_PRODUCTION_CMD, 'Chưa có lệnh deploy production (XQ-21)').not.toBe('');
   const deploy = (outDir: string) =>
     spawnSync(DEPLOY_PRODUCTION_CMD.split(' ')[0], [...DEPLOY_PRODUCTION_CMD.split(' ').slice(1), '--dry-run'], {
-      cwd: outDir + '/..',
+      cwd: `${outDir}/..`,
       encoding: 'utf8',
       env: { ...process.env, SITE_ENV: 'production' },
     });
