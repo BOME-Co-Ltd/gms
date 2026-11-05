@@ -666,7 +666,8 @@ function renderLayout(opts: {
       : '';
 
   const orgJsonLd = buildOrgJsonLd(company, siteUrl, locale);
-  const displayBrand = locale === 'en' ? 'GMS Hung Yen' : brandName;
+  // legalName là một chuỗi không tách locale (content-model.ts Company.legalName): vi và en cùng hiện đúng chuỗi này.
+  const displayBrand = brandName;
   const switcherLabel = locale === 'vi' ? 'Đổi ngôn ngữ' : 'Language switcher';
   const viSwitcherText = canonicalPath === '/en/404' ? 'Vietnamese' : 'Tiếng Việt';
 
@@ -1410,7 +1411,8 @@ function renderProductsPage(content: LoadedSiteContent, locale: Locale): string 
 
 function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum: number): string {
   const isVi = locale === 'vi';
-  const steps = isVi
+  // Không có journey-steps.yaml ⇒ lộ trình mặc định, không nhãn (loader.ts LoadedSiteContent.journeySteps).
+  const defaultNames = isVi
     ? [
         'Đánh giá hiện trạng',
         'Tổ chức mặt bằng',
@@ -1425,6 +1427,15 @@ function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum:
         'Technology deployment',
         'Operating-system completion',
       ];
+  const stepRows: Array<{ name: string; status: string | null }> = content.journeySteps
+    ? content.journeySteps.map((s) => ({ name: s.name[locale], status: s.status }))
+    : defaultNames.map((name) => ({ name, status: null }));
+  // shortcut: ux-spec chưa ghi nhãn EN cho trạng thái lộ trình; dùng bản dịch thẳng, chờ ux_ui/admin chốt chữ.
+  const statusLabel = (status: string | null): string => {
+    if (!status) return '';
+    const en: Record<string, string> = { 'chưa tới': 'upcoming', 'đang làm': 'in progress', 'đã xong': 'done' };
+    return isVi ? status : (en[status] ?? '');
+  };
 
   const allItems = content.news[locale];
   const start = (pageNum - 1) * PAGE_SIZE;
@@ -1468,7 +1479,15 @@ function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum:
       <h1>${isVi ? 'Tin tức & Hành trình chuyển đổi' : 'News & Transformation Journey'}</h1>
       <h2>${isVi ? 'Lộ trình chuyển đổi 5 bước' : '5-Step Transformation Roadmap'}</h2>
       <ol class="grid-cards">
-        ${steps.map((s, idx) => `<li class="card" data-testid="journey-step"><strong>${idx + 1}. ${escHtml(s)}</strong></li>`).join('')}
+        ${stepRows
+          .map((s, idx) => {
+            const label = statusLabel(s.status);
+            const badge = label
+              ? ` <span class="badge" data-status="${escHtml(s.status ?? '')}">${escHtml(label)}</span>`
+              : '';
+            return `<li class="card" data-testid="journey-step"><strong>${idx + 1}. ${escHtml(s.name)}</strong>${badge}</li>`;
+          })
+          .join('')}
       </ol>
     </section>
     <section class="section-block">
@@ -1576,7 +1595,9 @@ function renderPrivacyPage(content: LoadedSiteContent, locale: Locale): string {
   const ver = pol?.version ?? '1.0';
   const eff = formatDateLocale(pol?.effectiveFrom ?? '2026-01-01', locale);
   const ctrlName = content.company.legalName || 'Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên';
-  const reqEmail = content.company.privacyRequestEmail;
+  const reqEmail = content.company.privacyRequestEmail?.trim() ?? '';
+  // Thiếu email nhận yêu cầu ⇒ không in liên kết mailto: rỗng hay dòng email trống (privacy-policy.feature:72-78).
+  const reqEmailLink = reqEmail ? `<a href="mailto:${escHtml(reqEmail)}">${escHtml(reqEmail)}</a>` : '';
 
   const standardNotice = isVi
     ? `<p><strong>Phiên bản:</strong> ${escHtml(ver)} — <strong>Ngày hiệu lực:</strong> ${escHtml(eff)}</p>
@@ -1585,14 +1606,14 @@ function renderPrivacyPage(content: LoadedSiteContent, locale: Locale): string {
        <p><strong>Mục đích xử lý:</strong> Tiếp nhận, liên hệ lại và trả lời yêu cầu của người gửi từ biểu mẫu liên hệ.</p>
        <p><strong>Cách lưu trữ và thời hạn lưu:</strong> Website không lưu giữ lâu dài dữ liệu cá nhân trên máy chủ web. Liên hệ được chuyển thành thư báo gửi thẳng về hộp thư của GMS; hàng đợi kỹ thuật trên hạ tầng Cloudflare (bên xử lý dữ liệu) tự động xoá sau khi gửi thành công (tối đa 24 giờ, hoặc tối đa 7 ngày nếu lỗi đường truyền).</p>
        <p><strong>Ai được xem / truy cập:</strong> Bộ phận phụ trách liên hệ của ${escHtml(ctrlName)} và nhà cung cấp hạ tầng kỹ thuật Cloudflare.</p>
-       <p><strong>Quyền của chủ thể dữ liệu:</strong> Bạn có quyền yêu cầu xem, sửa, xoá dữ liệu cá nhân hoặc rút lại đồng ý bất cứ lúc nào bằng cách gửi yêu cầu tới địa chỉ email nhận yêu cầu về dữ liệu: <a href="mailto:${escHtml(reqEmail)}">${escHtml(reqEmail)}</a>.</p>`
+       <p><strong>Quyền của chủ thể dữ liệu:</strong> Bạn có quyền yêu cầu xem, sửa, xoá dữ liệu cá nhân hoặc rút lại đồng ý bất cứ lúc nào ${reqEmailLink ? `bằng cách gửi yêu cầu tới địa chỉ email nhận yêu cầu về dữ liệu: ${reqEmailLink}.` : 'bằng cách liên hệ với bên kiểm soát dữ liệu qua các kênh nêu ở trang Liên hệ.'}</p>`
     : `<p><strong>Version:</strong> ${escHtml(ver)} — <strong>Effective date:</strong> ${escHtml(eff)}</p>
        <p><strong>Legal basis:</strong> Personal Data Protection Law No. 91/2025/QH15 and Decree 356/2025/ND-CP.</p>
        <p><strong>Data controller:</strong> ${escHtml(ctrlName)}.</p>
        <p><strong>Purpose of processing:</strong> Receiving, contacting and responding to inquiries submitted via the contact form.</p>
        <p><strong>Retention & where data is stored:</strong> The website does not retain personal data after email delivery. Submissions are forwarded to the GMS mailbox via Cloudflare infrastructure (data processor) and deleted from the outbox within 24 hours of delivery.</p>
        <p><strong>Who can access:</strong> Authorized staff at ${escHtml(ctrlName)} and technical processor Cloudflare.</p>
-       <p><strong>Your rights:</strong> You have the right to access, rectify or request deletion / erasure of your personal data, or withdraw your consent at any time by contacting: <a href="mailto:${escHtml(reqEmail)}">${escHtml(reqEmail)}</a>.</p>`;
+       <p><strong>Your rights:</strong> You have the right to access, rectify or request deletion / erasure of your personal data, or withdraw your consent at any time by ${reqEmailLink ? `contacting: ${reqEmailLink}.` : 'contacting the data controller through the channels listed on the Contact page.'}</p>`;
 
   return `
     <section class="section-block">
