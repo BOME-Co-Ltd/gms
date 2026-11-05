@@ -4,27 +4,47 @@ import {
   BuildEnv,
   CONTENT_RULE_MESSAGES,
   FormStatus,
-  PRODUCTION_BRANCH,
-  REDIRECT_LINE,
-  SLUG_LOCK_LINE,
   formStatusOf,
   isProductionBuild,
   mayDeployProduction,
+  PRODUCTION_BRANCH,
   productionEnvMismatch,
+  REDIRECT_LINE,
+  SLUG_LOCK_LINE,
 } from '../../contracts/build.ts';
 
 const SITE = 'https://gms.example.test';
 
 describe('build.ts §1 — nhánh production và luật deploy (XQ-29(c), XQ-31.1)', () => {
   it.each([
-    ['push vào nhánh production, SITE_ENV=production', { SITE_ENV: 'production', WORKERS_CI_BRANCH: PRODUCTION_BRANCH }, true],
-    ['Deploy Hook: không có nhánh, WORKERS_CI=1, SITE_ENV=production', { SITE_ENV: 'production', WORKERS_CI: '1' }, true],
+    [
+      'push vào nhánh production, SITE_ENV=production',
+      { SITE_ENV: 'production', WORKERS_CI_BRANCH: PRODUCTION_BRANCH },
+      true,
+    ],
+    [
+      'Deploy Hook: không có nhánh, WORKERS_CI=1, SITE_ENV=production',
+      { SITE_ENV: 'production', WORKERS_CI: '1' },
+      true,
+    ],
     ['Deploy Hook nhưng WORKERS_CI khác "1" ⇒ không deploy', { SITE_ENV: 'production', WORKERS_CI: '0' }, false],
     ['trên máy (không WORKERS_CI, không nhánh) ⇒ không deploy', { SITE_ENV: 'production' }, false],
     ['SITE_ENV=test, không nhánh ⇒ BRANCH_NOT_PRODUCTION', { SITE_ENV: 'test', WORKERS_CI: '1' }, false],
-    ['nhánh production nhưng SITE_ENV=test ⇒ lệch môi trường, từ chối', { SITE_ENV: 'test', WORKERS_CI_BRANCH: PRODUCTION_BRANCH }, false],
-    ['nhánh khác production, SITE_ENV=production ⇒ lệch, từ chối', { SITE_ENV: 'production', WORKERS_CI_BRANCH: 'feature-x' }, false],
-    ['nhánh rỗng được coi là "không biết nhánh", vẫn đi đường Deploy Hook', { SITE_ENV: 'production', WORKERS_CI_BRANCH: '', WORKERS_CI: '1' }, true],
+    [
+      'nhánh production nhưng SITE_ENV=test ⇒ lệch môi trường, từ chối',
+      { SITE_ENV: 'test', WORKERS_CI_BRANCH: PRODUCTION_BRANCH },
+      false,
+    ],
+    [
+      'nhánh khác production, SITE_ENV=production ⇒ lệch, từ chối',
+      { SITE_ENV: 'production', WORKERS_CI_BRANCH: 'feature-x' },
+      false,
+    ],
+    [
+      'nhánh rỗng được coi là "không biết nhánh", vẫn đi đường Deploy Hook',
+      { SITE_ENV: 'production', WORKERS_CI_BRANCH: '', WORKERS_CI: '1' },
+      true,
+    ],
   ])('mayDeployProduction: %s', (_ten, env, mong) => {
     expect(mayDeployProduction(env)).toBe(mong);
   });
@@ -52,10 +72,19 @@ describe('build.ts BuildEnv — luật M36 (build đỏ)', () => {
   };
 
   it('SITE_ENV=test có DATE_OVERRIDE và CONTENT_DIR khác "content" ⇒ hợp lệ (qa dùng bộ mẫu)', () => {
-    expect(messages({ SITE_URL: SITE, SITE_ENV: 'test', DATE_OVERRIDE: '2026-11-16', CONTENT_DIR: 'tests/fixtures/content-sample' })).toEqual([]);
+    expect(
+      messages({
+        SITE_URL: SITE,
+        SITE_ENV: 'test',
+        DATE_OVERRIDE: '2026-11-16',
+        CONTENT_DIR: 'tests/fixtures/content-sample',
+      }),
+    ).toEqual([]);
   });
   it('staging có DATE_OVERRIDE ⇒ DATE_OVERRIDE_FORBIDDEN', () => {
-    expect(messages({ SITE_URL: SITE, SITE_ENV: 'staging', DATE_OVERRIDE: '2026-11-16' })).toContain('DATE_OVERRIDE_FORBIDDEN');
+    expect(messages({ SITE_URL: SITE, SITE_ENV: 'staging', DATE_OVERRIDE: '2026-11-16' })).toContain(
+      'DATE_OVERRIDE_FORBIDDEN',
+    );
   });
   it('nhánh production đặt nhầm SITE_ENV=test + CONTENT_DIR khác ⇒ PRODUCTION_ENV_MISMATCH và CONTENT_DIR_FORBIDDEN', () => {
     const m = messages({ SITE_URL: SITE, SITE_ENV: 'test', WORKERS_CI_BRANCH: PRODUCTION_BRANCH, CONTENT_DIR: 'khac' });
@@ -75,7 +104,9 @@ describe('build.ts BuildEnv — luật M36 (build đỏ)', () => {
 describe('build.ts §8 — thông báo luật nội dung trích nguyên văn tên/giá trị trong nháy kép', () => {
   const M = CONTENT_RULE_MESSAGES;
   it('PARTNER_PERMISSION_MISSING nêu tên đối tác và trường "căn cứ cho phép" (figures-and-claims.feature 96–101)', () => {
-    expect(M.PARTNER_PERMISSION_MISSING({ partner: 'Công ty Đối Tác' })).toBe('Đối tác "Công ty Đối Tác" thiếu trường "căn cứ cho phép"');
+    expect(M.PARTNER_PERMISSION_MISSING({ partner: 'Công ty Đối Tác' })).toBe(
+      'Đối tác "Công ty Đối Tác" thiếu trường "căn cứ cho phép"',
+    );
   });
   it('PARTNER_ASSET_NOT_ALLOWED nêu ảnh, loại, đối tác (dòng 110–115)', () => {
     const t = M.PARTNER_ASSET_NOT_ALLOWED({ image: 'a.jpg', type: 'logo', partner: 'P' });
@@ -123,7 +154,10 @@ describe('build.ts §8 — thông báo luật nội dung trích nguyên văn tê
 
 describe('build.ts §9 — trạng thái form lúc build', () => {
   it('đủ dữ liệu ⇒ form mở, không lý do', () => {
-    expect(formStatusOf({ mailReady: true, privacyRequestEmail: 'ct@vi-du.test', taxId: '0900000000' })).toEqual({ open: true, reasons: [] });
+    expect(formStatusOf({ mailReady: true, privacyRequestEmail: 'ct@vi-du.test', taxId: '0900000000' })).toEqual({
+      open: true,
+      reasons: [],
+    });
   });
   it.each([
     [{ mailReady: false, privacyRequestEmail: 'ct@vi-du.test', taxId: '1' }, ['mail-not-ready']],
@@ -134,7 +168,10 @@ describe('build.ts §9 — trạng thái form lúc build', () => {
     expect(formStatusOf(input)).toEqual({ open: false, reasons });
   });
   it('email/mã số thuế rỗng tính là thiếu', () => {
-    expect(formStatusOf({ mailReady: true, privacyRequestEmail: '', taxId: '' }).reasons).toEqual(['no-privacy-email', 'no-tax-id']);
+    expect(formStatusOf({ mailReady: true, privacyRequestEmail: '', taxId: '' }).reasons).toEqual([
+      'no-privacy-email',
+      'no-tax-id',
+    ]);
   });
   it('FormStatus: open ⇔ không có lý do', () => {
     expect(FormStatus.safeParse({ open: true, reasons: [] }).success).toBe(true);

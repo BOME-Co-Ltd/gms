@@ -4,12 +4,12 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, test } from '../support/turnstile-stub';
 import { buildSite, type Files, htmlOf, newsFiles } from '../support/build';
 import { control, pollUntil } from '../support/control';
 import { DEPLOY_PRODUCTION_CMD } from '../support/env';
 import { figure, figuresFile } from '../support/fixtures';
 import { detailPath, path } from '../support/routes';
+import { expect, test } from '../support/turnstile-stub';
 import { bodyText, fillAndSubmit, open, tid, VALID } from '../support/ui';
 
 const TO = 'lienhe@vi-du.test';
