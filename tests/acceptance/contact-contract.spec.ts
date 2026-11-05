@@ -451,7 +451,9 @@ test('CC-13 Q10-2: phần đầy maxSummaryContacts trên D1 cục bộ thật �
     'vừa một phần ⇒ không SUMMARY_SPLIT',
   ).toHaveLength(0);
   const { lines } = await control.appLogs();
-  const dbErrors = lines.filter((l) => /bound|too many (sql )?(variables|parameters)|SQLITE_|D1_ERROR|parameter/i.test(l));
+  const dbErrors = lines.filter((l) =>
+    /bound|too many (sql )?(variables|parameters)|SQLITE_|D1_ERROR|parameter/i.test(l),
+  );
   expect(dbErrors, 'app-logs không có lỗi D1 / bound-parameter').toEqual([]);
 });
 
@@ -484,10 +486,15 @@ test('CC-13b Q10-2: bước 3 xoá dòng quá OUTBOX.maxRetentionUnsentSeconds (
 
   await control.runCron(at(62));
   byId = await outboxById();
-  expect(oldIds.filter((id) => byId.has(id)), 'lượt 2 xoá nốt phần còn lại').toEqual([]);
+  expect(
+    oldIds.filter((id) => byId.has(id)),
+    'lượt 2 xoá nốt phần còn lại',
+  ).toEqual([]);
   expect(byId.has(keepId ?? ''), 'dòng chưa quá hạn không bị xoá').toBe(true);
   const { lines } = await control.appLogs();
-  expect(lines.filter((l) => /bound|too many (sql )?(variables|parameters)|SQLITE_|D1_ERROR|parameter/i.test(l))).toEqual([]);
+  expect(
+    lines.filter((l) => /bound|too many (sql )?(variables|parameters)|SQLITE_|D1_ERROR|parameter/i.test(l)),
+  ).toEqual([]);
 });
 
 // design.md §6g (dòng 207–219, 233) + api.ts:172–175: bản ghi đầu hàng (rn = 1, thứ tự (created_at, id)) có attempts ≥
@@ -534,7 +541,5 @@ test('CC-14b biên: bản ghi đầu attempts = summaryHeadAttemptsIsolate − 1
   await control.runCron(T);
   const sums = await summaries();
   expect(sums, 'đúng 1 thư tóm tắt').toHaveLength(1);
-  expect(seedIds(sums[0]?.text ?? '').sort((a, b) => a - b)).toEqual(
-    Array.from({ length: SIBLINGS + 1 }, (_, i) => i),
-  );
+  expect(seedIds(sums[0]?.text ?? '').sort((a, b) => a - b)).toEqual(Array.from({ length: SIBLINGS + 1 }, (_, i) => i));
 });
