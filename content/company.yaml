@@ -7,3 +7,6 @@ zalo: "https://zalo.me/0987998370"
 mapPoint: "20.930031, 106.065651"
 mapUrl: "https://www.google.com/maps?q=20.930031,106.065651"
 privacyRequestEmail: "lienhe@gmshungyen.vn"
+social:
+  - name: "Facebook"
+    url: "https://www.facebook.com/gmshungyen/"
