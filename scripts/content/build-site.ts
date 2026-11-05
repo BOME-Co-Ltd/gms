@@ -5,7 +5,7 @@ import { parse as parseYaml } from 'yaml';
 import { formStatusOf } from '../../contracts/build.ts';
 import { PAGE_SIZE, ROUTES } from '../../contracts/routes.ts';
 import { buildFooterHtml, FOOTER_CSS, type FooterLink, parseSocial } from '../../src/components/ui/static-footer.ts';
-import { icon } from '../../src/components/ui/static-icons.ts';
+import { icon, zaloLogo } from '../../src/components/ui/static-icons.ts';
 import {
   type LoadedCompany,
   type LoadedImage,
@@ -268,7 +268,6 @@ body { margin: 0; font-family: var(--font); font-size: 16px; line-height: 1.6; c
 img, svg { max-width: 100%; display: block; }
 a, button, input, select, textarea, summary { min-height: 28px; min-width: 28px; font-size: 1rem; }
 a { color: var(--b800); text-decoration: underline; text-underline-offset: 3px; display: inline-flex; align-items: center; padding: 2px 4px; }
-a:hover { color: var(--g900); }
 h1, h2, h3 { line-height: 1.25; margin: 0 0 0.5em; color: var(--g900); text-wrap: balance; }
 p, li { margin: 0 0 0.75em; overflow-wrap: break-word; word-break: break-word; }
 ul, ol { margin: 0; padding-left: 20px; }
@@ -325,9 +324,8 @@ nav[data-testid="nav-main"] { display: flex; flex-wrap: wrap; align-items: cente
 nav[data-testid="nav-main"] a {
   display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 6px 8px;
   border-radius: var(--radius-s); color: var(--g900); text-decoration: none;
-  font-weight: 600; font-size: 0.85rem; white-space: nowrap; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-weight: 600; font-size: 0.85rem; white-space: nowrap;
 }
-nav[data-testid="nav-main"] a:hover { background: var(--tint-2); color: var(--g900); }
 nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); color: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
 .lang-switcher {
   display: inline-flex; gap: 4px; border: 1.5px solid var(--line); border-radius: 999px; padding: 3px; align-items: center; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -336,9 +334,8 @@ nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); co
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 44px; min-height: 40px; padding: 0 10px; border-radius: 999px; text-decoration: none;
   color: var(--g900); font-weight: 600; font-size: 0.85rem; white-space: nowrap;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1); position: relative; cursor: pointer;
+  position: relative; cursor: pointer;
 }
-.lang-switcher a:hover { background: var(--tint); }
 .lang-switcher a[aria-current="true"] { background: var(--g900); color: var(--white); text-decoration: underline; text-underline-offset: 3px; box-shadow: 0 2px 6px rgba(15, 88, 56, 0.28); }
 
 /* Buttons & Badges */
@@ -346,16 +343,18 @@ nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); co
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 44px; padding: 8px 22px; border-radius: 999px; border: 2px solid transparent;
   font-weight: 700; font-size: 1rem; text-decoration: none; cursor: pointer;
-  background: var(--g700); color: var(--white); transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  background: var(--g700); color: var(--white);
   box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
-.btn:hover { background: var(--g900); color: var(--white); transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.16); }
 .btn-light { background: #ffffff; color: var(--g900); border-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
-.btn-light:hover { background: #e6f4ea; color: var(--g900); border-color: #e6f4ea; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
 .btn-ghost { background: transparent; border-color: rgba(255, 255, 255, 0.85); color: var(--white); }
-.btn-ghost:hover { background: rgba(255, 255, 255, 0.2); border-color: #ffffff; color: var(--white); transform: translateY(-2px); }
 .btn-secondary, .btn-outline { background: var(--white); border-color: var(--g700); color: var(--g700); }
-.btn-secondary:hover, .btn-outline:hover { background: #e6f4ea; border-color: var(--g900); color: var(--g900); transform: translateY(-2px); }
+/* ux-spec V25: hover chỉ phóng to (nút 1.08, menu 1.05), không đổi màu/viền/bóng; reduced motion thì không scale. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .btn, .floating-circle-btn, .lang-switcher a, nav[data-testid="nav-main"] a, .mobile-menu-btn { transition: transform 0.16s var(--ease-spring); }
+  .btn:hover, .floating-circle-btn:hover, .mobile-menu-btn:hover { transform: scale(1.08); }
+  .lang-switcher a:hover, nav[data-testid="nav-main"] a:hover { transform: scale(1.05); }
+}
 .btn[aria-pressed="true"] { background: var(--g900); color: var(--white); border-color: var(--g900); }
 
 .badge {
@@ -365,7 +364,23 @@ nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); co
 }
 /* Nhãn trạng thái lộ trình (ux-review-journey-status-2026-11-05 §3): khác nhau bằng chữ + biểu tượng + độ đặc/kiểu viền, không chỉ màu. */
 .journey-status { margin: 8px 0 0; }
-.badge-status { gap: 6px; font-size: 0.9rem; border: 2px solid transparent; }
+/* §13b-8: icon cùng hàng với chữ, căn giữa dọc, cách 8px; icon không co. */
+.il { display: flex; align-items: center; gap: 8px; }
+.il > svg { flex: none; }
+.il-zalo { border-radius: 4px; }
+/* §14c U17: thẻ bước có vùng ảnh 16:9 riêng, huy hiệu số tròn 40px cạnh tiêu đề dưới ảnh; không có gì đè lên số/chữ. */
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 32px; list-style: none; padding: 0; margin: 0; }
+@media (min-width: 600px) { .step-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 900px) { .step-grid { grid-template-columns: repeat(3, 1fr); } }
+.step-card { display: flex; flex-direction: column; gap: 16px; margin: 0; }
+.step-fig { aspect-ratio: 16 / 9; margin: 0; border-radius: 16px; overflow: hidden; position: relative; background: var(--tint); }
+.step-fig img { width: 100%; height: 100%; object-fit: cover; }
+.step-fig figcaption { position: absolute; left: 8px; bottom: 8px; padding: 2px 10px; border-radius: 999px; background: rgb(0 0 0 / 0.65); color: var(--white); font-size: 0.8rem; }
+.step-head { display: flex; align-items: center; gap: 12px; }
+.step-head h3 { margin: 0; }
+.step-badge { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #0F5838; color: var(--white); font-weight: 700; }
+.step-card p { margin: 0; }
+.badge-status { gap: 8px; font-size: 0.9rem; border: 2px solid transparent; }
 .badge-status svg { flex-shrink: 0; }
 .badge-status--done { background: var(--g900); color: var(--white); border-color: var(--g900); }
 .badge-status--doing { background: var(--tint-b); color: var(--b800); border-color: var(--b600); }
@@ -531,35 +546,24 @@ input[type="checkbox"] {
   position: fixed; bottom: 24px; right: 24px; z-index: 99;
   display: flex; flex-direction: column; gap: 12px; align-items: flex-end;
 }
-.floating-circle-btn, .floating-btn {
+.floating-circle-btn {
   display: flex; align-items: center; justify-content: center;
-  width: 58px; height: 58px; min-width: 58px; min-height: 58px; border-radius: 50%;
+  width: 56px; height: 56px; min-width: 56px; min-height: 56px; padding: 0; border-radius: 16px;
   color: #ffffff; text-decoration: none; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative; cursor: pointer;
 }
-.floating-circle-btn:hover, .floating-btn:hover { transform: scale(1.18); box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35); }
-.floating-btn-phone { background: linear-gradient(135deg, #1b7a4b 0%, #0f5838 100%); }
-.floating-btn-zalo { background: #0068ff; }
-.floating-btn .floating-pulse {
-  position: absolute; top: -4px; left: -4px; right: -4px; bottom: -4px;
-  border-radius: 50%; border: 2px solid currentColor; opacity: 0.6;
-  animation: floatingPulse 2s infinite cubic-bezier(0.24, 0, 0.38, 1); pointer-events: none;
-}
-@keyframes floatingPulse {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  70% { transform: scale(1.35); opacity: 0; }
-  100% { transform: scale(1.4); opacity: 0; }
-}
+.floating-btn-phone { background: #27673C; }
+/* Logo Zalo thật: ngoại lệ thương hiệu màu #0068FF (ux-spec Q-UX-18); nền trắng để logo đúng màu. */
+.floating-btn-zalo { background: #0068FF; overflow: hidden; }
+.floating-btn-zalo > svg { width: 56px; height: 56px; }
 
 /* Mobile Menu */
 .mobile-menu-btn {
   display: none; align-items: center; justify-content: center;
   min-width: 44px; min-height: 44px; padding: 8px; border-radius: 8px;
   border: 1px solid var(--line); background: #ffffff; color: var(--g900);
-  cursor: pointer; transition: background 0.2s;
+  cursor: pointer;
 }
-.mobile-menu-btn:hover { background: var(--tint); }
 @media (max-width: 1023px) {
   .mobile-menu-btn { display: inline-flex; }
   .header-nav { display: none; }
@@ -607,7 +611,7 @@ ${FOOTER_CSS}
   a, button, input, select, textarea, summary,
   .card, .output-card, .pillar-card, .figure-card, .partner-logo-item,
   .btn, .btn-light, .btn-ghost, .btn-secondary, .btn-outline,
-  .floating-circle-btn, .floating-btn, .floating-pulse,
+  .floating-circle-btn,
   nav a, .lang-switcher a, .site-header, .site-footer {
     animation: none !important;
     animation-duration: 0s !important;
@@ -690,15 +694,13 @@ function renderLayout(opts: {
 
   const floatingZaloHtml =
     company.zalo && company.zalo.trim()
-      ? `<a href="${escHtml(company.zalo.trim())}" target="_blank" rel="noopener noreferrer" class="floating-circle-btn floating-btn-zalo" aria-label="Chat Zalo" title="Chat Zalo: ${escHtml(company.phone || '')}">
-        <span class="floating-pulse"></span>
-        ${icon('message-circle', { size: 24 })}
+      ? `<a href="${escHtml(company.zalo.trim())}" target="_blank" rel="noopener noreferrer" class="floating-circle-btn floating-btn-zalo" aria-label="${locale === 'vi' ? 'Nhắn Zalo (mở tab mới)' : 'Message on Zalo (opens in a new tab)'}">
+        ${zaloLogo({ size: 56 })}
       </a>`
       : '';
   const floatingPhoneHtml =
     company.phone && company.phone.trim()
-      ? `<a href="tel:${escHtml(company.phone.trim())}" class="floating-circle-btn floating-btn-phone" aria-label="Hotline" title="Hotline: ${escHtml(company.phone.trim())}">
-        <span class="floating-pulse"></span>
+      ? `<a href="tel:${escHtml(company.phone.trim())}" class="floating-circle-btn floating-btn-phone" aria-label="${locale === 'vi' ? 'Gọi' : 'Call'} ${escHtml(phoneShown || company.phone.trim())}">
         ${icon('phone', { size: 24 })}
       </a>`
       : '';
@@ -979,6 +981,14 @@ function renderAboutPage(content: LoadedSiteContent, locale: Locale): string {
   `;
 }
 
+// Ảnh minh hoạ theo thứ tự bước (cùng ảnh với SolutionsPageView); alt rỗng vì tiêu đề bước đã nói nội dung.
+const SOLUTION_IMAGES: Record<number, string> = {
+  0: '/img/sorting-trommel-screen.jpg',
+  1: '/img/vpd-pyrolysis-facility.jpg',
+  2: '/img/rdf-pellet-production.jpg',
+  3: '/img/scada-control-room.jpg',
+};
+
 function renderSolutionsPage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
   const items = content.solutionItems[locale];
@@ -986,17 +996,24 @@ function renderSolutionsPage(content: LoadedSiteContent, locale: Locale): string
     <section class="section-block">
       <p class="eyebrow">${isVi ? 'Giải pháp' : 'Solutions'}</p>
       <h1>${isVi ? 'Giải pháp xử lý chất thải & Tái tạo tài nguyên' : 'Waste Treatment & Resource Recovery Solutions'}</h1>
-      <div class="grid-cards">
+      <h2>${isVi ? 'Quy trình giải pháp khép kín' : 'Integrated solution framework'}</h2>
+      <ol class="step-grid">
         ${items
-          .map(
-            (item) => `<article class="card" data-testid="solution-item">
-              <h2>${escHtml(item.title)}</h2>
+          .map((item, i) => {
+            const img = SOLUTION_IMAGES[i];
+            // Không có ảnh ⇒ ẩn hẳn vùng ảnh (ux-spec §14c), không để ô trống.
+            const fig = img
+              ? `<figure class="step-fig"><img src="${img}" alt="" width="640" height="360" loading="lazy" decoding="async" /></figure>`
+              : '';
+            return `<li class="card step-card" data-testid="solution-item">
+              ${fig}
+              <div class="step-head"><span class="step-badge" aria-hidden="true">${i + 1}</span><h3><span class="sr-only">${isVi ? 'Bước' : 'Step'} ${i + 1}: </span>${escHtml(item.title)}</h3></div>
               <div>${item.bodyHtml}</div>
               <p><a href="${ROUTES.contact[locale]}" class="btn" data-testid="cta-contact">${isVi ? 'Liên hệ tư vấn' : 'Contact us'}</a></p>
-            </article>`,
-          )
+            </li>`;
+          })
           .join('')}
-      </div>
+      </ol>
     </section>
   `;
 }
@@ -1533,7 +1550,7 @@ function renderCareersListPage(content: LoadedSiteContent, locale: Locale): stri
             .map(
               (j) => `<article class="card" data-testid="list-item">
                 <h2><a href="${ROUTES.careers[locale]}/${j.slug}">${escHtml(j.title)}</a></h2>
-                <p>${isVi ? 'Hạn nộp' : 'Deadline'}: ${escHtml(formatDateLocale(j.validThrough, locale))}</p>
+                <p class="il">${icon('circle-alert')}<span>${isVi ? 'Hạn nộp' : 'Deadline'}: ${escHtml(formatDateLocale(j.validThrough, locale))}</span></p>
               </article>`,
             )
             .join('')}
@@ -1986,17 +2003,17 @@ function renderContactPage(
     <div data-testid="contact-channels">
       ${
         company.address?.[locale]
-          ? `<p><strong>${isVi ? 'Địa chỉ' : 'Address'}:</strong> ${escHtml(company.address[locale])}</p>`
+          ? `<p class="il">${icon('map-pin')}<span><strong>${isVi ? 'Địa chỉ' : 'Address'}:</strong> ${escHtml(company.address[locale])}</span></p>`
           : ''
       }
       ${
         phoneRaw
-          ? `<p><strong>${isVi ? 'Điện thoại' : 'Phone'}:</strong> <a href="tel:${escHtml(phoneRaw)}">${escHtml(phoneShown)}</a></p>`
+          ? `<p class="il">${icon('phone')}<span><strong>${isVi ? 'Điện thoại' : 'Phone'}:</strong> <a href="tel:${escHtml(phoneRaw)}">${escHtml(phoneShown)}</a></span></p>`
           : ''
       }
       ${
         zaloRaw
-          ? `<p><strong>Zalo:</strong> <a href="${escHtml(zaloRaw)}" rel="noopener noreferrer">${escHtml(zaloRaw)}</a></p>`
+          ? `<p class="il">${zaloLogo({ size: 20, className: 'il-zalo' })}<span><strong>Zalo:</strong> <a href="${escHtml(zaloRaw)}" rel="noopener noreferrer">${escHtml(zaloRaw)}</a></span></p>`
           : ''
       }
     </div>
@@ -2447,7 +2464,7 @@ export async function runBuildSite(options?: {
       const bodyHtml = `
         <article class="section-block">
           <h1>${escHtml(j.title)}</h1>
-          <p><strong>${escHtml(deadlineLabel)}</strong></p>
+          <p class="il">${icon('circle-alert')}<strong>${escHtml(deadlineLabel)}</strong></p>
           <div>${j.bodyHtml}</div>
         </article>
       `;

@@ -35,7 +35,7 @@ function base(over: Partial<FooterInput> = {}): FooterInput {
 
 const EMOJI = /[\u{2190}-\u{21FF}\u{2600}-\u{27BF}\u{1F300}-\u{1FAFF}]|\u{FE0F}/u;
 
-describe('buildFooterHtml — chân trang U10 (ux-spec §14a)', () => {
+describe('buildFooterHtml — chân trang U10 (ux-spec v0.5 §14a)', () => {
   it('giữ data-testid footer, thứ tự DOM thương hiệu → liên hệ → nav → bản quyền, một <nav aria-label>', () => {
     const html = buildFooterHtml(base());
     expect(html).toContain('<footer class="ft on-dark" data-testid="footer">');
@@ -46,6 +46,14 @@ describe('buildFooterHtml — chân trang U10 (ux-spec §14a)', () => {
     expect(html).toContain('<nav class="ft-nav" aria-label="Liên kết chân trang">');
   });
 
+  it('menu là MỘT danh sách 2 cột (--rows), không tiêu đề nhóm; chỉ còn h2 "Liên hệ" dành cho trình đọc', () => {
+    const html = buildFooterHtml(base());
+    expect(html.match(/<ul style="--rows:2">/g)).toHaveLength(1);
+    expect(html.match(/<h2/g)).toHaveLength(1);
+    expect(html).toContain('<h2 id="ft-contact-h" class="sr-only">Liên hệ</h2>');
+    expect(html).not.toMatch(/Khám phá|Thông tin<\/h2>/);
+  });
+
   it('aria-current="page" đúng một liên kết, mọi liên kết là .ft-link', () => {
     const html = buildFooterHtml(base());
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
@@ -53,16 +61,33 @@ describe('buildFooterHtml — chân trang U10 (ux-spec §14a)', () => {
     expect(html).toContain('Tuyển dụng');
   });
 
-  it('tên pháp lý hiện ở cả vi và en, nguyên chuỗi; khung EN đánh dấu lang="vi" và nhãn tiếng Anh', () => {
+  it('tên pháp lý ở .ft-name (EN: lang="vi"), dòng bản quyền không lặp tên pháp lý', () => {
     const vi = buildFooterHtml(base());
     expect(vi).toContain(`<p class="ft-name">${LEGAL}</p>`);
-    expect(vi).toContain(`© 2026 ${LEGAL}. Tất cả các quyền được bảo lưu.`);
+    expect(vi).toContain('<p>© 2026. Tất cả các quyền được bảo lưu.</p>');
     const en = buildFooterHtml(base({ locale: 'en' }));
     expect(en).toContain(`<p class="ft-name" lang="vi">${LEGAL}</p>`);
-    expect(en).toContain(`<span lang="vi">${LEGAL}</span>. All rights reserved.`);
+    expect(en).toContain('<p>© 2026. All rights reserved.</p>');
+    expect(en.match(new RegExp(LEGAL, 'g'))).toHaveLength(1);
     expect(en).toContain('aria-label="Footer links"');
     expect(en).toContain('(opens in a new tab)');
     expect(en).toContain('Tax ID');
+  });
+
+  it('hover chỉ phóng to (1.04 hàng, 1.05 liên kết), không đổi màu/nền/gạch chân; chỉ khi hover và không reduced-motion', () => {
+    const hoverRules = FOOTER_CSS.match(/[^{}]*:hover[^{}]*\{[^}]*\}/g) ?? [];
+    expect(hoverRules.length).toBeGreaterThan(0);
+    for (const r of hoverRules) {
+      const decl = r.slice(r.indexOf('{') + 1, r.indexOf('}'));
+      if (r.includes('.ft a')) continue; // .ft a, .ft a:hover { color: white } giữ màu cố định
+      expect(decl.trim(), r).toMatch(/^transform: scale\(1\.0[45]\);?$/);
+    }
+    expect(FOOTER_CSS).toContain('a.ft-row:hover { transform: scale(1.04); }');
+    expect(FOOTER_CSS).toContain('.ft-link:hover { transform: scale(1.05); }');
+    expect(FOOTER_CSS).toContain('@media (hover: hover) and (prefers-reduced-motion: no-preference)');
+    expect(FOOTER_CSS.indexOf('scale(1.04)')).toBeGreaterThan(
+      FOOTER_CSS.indexOf('prefers-reduced-motion: no-preference'),
+    );
   });
 
   it('không còn emoji/ký tự hình, không còn đoạn Pháp lý & Tiêu chuẩn / chip công nghệ', () => {
@@ -87,16 +112,32 @@ describe('buildContactRowsHtml — hàng NAP', () => {
     expect(html.match(/target="_blank" rel="noopener noreferrer"/g)).toHaveLength(2);
     expect(html.match(/<span class="sr-only"> \(mở tab mới\)<\/span>/g)).toHaveLength(2);
     expect(html).toContain('facebook.com/gmshungyen<span');
-    expect(html).toContain('<address class="ft-value">Quốc lộ 39 &amp; Hưng Yên</address>');
+    expect(html).toContain(
+      '<address class="ft-val"><span class="sr-only">Địa chỉ: </span>Quốc lộ 39 &amp; Hưng Yên</address>',
+    );
     expect(html).toContain('<li data-testid="tax-id">');
     expect(html).toContain('<svg');
     expect(html.match(/aria-hidden="true" focusable="false"/g)?.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('mỗi hàng: ô icon + chữ cùng hàng; nhãn chỉ cho trình đọc; Zalo dùng logo thật #0068FF với chữ "Zalo {số}"', () => {
+    const html = buildContactRowsHtml(base());
+    expect(html.match(/class="ft-ico"/g)).toHaveLength(5);
+    expect(html.match(/class="ft-val"/g) ?? []).toHaveLength(5);
+    expect(html.match(/<address class="ft-val"/g)).toHaveLength(1);
+    expect(html).toContain('<span class="sr-only">Điện thoại: </span>098 799 83 70');
+    expect(html).toContain('fill="#0068FF"');
+    expect(html).toContain('class="ft-zalo"');
+    expect(html).toContain('Zalo 098 799 83 70');
+    expect(html).not.toContain('class="ft-label"');
+    expect(html).not.toContain('message-circle');
   });
 
   it('trường trống ⇒ ẩn cả hàng và nhãn; không có hàng nào ⇒ ẩn cả khối Liên hệ', () => {
     const noTax = buildContactRowsHtml(base({ taxId: '  ' }));
     expect(noTax).not.toContain('tax-id');
     expect(noTax).not.toContain('Mã số thuế');
+    expect(noTax).not.toContain('0900000000');
     const none = base({ phone: null, zalo: null, fanpages: [], address: null, taxId: null });
     expect(buildContactRowsHtml(none)).toBe('');
     const html = buildFooterHtml(none);
@@ -104,6 +145,7 @@ describe('buildContactRowsHtml — hàng NAP', () => {
     expect(html).not.toContain('Liên hệ</h2>');
     expect(html).toContain('data-testid="footer"');
     expect(html).not.toContain('Fanpage');
+    expect(html).not.toContain('class="ft-zalo"');
   });
 
   it('chỉ địa chỉ ⇒ một hàng không bấm được', () => {

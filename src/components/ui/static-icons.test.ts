@@ -1,5 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { ICONS, type IconName, icon } from './static-icons.ts';
+import { ICONS, type IconName, icon, ZALO_BLUE, zaloLogo } from './static-icons.ts';
+
+describe('zaloLogo() — logo Zalo thật (ngoại lệ thương hiệu Q-UX-18)', () => {
+  it('SVG path inline màu #0068FF, trang trí, không <text>/<image>/tham chiếu ngoài', () => {
+    const svg = zaloLogo();
+    expect(ZALO_BLUE).toBe('#0068FF');
+    expect(svg.startsWith('<svg')).toBe(true);
+    expect(svg).toContain('fill="#0068FF"');
+    expect(svg).toContain('<path ');
+    expect(svg).toContain('viewBox="0 0 24 24"');
+    expect(svg).toContain('aria-hidden="true"');
+    expect(svg).toContain('focusable="false"');
+    expect(svg).not.toMatch(/<text|<image|<use|href=|<script/);
+  });
+
+  it('tham số cỡ và class; mặc định 24px', () => {
+    expect(zaloLogo()).toContain('width="24"');
+    const big = zaloLogo({ size: 56, className: 'z' });
+    expect(big).toContain('width="56"');
+    expect(big).toContain('class="z"');
+  });
+
+  it('không còn biểu tượng message-circle trong bộ ICONS', () => {
+    expect(Object.keys(ICONS)).not.toContain('message-circle');
+  });
+});
 
 describe('icon() — SVG lucide dựng lúc build (ux-spec §13b)', () => {
   it('mọi biểu tượng: SVG inline trang trí, nét currentColor, viewBox 24, aria-hidden + focusable=false', () => {
