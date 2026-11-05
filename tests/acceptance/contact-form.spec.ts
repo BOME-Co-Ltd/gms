@@ -255,8 +255,8 @@ test('FORM-35 Liên hệ chờ gửi thư quá 15 phút: đúng 1 cảnh báo ch
 
 // Biên 15 phút (900 s) của hạn gửi thư — khớp pendingStats (worker/adapters/cloudflare.ts) với chữ spec. Hạn gửi = created_at (design.md:151,
 // api.ts:211 overdueAlertSeconds=900). Liên hệ gửi lỗi lúc 09:00; đo health + cảnh báo tại T0+899 / +900 / +901 s.
-// Mâu thuẫn tài liệu: feature "từ 09:20" (gồm biên) ≠ design.md:151 "> 900" (loại biên) ⇒ tại đúng 900 s KHÔNG khẳng định có/không cảnh báo
-// (chỉ khẳng định oldestOverdueSec = 900 đúng chữ; xem test-plan, câu hỏi PM).
+// Quyết định admin 05/11: spec đã duyệt là nguồn đúng (contact-form.feature: gửi 09:05 ⇒ "từ 09:20 nhận đúng 1 cảnh báo"), nên tại đúng
+// 900 s PHẢI có đúng 1 cảnh báo (≥), dù design.md:151 viết "> 900". [dự đoán — chưa chạy] đỏ ở lần chạy sau thì backend sửa (pendingStats/cron).
 const at = (sec: number) => new Date(Date.parse(ISO(9, 0)) + sec * 1000).toISOString().replace('.000Z', 'Z');
 const healthAt = async (request: Parameters<typeof postContact>[0], sec: number) => {
   await control.setNow(at(sec));
@@ -266,7 +266,7 @@ const healthAt = async (request: Parameters<typeof postContact>[0], sec: number)
   return (await res.json()) as { ok: boolean; lastCronAgeSec: number; pending: number; oldestOverdueSec: number };
 };
 for (const sec of [899, 900, 901]) {
-  test(`FORM-36 Biên 15 phút: liên hệ chờ ${sec} giây ⇒ oldestOverdueSec đúng ${sec}${sec === 901 ? ', health không ok, đúng 1 cảnh báo' : sec === 899 ? ', health ok, chưa cảnh báo' : ''} (@S19 @risk:mail-failure)`, async ({
+  test(`FORM-36 Biên 15 phút: liên hệ chờ ${sec} giây ⇒ oldestOverdueSec đúng ${sec}${sec === 899 ? ', health ok, chưa cảnh báo' : sec === 900 ? ', đúng 1 cảnh báo (biên gồm)' : ', health không ok, đúng 1 cảnh báo'} (@S19 @risk:mail-failure)`, async ({
     request,
   }) => {
     await control.failMail(true);
@@ -279,6 +279,9 @@ for (const sec of [899, 900, 901]) {
     if (sec === 899) {
       expect(h.ok, 'chưa quá hạn ⇒ ok').toBe(true);
       expect(await alertCodes(), 'chưa quá 15 phút ⇒ chưa cảnh báo').toEqual([]);
+    }
+    if (sec === 900) {
+      expect(await alertCodes(), 'đúng 900 s (biên gồm, feature "từ 09:20") ⇒ đúng 1 cảnh báo').toEqual([CODE_15M]);
     }
     if (sec === 901) {
       expect(h.ok, 'quá hạn ⇒ không ok').toBe(false);
