@@ -65,7 +65,7 @@ test('NEWS-01 Trang Tin tức có lộ trình 5 bước, bước 1–3 mang nhã
   ).toHaveLength(3);
 });
 
-// news-and-journey.feature dòng 17. Nhãn vi theo chữ spec; nhãn EN spec không ghi ⇒ khớp theo nghĩa (điểm mơ hồ gửi PM).
+// news-and-journey.feature dòng 17. Nhãn vi theo chữ spec; nhãn EN spec không ghi ⇒ chỉ kiểm có nhãn ở đúng bước, không khoá chữ.
 test('NEWS-13 Bước đã xong mang nhãn "đã xong", bước đang làm mang nhãn "đang làm" ở cả vi và en (@S12 @kiem-luc-build)', () => {
   const r = buildSite(journeyFile(['đã xong', 'đang làm', null, null, null]));
   expect(r.ok, r.log).toBe(true);
@@ -77,10 +77,22 @@ test('NEWS-13 Bước đã xong mang nhãn "đã xong", bước đang làm mang 
   expect(vi[0]).not.toMatch(/đang làm/i);
   expect(vi[1], 'vi: Tổ chức mặt bằng').toContain('đang làm');
   expect(vi[1]).not.toMatch(/đã xong/i);
-  expect(en[0], 'en: bước 1 nhãn hoàn thành').toMatch(/\b(done|completed?|finished)\b/i);
-  expect(en[0]).not.toMatch(/in progress|ongoing|under way|underway|in the works/i);
-  expect(en[1], 'en: bước 2 nhãn đang làm').toMatch(/in progress|ongoing|under way|underway|in the works|current/i);
-  expect(en[1]).not.toMatch(/\b(done|completed?|finished)\b/i);
+  // Quyết định admin 05/11: spec không ghi nhãn EN ⇒ KHÔNG khoá chữ EN. Chỉ kiểm bản en có nhãn trạng thái đúng bước:
+  // phần chữ còn lại của bước (sau khi bỏ tên bước, số thứ tự, dấu câu) khác với bước không trạng thái, và hai trạng thái khác nhau thì nhãn khác nhau.
+  const residue = (t: string, name: string) =>
+    t
+      .replace(name, ' ')
+      .replace(/[\d.:()\-–—|·]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  const bare = [2, 3, 4].map((i) => residue(en[i], STEP_NAMES[i][1]));
+  expect(new Set(bare).size, 'en: các bước không trạng thái có cùng phần chữ ngoài tên').toBe(1);
+  const done = residue(en[0], STEP_NAMES[0][1]);
+  const doing = residue(en[1], STEP_NAMES[1][1]);
+  expect(done, 'en: bước 1 ("đã xong") có nhãn trạng thái').not.toBe(bare[0]);
+  expect(doing, 'en: bước 2 ("đang làm") có nhãn trạng thái').not.toBe(bare[0]);
+  expect(done, 'en: nhãn "đã xong" khác nhãn "đang làm"').not.toBe(doing);
 });
 
 // news-and-journey.feature dòng 23.
