@@ -1,6 +1,21 @@
 // Dựng file nội dung nguồn (content/**) cho ca kiểm lúc build. Hình dạng theo 02-design/contracts/content-model.ts.
 // Giá trị là DỮ LIỆU MẪU. Trường nào muốn thiếu thì truyền undefined/null để bỏ khỏi YAML.
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Files } from './build';
+
+// Tên pháp lý của bản build "đang chạy" (build-e2e-site.ts dựng từ content/company.yaml thật): đọc từ chính tệp đó,
+// không viết cứng chuỗi trong test. Không đọc được thì ném lỗi (test đỏ có lý do), không đoán.
+export const siteLegalName = (): string => {
+  const file = resolve(dirname(fileURLToPath(import.meta.url)), '../../content/company.yaml');
+  const m = /^legalName:[ \t]*(?:"((?:[^"\\]|\\.)*)"|'([^']*)'|([^\n#]+?))[ \t]*(?:#.*)?$/m.exec(
+    readFileSync(file, 'utf8'),
+  );
+  const name = (m?.[1] ?? m?.[2] ?? m?.[3])?.trim();
+  if (!name) throw new Error(`không đọc được legalName từ ${file}`);
+  return name;
+};
 
 const q = (v: unknown) => JSON.stringify(v);
 export const yamlItem = (o: Record<string, unknown>, pad = '  ') =>

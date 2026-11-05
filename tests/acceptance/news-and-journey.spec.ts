@@ -32,19 +32,21 @@ const journeyFile = (statuses: Array<string | null>): Files => ({
       `- order: ${i + 1}\n  name:\n    vi: "${vi}"\n    en: "${en}"\n${statuses[i] ? `  status: "${statuses[i]}"\n` : ''}`,
   ).join(''),
 });
-// Tách các phần tử data-testid="journey-step" (phần tử cuối cắt tại thẻ đóng danh sách/khu vực kế tiếp).
-const stepTexts = (html: string): string[] =>
-  html
-    .split('data-testid="journey-step"')
-    .slice(1)
-    .map((chunk, i, all) => (i === all.length - 1 ? chunk.split(/<\/(?:ol|ul|section)>/i)[0] : chunk))
-    .map((chunk) =>
-      chunk
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim(),
-    );
+// Tách các phần tử data-testid="journey-step": nội dung từ SAU thẻ mở của bước tới TRƯỚC thẻ mở của bước kế (bước cuối: tới thẻ đóng danh sách/khu vực).
+// Cắt theo cả thẻ mở (không cắt giữa thẻ) để mảnh đầu/cuối không sót "<li" hay phần đuôi thuộc tính — sót đó làm phần chữ các bước lệch nhau (NEWS-13 en, e2e 6f55f15).
+const stepTexts = (html: string): string[] => {
+  const opens = [...html.matchAll(/<[a-z][a-z0-9]*\b[^>]*data-testid="journey-step"[^>]*>/gi)];
+  return opens.map((m, i) => {
+    const from = m.index + m[0].length;
+    const next = opens[i + 1]?.index;
+    const chunk = next !== undefined ? html.slice(from, next) : html.slice(from).split(/<\/(?:ol|ul|section)>/i)[0];
+    return chunk
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  });
+};
 
 test('NEWS-01 Trang Tin tức có lộ trình 5 bước, bước 1–3 mang nhãn "đang làm", bước 4–5 không nhãn (@S12 @kiem-luc-build @cho-khach:N18)', () => {
   const r = buildSite(journeyFile(['đang làm', 'đang làm', 'đang làm', null, null]));
@@ -87,7 +89,7 @@ test('NEWS-13 Bước đã xong mang nhãn "đã xong", bước đang làm mang 
       .trim()
       .toLowerCase();
   const bare = [2, 3, 4].map((i) => residue(en[i], STEP_NAMES[i][1]));
-  expect(new Set(bare).size, 'en: các bước không trạng thái có cùng phần chữ ngoài tên').toBe(1);
+  expect([...new Set(bare)], 'en: các bước không trạng thái (3–5) có cùng phần chữ ngoài tên').toHaveLength(1);
   const done = residue(en[0], STEP_NAMES[0][1]);
   const doing = residue(en[1], STEP_NAMES[1][1]);
   expect(done, 'en: bước 1 ("đã xong") có nhãn trạng thái').not.toBe(bare[0]);
