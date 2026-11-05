@@ -4,7 +4,6 @@
 import { expect, test } from '@playwright/test';
 import { allHtml, buildSite, count, type Files, htmlOf, newsFiles } from '../support/build';
 import { detailPath, newsPage, path } from '../support/routes';
-import { open, tid } from '../support/ui';
 
 const many = (n: number): Files =>
   Object.assign(
@@ -18,22 +17,77 @@ const many = (n: number): Files =>
     }),
   );
 
-test('NEWS-01 Trang Tin tức có lộ trình 5 bước (@S12 @cho-khach:N18)', async ({ page }) => {
-  await open(page, 'news', 'vi');
-  const steps = tid(page, 'journey-step');
-  await expect(steps).toHaveCount(5);
-  const expected = [
-    'Đánh giá hiện trạng',
-    'Tổ chức mặt bằng',
-    'Cải tạo hạ tầng',
-    'Triển khai công nghệ',
-    'Hoàn thiện hệ thống vận hành',
-  ];
-  const texts = await steps.allInnerTexts();
-  expected.forEach((e, i) => {
-    expect(texts[i]).toContain(e);
+// Lộ trình: content/journey-steps.yaml = JourneyStep[] {order, name{vi,en}, status?} (content-model.ts). Dựng từ nội dung giả rồi đọc HTML build
+// (news-and-journey.feature dòng 9, 17, 23; spec v0.5 N18). Tên EN là dữ liệu mẫu của test (spec chỉ ghi tên vi).
+const STEP_NAMES = [
+  ['Đánh giá hiện trạng', 'Current-state assessment'],
+  ['Tổ chức mặt bằng', 'Site organisation'],
+  ['Cải tạo hạ tầng', 'Infrastructure upgrade'],
+  ['Triển khai công nghệ', 'Technology rollout'],
+  ['Hoàn thiện hệ thống vận hành', 'Operations system completion'],
+];
+const journeyFile = (statuses: Array<string | null>): Files => ({
+  'journey-steps.yaml': STEP_NAMES.map(
+    ([vi, en], i) =>
+      `- order: ${i + 1}\n  name:\n    vi: "${vi}"\n    en: "${en}"\n${statuses[i] ? `  status: "${statuses[i]}"\n` : ''}`,
+  ).join(''),
+});
+// Tách các phần tử data-testid="journey-step" (phần tử cuối cắt tại thẻ đóng danh sách/khu vực kế tiếp).
+const stepTexts = (html: string): string[] =>
+  html
+    .split('data-testid="journey-step"')
+    .slice(1)
+    .map((chunk, i, all) => (i === all.length - 1 ? chunk.split(/<\/(?:ol|ul|section)>/i)[0] : chunk))
+    .map((chunk) =>
+      chunk
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    );
+
+test('NEWS-01 Trang Tin tức có lộ trình 5 bước, bước 1–3 mang nhãn "đang làm", bước 4–5 không nhãn (@S12 @kiem-luc-build @cho-khach:N18)', () => {
+  const r = buildSite(journeyFile(['đang làm', 'đang làm', 'đang làm', null, null]));
+  expect(r.ok, r.log).toBe(true);
+  const texts = stepTexts(htmlOf(r, path('news', 'vi'))!);
+  expect(texts, 'đúng 5 bước').toHaveLength(5);
+  STEP_NAMES.forEach(([vi], i) => {
+    expect(texts[i], `bước ${i + 1} đúng thứ tự tên`).toContain(vi);
   });
-  for (const t of texts) expect(t).not.toMatch(/đang làm|đã xong/i);
+  texts.forEach((t, i) => {
+    const labelled = /đang làm/i.test(t);
+    expect(labelled, `bước ${i + 1} (${STEP_NAMES[i][0]}): nhãn "đang làm"`).toBe(i < 3);
+    expect(t, `bước ${i + 1}: không nhãn khác`).not.toMatch(/đã xong|chưa tới/i);
+  });
+  expect(
+    texts.filter((t) => /đang làm/i.test(t)),
+    'đúng 3 nhãn "đang làm"',
+  ).toHaveLength(3);
+});
+
+// news-and-journey.feature dòng 17. Nhãn vi theo chữ spec; nhãn EN spec không ghi ⇒ khớp theo nghĩa (điểm mơ hồ gửi PM).
+test('NEWS-13 Bước đã xong mang nhãn "đã xong", bước đang làm mang nhãn "đang làm" ở cả vi và en (@S12 @kiem-luc-build)', () => {
+  const r = buildSite(journeyFile(['đã xong', 'đang làm', null, null, null]));
+  expect(r.ok, r.log).toBe(true);
+  const vi = stepTexts(htmlOf(r, path('news', 'vi'))!);
+  const en = stepTexts(htmlOf(r, path('news', 'en'))!);
+  expect(vi, 'vi: 5 bước').toHaveLength(5);
+  expect(en, 'en: 5 bước').toHaveLength(5);
+  expect(vi[0], 'vi: Đánh giá hiện trạng').toContain('đã xong');
+  expect(vi[0]).not.toMatch(/đang làm/i);
+  expect(vi[1], 'vi: Tổ chức mặt bằng').toContain('đang làm');
+  expect(vi[1]).not.toMatch(/đã xong/i);
+  expect(en[0], 'en: bước 1 nhãn hoàn thành').toMatch(/\b(done|completed?|finished)\b/i);
+  expect(en[0]).not.toMatch(/in progress|ongoing|under way|underway|in the works/i);
+  expect(en[1], 'en: bước 2 nhãn đang làm').toMatch(/in progress|ongoing|under way|underway|in the works|current/i);
+  expect(en[1]).not.toMatch(/\b(done|completed?|finished)\b/i);
+});
+
+// news-and-journey.feature dòng 23.
+test('NEWS-14 Trạng thái bước ngoài danh sách cho phép thì build đỏ, thông báo nêu bước và trạng thái (@S12 @kiem-luc-build)', () => {
+  const r = buildSite(journeyFile([null, null, 'sắp xong', null, null]));
+  expect(r.ok).toBe(false);
+  expect(r.log).toContain('bước 3 có trạng thái "sắp xong" không thuộc "chưa tới", "đang làm", "đã xong"');
 });
 
 test('NEWS-02 Danh sách Tin mới nhất trước, phân trang 12 bài (@S12 @kiem-luc-build)', () => {
