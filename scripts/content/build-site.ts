@@ -1,8 +1,11 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import sharp from 'sharp';
+import { parse as parseYaml } from 'yaml';
 import { formStatusOf } from '../../contracts/build.ts';
 import { PAGE_SIZE, ROUTES } from '../../contracts/routes.ts';
+import { buildFooterHtml, FOOTER_CSS, type FooterLink, parseSocial } from '../../src/components/ui/static-footer.ts';
+import { icon } from '../../src/components/ui/static-icons.ts';
 import {
   type LoadedCompany,
   type LoadedImage,
@@ -58,6 +61,14 @@ const MENU_LABELS: Record<Locale, Record<StaticPageKey, string>> = {
     privacy: 'Privacy policy',
   },
 };
+
+// ux-spec §14a: hai nhóm liên kết chân trang. Trang chủ đã có ở logo đầu trang nên không lặp.
+const FOOTER_EXPLORE: StaticPageKey[] = ['about', 'solutions', 'technology', 'products', 'news', 'projects'];
+const FOOTER_INFO: StaticPageKey[] = ['careers', 'faq', 'privacy', 'contact'];
+
+function footerLink(k: StaticPageKey, locale: Locale, active?: StaticPageKey): FooterLink {
+  return { href: ROUTES[k][locale], label: MENU_LABELS[locale][k], current: active === k };
+}
 
 const PAGE_DESCRIPTIONS: Record<Locale, Record<StaticPageKey, string>> = {
   vi: {
@@ -299,7 +310,7 @@ input:focus, input:focus-visible, select:focus, select:focus-visible, textarea:f
   padding: 4px 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
-/* Thứ tự DOM = thứ tự tab ux-spec §5.1 (logo → menu chính → ngôn ngữ); bố cục nhìn thấy do grid-area quyết định. */
+/* Thứ tự DOM = thứ tự tab ux-spec §5.1 (logo, menu chính, rồi ngôn ngữ); bố cục nhìn thấy do grid-area quyết định. */
 .header-grid {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand tools" "nav nav";
   align-items: center; column-gap: 12px; padding-top: 8px; padding-bottom: 8px;
@@ -515,13 +526,6 @@ input[type="checkbox"] {
   transform: translateY(-4px); box-shadow: 0 12px 28px -8px rgba(15, 88, 56, 0.16) !important;
 }
 
-.site-footer a, footer a {
-  display: inline-flex !important;
-  align-items: center !important;
-  min-height: 24px !important;
-  min-width: 24px !important;
-}
-
 /* Floating Contact Buttons */
 .floating-contact-group {
   position: fixed; bottom: 24px; right: 24px; z-index: 99;
@@ -577,9 +581,12 @@ input[type="checkbox"] {
 .error-box { background: var(--error-bg); color: var(--error); border: 1px solid var(--error); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
 .notice-box { background: var(--tint); color: var(--g900); border: 1px solid var(--line); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
 .notice-box[hidden] { display: none; }
-.field-error { color: var(--error); font-size: 0.9rem; font-weight: 600; margin: 4px 0 0; }
-.field-error::before { content: "⚠ "; }
+.field-error { display: flex; align-items: flex-start; gap: 6px; color: var(--error); font-size: 0.9rem; font-weight: 600; margin: 4px 0 0; }
+.field-error > svg { flex: none; margin-top: 2px; }
 .field-error[hidden] { display: none; }
+.btn > svg { flex: none; }
+.mobile-menu-btn .ic-close, .mobile-menu-btn[aria-expanded="true"] .ic-open { display: none; }
+.mobile-menu-btn[aria-expanded="true"] .ic-close { display: block; }
 [aria-invalid="true"] { border-color: var(--error) !important; }
 .human-slot { min-height: 65px; margin-bottom: 12px; }
 .error-box ul, .notice-box ul { margin: 0; padding-left: 20px; }
@@ -587,12 +594,7 @@ input[type="checkbox"] {
 .success-box { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok); padding: 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
 .hp-trap { position: absolute !important; left: -9999px !important; width: 1px !important; height: 1px !important; overflow: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 
-footer.site-footer { background: var(--g900); color: var(--white); padding: 40px 0 24px; margin-top: 40px; }
-footer.site-footer p, footer.site-footer strong { color: var(--white); }
-footer.site-footer a { color: var(--white); text-decoration: underline; min-height: 34px; }
-.footer-grid { display: grid; gap: 24px; }
-@media (min-width: 900px) { .footer-grid { grid-template-columns: 1.4fr 1fr 1fr; } }
-.footer-bottom { border-top: 1px solid rgb(255 255 255 / 0.22); margin-top: 24px; padding-top: 16px; font-size: 0.9rem; }
+${FOOTER_CSS}
 
 @media (max-width: 480px) {
   .wrap, .container { padding: 0 14px; }
@@ -629,7 +631,7 @@ function renderLayout(opts: {
   noindex?: boolean;
   ogImageRel?: string;
   siteUrl: string;
-  company: LoadedCompany;
+  company: LoadedCompany & { social?: Array<{ url: string }> };
   activePageKey?: StaticPageKey;
   bodyHtml: string;
 }): string {
@@ -663,22 +665,22 @@ function renderLayout(opts: {
     return `<a href="${href}" data-testid="nav-menu"${current}>${escHtml(MENU_LABELS[locale][k])}</a>`;
   }).join('');
 
-  const phoneHtml =
-    company.phone && company.phone.trim()
-      ? `<p><strong>${locale === 'vi' ? 'Điện thoại' : 'Phone'}:</strong> <a href="tel:${escHtml(company.phone.trim())}">${escHtml(formatPublicPhone(company.phone, locale))}</a></p>`
-      : '';
-  const zaloHtml =
-    company.zalo && company.zalo.trim()
-      ? `<p><strong>Zalo:</strong> <a href="${escHtml(company.zalo.trim())}" rel="noopener noreferrer">${escHtml(company.zalo.trim())}</a></p>`
-      : '';
-  const addrHtml =
-    company.address && company.address[locale]?.trim()
-      ? `<p><strong>${locale === 'vi' ? 'Địa chỉ' : 'Address'}:</strong> ${escHtml(company.address[locale])}</p>`
-      : '';
-  const taxHtml =
-    company.taxId && company.taxId.trim()
-      ? `<p data-testid="tax-id"><strong>${locale === 'vi' ? 'Mã số thuế' : 'Tax ID'}:</strong> ${escHtml(company.taxId.trim())}</p>`
-      : '';
+  const phoneRaw = company.phone?.trim() ?? '';
+  const zaloRaw = company.zalo?.trim() ?? '';
+  const phoneShown = phoneRaw ? formatPublicPhone(phoneRaw, locale) : '';
+  const footerHtml = buildFooterHtml({
+    locale,
+    legalName: brandName,
+    slogan: locale === 'vi' ? 'Giải pháp thông minh – Kiến tạo giá trị xanh' : 'Smart solutions – Creating green value',
+    year: new Date().getFullYear(),
+    phone: phoneRaw ? { href: `tel:${phoneRaw}`, text: phoneShown } : null,
+    zalo: zaloRaw ? { href: zaloRaw, text: phoneShown || zaloRaw.replace(/^https?:\/\//i, '') } : null,
+    fanpages: company.social ?? [],
+    address: company.address?.[locale] ?? null,
+    taxId: company.taxId,
+    explore: FOOTER_EXPLORE.map((k) => footerLink(k, locale, activePageKey)),
+    info: FOOTER_INFO.map((k) => footerLink(k, locale, activePageKey)),
+  });
 
   const orgJsonLd = buildOrgJsonLd(company, siteUrl, locale);
   // legalName là một chuỗi không tách locale (content-model.ts Company.legalName): vi và en cùng hiện đúng chuỗi này.
@@ -690,14 +692,14 @@ function renderLayout(opts: {
     company.zalo && company.zalo.trim()
       ? `<a href="${escHtml(company.zalo.trim())}" target="_blank" rel="noopener noreferrer" class="floating-circle-btn floating-btn-zalo" aria-label="Chat Zalo" title="Chat Zalo: ${escHtml(company.phone || '')}">
         <span class="floating-pulse"></span>
-        <svg width="34" height="34" viewBox="0 0 48 48"><path fill="#ffffff" d="M24 6C13.5 6 5 13.6 5 23c0 3.8 1.4 7.3 3.8 10.2L6.2 40.5a1.2 1.2 0 0 0 1.5 1.5l7.6-2.5C18 40.4 20.9 41 24 41c10.5 0 19-7.6 19-17S34.5 6 24 6z"/><text x="24" y="28" font-size="14" font-weight="900" font-family="Arial, sans-serif" text-anchor="middle" fill="#0068ff">Zalo</text></svg>
+        ${icon('message-circle', { size: 24 })}
       </a>`
       : '';
   const floatingPhoneHtml =
     company.phone && company.phone.trim()
       ? `<a href="tel:${escHtml(company.phone.trim())}" class="floating-circle-btn floating-btn-phone" aria-label="Hotline" title="Hotline: ${escHtml(company.phone.trim())}">
         <span class="floating-pulse"></span>
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+        ${icon('phone', { size: 24 })}
       </a>`
       : '';
   const floatingAsideHtml =
@@ -753,7 +755,7 @@ function renderLayout(opts: {
             <a hreflang="en" href="${escHtml(enPath)}" lang="en"${locale === 'en' ? ' aria-current="true"' : ''}>English</a>
           </div>
           <button type="button" class="mobile-menu-btn" id="btn-mobile-menu" aria-label="${locale === 'vi' ? 'Menu di động' : 'Mobile menu'}" aria-expanded="false" aria-controls="header-nav-wrap" onclick="var el=document.getElementById('header-nav-wrap');if(el){var o=el.classList.toggle('is-mobile-open');this.setAttribute('aria-expanded', o);if(o){var f=el.querySelector('a');if(f)f.focus();}}">
-            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            ${icon('menu', { size: 24, className: 'ic-open' })}${icon('x', { size: 24, className: 'ic-close' })}
           </button>
         </div>
       </div>
@@ -762,43 +764,7 @@ function renderLayout(opts: {
   <main id="main-content" class="container">
     ${bodyHtml}
   </main>
-  <footer class="site-footer on-dark" data-testid="footer" style="background:#0a3e27; padding:48px 0 28px; border-top:2px solid rgba(27,122,75,0.3); margin-top:auto;">
-    <div class="container">
-      <div class="footer-grid" style="display:grid; gap:32px; padding-bottom:32px; border-bottom:1px solid rgba(255,255,255,0.15);">
-        <div>
-          <div style="margin-bottom:12px;">${INLINE_LOGO_MARK_SVG}</div>
-          <p style="font-weight:800; font-size:1.05rem; margin-bottom:6px;"><strong>${escHtml(displayBrand)}</strong></p>
-          <p style="font-size:0.9rem; opacity:0.85; line-height:1.5;">${locale === 'vi' ? 'Giải pháp thông minh – Kiến tạo giá trị xanh.' : 'Smart solutions – Creating green value.'}</p>
-          <p style="margin-top:10px;"><span style="display:inline-block; padding:4px 12px; border-radius:999px; font-size:0.8rem; background:rgba(27,122,75,0.4); color:#a7f3d0; border:1px solid rgba(167,243,208,0.2);">🌿 ${locale === 'vi' ? 'Công nghệ sạch tuần hoàn' : 'Clean circular technology'}</span></p>
-        </div>
-        <div>
-          <p style="font-size:0.8rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#6ee7b7; margin-bottom:12px;">${locale === 'vi' ? 'Thông tin liên hệ' : 'Contact Information'}</p>
-          ${addrHtml}
-          ${phoneHtml}
-          ${zaloHtml}
-          ${taxHtml}
-        </div>
-        <div>
-          <p style="font-size:0.8rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#6ee7b7; margin-bottom:12px;">${locale === 'vi' ? 'Liên kết chính' : 'Quick Links'}</p>
-          <p><a href="${ROUTES.home[locale]}" style="color:rgba(255,255,255,0.85); text-decoration:none;">${escHtml(MENU_LABELS[locale].home)}</a></p>
-          <p><a href="${ROUTES.about[locale]}" style="color:rgba(255,255,255,0.85); text-decoration:none;">${escHtml(MENU_LABELS[locale].about)}</a></p>
-          <p><a href="${ROUTES.technology[locale]}" style="color:rgba(255,255,255,0.85); text-decoration:none;">${escHtml(MENU_LABELS[locale].technology)}</a></p>
-          <p><a href="${ROUTES.products[locale]}" style="color:rgba(255,255,255,0.85); text-decoration:none;">${escHtml(MENU_LABELS[locale].products)}</a></p>
-        </div>
-        <div>
-          <p style="font-size:0.8rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#6ee7b7; margin-bottom:12px;">${locale === 'vi' ? 'Pháp lý & Tiêu chuẩn' : 'Compliance & Legal'}</p>
-          <p style="font-size:0.85rem; opacity:0.85; line-height:1.5;">${locale === 'vi' ? 'Tuân thủ quy chuẩn kỹ thuật môi trường quốc gia và Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15.' : 'Compliant with national environmental emission standards and Personal Data Protection Law.'}</p>
-          <p style="margin-top:12px;">
-            <a href="${ROUTES.privacy[locale]}" style="color:#6ee7b7; font-weight:700; text-decoration:underline;">🔒 ${escHtml(MENU_LABELS[locale].privacy)}</a> ·
-            <a href="${ROUTES.contact[locale]}" style="color:#6ee7b7; font-weight:700; text-decoration:underline;">${escHtml(MENU_LABELS[locale].contact)}</a>
-          </p>
-        </div>
-      </div>
-      <div class="footer-bottom" style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; padding-top:20px; font-size:0.85rem; opacity:0.75;">
-        <p style="margin:0;">© 2026 ${escHtml(displayBrand)}. ${locale === 'vi' ? 'Tất cả các quyền được bảo lưu.' : 'All rights reserved.'}</p>
-      </div>
-    </div>
-  </footer>
+  ${footerHtml}
   ${floatingAsideHtml}
 </body>
 </html>`;
@@ -883,7 +849,7 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
               : 'From waste to resources. GMS Hung Yen is building, step by step, a sorting and conversion system that returns still-valuable material streams to a new cycle of use.'
           }</p>
           <p style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px;">
-            <a href="${ROUTES.technology[locale]}" class="btn btn-light">${isVi ? 'Tìm hiểu công nghệ →' : 'Explore the technology →'}</a>
+            <a href="${ROUTES.technology[locale]}" class="btn btn-light">${isVi ? 'Tìm hiểu công nghệ' : 'Explore the technology'}${icon('arrow-right', { size: 18 })}</a>
             <a href="${ROUTES.contact[locale]}" class="btn btn-ghost" data-testid="cta-contact">${isVi ? 'Liên hệ hợp tác' : 'Partner with us'}</a>
           </p>
         </div>
@@ -936,7 +902,7 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
           <p class="eyebrow">${isVi ? 'Công nghệ' : 'Technology'}</p>
           <h2>${isVi ? 'Hai nhóm công đoạn, sáu dòng đầu ra' : 'Two process groups, six output streams'}</h2>
           <p>${isVi ? 'Chất thải đi qua sàng tuyển để tách dòng, và qua công nghệ VPD để chuyển hoá những dòng nguyên liệu phù hợp thành sản phẩm mới.' : 'Waste passes through sorting to separate streams, and through VPD technology to convert suitable feedstock into new products.'}</p>
-          <p><a class="btn btn-light" href="${ROUTES.technology[locale]}">${isVi ? 'Xem quy trình công nghệ →' : 'See the process →'}</a></p>
+          <p><a class="btn btn-light" href="${ROUTES.technology[locale]}">${isVi ? 'Xem quy trình công nghệ' : 'See the process'}${icon('arrow-right', { size: 18 })}</a></p>
         </div>
         <div class="mini-flow" role="img" aria-label="${escHtml(miniDiagramAria)}">
           <div class="mf-node mf-in">${isVi ? 'Chất thải đầu vào' : 'Incoming waste'}</div>
@@ -1315,9 +1281,9 @@ function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): strin
       <h2 id="vpd-title">${isVi ? 'Quy trình chuyển hoá, từng bước' : 'The conversion process, step by step'}</h2>
       <p>${isVi ? 'Bấm từng bước hoặc chọn “Tự chạy” để xem dòng nguyên liệu đi qua dây chuyền.' : 'Tap a step or choose “Auto play” to follow the feedstock through the line.'}</p>
       <div class="step-controls">
-        <button type="button" class="btn btn-outline" id="step-prev">← ${isVi ? 'Bước trước' : 'Previous'}</button>
+        <button type="button" class="btn btn-outline" id="step-prev">${icon('arrow-left', { size: 18 })}${isVi ? 'Bước trước' : 'Previous'}</button>
         <button type="button" class="btn" id="step-play" aria-pressed="false" data-label-play="${isVi ? 'Tự chạy' : 'Auto play'}" data-label-stop="${isVi ? 'Dừng' : 'Stop'}">${isVi ? 'Tự chạy' : 'Auto play'}</button>
-        <button type="button" class="btn btn-outline" id="step-next">${isVi ? 'Bước sau' : 'Next'} →</button>
+        <button type="button" class="btn btn-outline" id="step-next">${isVi ? 'Bước sau' : 'Next'}${icon('arrow-right', { size: 18 })}</button>
       </div>
       <p class="sr-only" aria-live="polite" id="step-live"></p>
       <ol class="steps" id="vpd-steps-list">
@@ -1457,13 +1423,11 @@ function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum:
     'đang làm': 'doing',
     'đã xong': 'done',
   };
-  // Biểu tượng lucide check/clock/circle, 14px, nét 2px, currentColor; trang trí nên aria-hidden.
-  const SVG_OPEN =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">';
+  // Biểu tượng lucide check/clock/circle, 14px, nét 2px (U03b), dựng chung nguồn với mọi biểu tượng khác.
   const STATUS_ICON: Record<'done' | 'doing' | 'upcoming', string> = {
-    done: `${SVG_OPEN}<path d="M20 6 9 17l-5-5"/></svg>`,
-    doing: `${SVG_OPEN}<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
-    upcoming: `${SVG_OPEN}<circle cx="12" cy="12" r="10"/></svg>`,
+    done: icon('check', { size: 14, strokeWidth: 2 }),
+    doing: icon('clock', { size: 14, strokeWidth: 2 }),
+    upcoming: icon('circle', { size: 14, strokeWidth: 2 }),
   };
 
   const allItems = content.news[locale];
@@ -1752,12 +1716,12 @@ const contactFormScript = (hasPhone: boolean, hasZalo: boolean): string => `
       var f = fieldEl(k);
       var h = $('err-' + k);
       if (errs[k]) {
-        h.textContent = errs[k];
+        h.querySelector('.fe-text').textContent = errs[k];
         h.hidden = false;
         f.setAttribute('aria-invalid', 'true');
         f.setAttribute('aria-describedby', 'err-' + k);
       } else {
-        h.textContent = '';
+        h.querySelector('.fe-text').textContent = '';
         h.hidden = true;
         f.removeAttribute('aria-invalid');
         f.removeAttribute('aria-describedby');
@@ -2046,7 +2010,7 @@ function renderContactPage(
   const hasMap = Boolean(mapPoint || mapLinkUrl || (company.mapImage && company.mapImage.trim()));
   const mapTitle = isVi ? 'Bản đồ vị trí nhà máy' : 'Plant Location Map';
   const mapLinkHtml = mapLinkUrl
-    ? `<a href="${escHtml(mapLinkUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="min-height: 36px; padding: 6px 14px; font-size: 0.85rem;">${isVi ? 'Mở trên Google Maps ↗' : 'Open in Google Maps ↗'}</a>`
+    ? `<a href="${escHtml(mapLinkUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="min-height: 36px; padding: 6px 14px; font-size: 0.85rem;">${isVi ? 'Mở trên Google Maps' : 'Open in Google Maps'}<span class="sr-only"> ${isVi ? '(mở tab mới)' : '(opens in a new tab)'}</span>${icon('external-link', { size: 18 })}</a>`
     : '';
   const mapAddress = isVi
     ? 'Quốc lộ 39, Bần Yên Nhân, Mỹ Hào, Hưng Yên'
@@ -2080,6 +2044,9 @@ function renderContactPage(
     ? `Tôi đồng ý để ${escHtml(company.legalName ?? '')} thu thập và dùng họ tên, email hoặc số điện thoại, công ty và nội dung tôi nhập với mục đích trả lời liên hệ này. Xem <a href="${ROUTES.privacy.vi}" tabindex="-1">Chính sách bảo mật</a>.`
     : `I agree that ${escHtml(company.legalName ?? '')} may collect and use the full name, email or phone number, company and message I enter in order to reply and respond to my inquiry. See the <a href="${ROUTES.privacy.en}" tabindex="-1">Privacy policy</a>.`;
 
+  // Lỗi trường: biểu tượng trang trí + chữ lỗi (kênh chính, aria-describedby trỏ vào <p>); script chỉ đổi .fe-text.
+  const fieldError = (k: string) =>
+    `<p class="field-error" id="err-${k}" hidden>${icon('circle-alert', { size: 18 })}<span class="fe-text"></span></p>`;
   const formHtml = canRenderForm
     ? `<form data-testid="contact-form" id="gms-contact-form" method="post" action="/api/contact" novalidate data-locale="${locale}" data-policy-version="${escHtml(polVer)}" data-phone="${escHtml(phoneRaw)}" data-phone-shown="${escHtml(phoneShown)}" data-zalo="${escHtml(zaloRaw)}" data-sitekey="${escHtml(turnstileSiteKey)}" data-home="${ROUTES.home[locale]}">
         <div id="contact-feedback-area"></div>
@@ -2087,28 +2054,28 @@ function renderContactPage(
         <div class="form-group">
           <label for="contact-name">${isVi ? 'Họ và tên (bắt buộc)' : 'Full name (required)'}</label>
           <input id="contact-name" name="fullName" type="text" class="form-control" data-testid="contact-name" required maxlength="200" autocomplete="name" />
-          <p class="field-error" id="err-fullName" hidden></p>
+          ${fieldError('fullName')}
         </div>
         <p><small>${isVi ? 'Cần điền ít nhất email hoặc số điện thoại.' : 'Please provide at least an email or a phone number.'}</small></p>
         <div class="form-group">
           <label for="contact-email">Email</label>
           <input id="contact-email" name="email" type="email" class="form-control" data-testid="contact-email" maxlength="254" autocomplete="email" />
-          <p class="field-error" id="err-email" hidden></p>
+          ${fieldError('email')}
         </div>
         <div class="form-group">
           <label for="contact-phone">${isVi ? 'Số điện thoại' : 'Phone number'}</label>
           <input id="contact-phone" name="phone" type="tel" class="form-control" data-testid="contact-phone" maxlength="20" autocomplete="tel" />
-          <p class="field-error" id="err-phone" hidden></p>
+          ${fieldError('phone')}
         </div>
         <div class="form-group">
           <label for="contact-company">${isVi ? 'Công ty / Tổ chức (không bắt buộc)' : 'Company / Organisation (optional)'}</label>
           <input id="contact-company" name="company" type="text" class="form-control" data-testid="contact-company" maxlength="200" autocomplete="organization" />
-          <p class="field-error" id="err-company" hidden></p>
+          ${fieldError('company')}
         </div>
         <div class="form-group">
           <label for="contact-message">${isVi ? 'Nội dung (bắt buộc)' : 'Message (required)'}</label>
           <textarea id="contact-message" name="message" rows="4" class="form-control" data-testid="contact-message" required maxlength="5000"></textarea>
-          <p class="field-error" id="err-message" hidden></p>
+          ${fieldError('message')}
         </div>
         <div class="hp-trap" aria-hidden="true">
           <input id="contact-trap" name="website" type="text" tabindex="-1" autocomplete="off" data-testid="contact-trap" />
@@ -2118,7 +2085,7 @@ function renderContactPage(
             <input id="contact-consent" name="consent" type="checkbox" data-testid="contact-consent" style="margin-top: 4px; width: 24px; height: 24px; min-width: 24px; min-height: 24px; cursor: pointer;" />
             <span>${consentText}</span>
           </label>
-          <p class="field-error" id="err-consent" hidden></p>
+          ${fieldError('consent')}
         </div>
         <p id="contact-human-wait" class="notice-box" data-testid="contact-human-wait" hidden></p>
         <div id="contact-human-slot" class="human-slot" data-testid="contact-human-slot"></div>
@@ -2229,6 +2196,13 @@ export async function runBuildSite(options?: {
 
   const hash = computeContentHash(contentDir);
   console.log(`content-hash: ${hash}`);
+
+  // shortcut: LoadedCompany (loader.ts, lãnh địa backend) chưa mang Company.social; đọc lại từ company.yaml ở đây. Bỏ khi loader xuất `social`.
+  const companyYamlPath = join(contentDir, 'company.yaml');
+  const rawSocial = existsSync(companyYamlPath)
+    ? (parseYaml(readFileSync(companyYamlPath, 'utf8')) as { social?: unknown } | null)?.social
+    : undefined;
+  const siteCompany = { ...loaded.company, social: parseSocial(rawSocial) };
 
   if (existsSync(outDir)) {
     rmSync(outDir, { recursive: true, force: true });
@@ -2344,7 +2318,7 @@ export async function runBuildSite(options?: {
         enPath,
         noindex,
         siteUrl,
-        company: loaded.company,
+        company: siteCompany,
         activePageKey: key,
         bodyHtml,
       });
@@ -2369,7 +2343,7 @@ export async function runBuildSite(options?: {
         enPath,
         noindex: isStaging,
         siteUrl,
-        company: loaded.company,
+        company: siteCompany,
         activePageKey: 'news',
         bodyHtml,
       });
@@ -2419,7 +2393,7 @@ export async function runBuildSite(options?: {
         noindex: isStaging,
         ogImageRel,
         siteUrl,
-        company: loaded.company,
+        company: siteCompany,
         activePageKey: 'news',
         bodyHtml,
       });
@@ -2451,7 +2425,7 @@ export async function runBuildSite(options?: {
         enPath,
         noindex: isStaging,
         siteUrl,
-        company: loaded.company,
+        company: siteCompany,
         activePageKey: 'projects',
         bodyHtml,
       });
@@ -2487,7 +2461,7 @@ export async function runBuildSite(options?: {
         enPath,
         noindex: isStaging,
         siteUrl,
-        company: loaded.company,
+        company: siteCompany,
         activePageKey: 'careers',
         bodyHtml,
       });
@@ -2509,7 +2483,7 @@ export async function runBuildSite(options?: {
       enPath: '/en/404',
       noindex: true,
       siteUrl,
-      company: loaded.company,
+      company: siteCompany,
       bodyHtml: `<section class="section-block">
         <h1>${isVi ? 'Không tìm thấy trang (404)' : 'Page not found (404)'}</h1>
         <p>${

@@ -1,3 +1,4 @@
+import { ArrowRight, MapPin } from 'lucide-react';
 import type React from 'react';
 import { ROUTES } from '../../../contracts/routes.ts';
 import { getDictionary, type Locale } from '../../i18n/index.ts';
@@ -60,11 +61,15 @@ export function CareersPageView({ locale }: { locale: Locale }): React.ReactElem
                   <h3 className="text-lg font-bold text-[#0F5838] leading-snug">{pos.title}</h3>
                   <span className="badge bg-[#9FB43B]/20 text-[#0F5838] font-semibold">{pos.type}</span>
                 </div>
-                <p className="text-xs font-semibold text-[#1D6FB6] mb-3">📍 {pos.location}</p>
+                <p className="text-xs font-semibold text-[#1D6FB6] mb-3">
+                  <MapPin size={14} aria-hidden="true" focusable="false" className="inline-block align-[-2px]" />{' '}
+                  {pos.location}
+                </p>
                 <p className="text-sm leading-relaxed text-[#40773F] mb-5">{pos.desc}</p>
                 <div className="mt-auto pt-2">
                   <a href={ROUTES.contact[locale]} className="btn btn-outline" data-testid="cta-contact">
-                    {isVi ? 'Ứng tuyển ngay' : 'Apply now'} →
+                    {isVi ? 'Ứng tuyển ngay' : 'Apply now'}{' '}
+                    <ArrowRight size={18} aria-hidden="true" focusable="false" />
                   </a>
                 </div>
               </article>

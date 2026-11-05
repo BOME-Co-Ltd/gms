@@ -1,3 +1,4 @@
+import { ArrowRight } from 'lucide-react';
 import type React from 'react';
 
 export interface HeroSectionProps {
@@ -46,7 +47,7 @@ export function HeroSection({
           <p>{subtitle}</p>
           <p className="mt-5 flex flex-wrap gap-3">
             <a href={ctaTechHref} className="btn btn-light">
-              {ctaTechLabel} →
+              {ctaTechLabel} <ArrowRight size={18} aria-hidden="true" focusable="false" />
             </a>
             <a href={ctaContactHref} className="btn btn-ghost" data-testid="cta-contact">
               {ctaContactLabel}

@@ -1,3 +1,4 @@
+import { ArrowRight } from 'lucide-react';
 import type React from 'react';
 
 export interface JourneySectionProps {
@@ -24,7 +25,7 @@ export function JourneySection({
           <p className="text-base leading-relaxed text-[#1b4332] mb-6">{description}</p>
           <p className="m-0">
             <a href={newsHref} className="btn btn-outline inline-flex items-center gap-2">
-              {btnLabel} →
+              {btnLabel} <ArrowRight size={18} aria-hidden="true" focusable="false" />
             </a>
           </p>
         </div>

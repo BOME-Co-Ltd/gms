@@ -1,7 +1,9 @@
 'use client';
 
+import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { LangSwitcher } from './LangSwitcher.tsx';
 
 export interface NavItem {
@@ -87,27 +89,9 @@ export function Header({
                 onClick={() => setMobileOpen((prev) => !prev)}
               >
                 {mobileOpen ? (
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    focusable="false"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X size={24} strokeWidth={2} aria-hidden="true" focusable="false" />
                 ) : (
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    focusable="false"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
+                  <Menu size={24} strokeWidth={2} aria-hidden="true" focusable="false" />
                 )}
               </button>
             </div>

@@ -1,3 +1,4 @@
+import { ArrowRight } from 'lucide-react';
 import type React from 'react';
 import { ROUTES } from '../../../contracts/routes.ts';
 import { getDictionary, type Locale } from '../../i18n/index.ts';
@@ -89,7 +90,7 @@ export function ProductsPageView({ locale }: { locale: Locale }): React.ReactEle
           </p>
           <p className="mt-4">
             <a href={ROUTES.contact[locale]} className="btn" data-testid="cta-contact">
-              {dict.home.ctaContact} →
+              {dict.home.ctaContact} <ArrowRight size={18} aria-hidden="true" focusable="false" />
             </a>
           </p>
         </section>
