@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 import { formStatusOf } from '../../contracts/build.ts';
@@ -670,24 +670,27 @@ function renderLayout(opts: {
   const switcherLabel = locale === 'vi' ? 'Đổi ngôn ngữ' : 'Language switcher';
   const viSwitcherText = canonicalPath === '/en/404' ? 'Vietnamese' : 'Tiếng Việt';
 
-  const floatingZaloHtml = (company.zalo && company.zalo.trim())
-    ? `<a href="${escHtml(company.zalo.trim())}" target="_blank" rel="noopener noreferrer" class="floating-circle-btn floating-btn-zalo" aria-label="Chat Zalo" title="Chat Zalo: ${escHtml(company.phone || '')}">
+  const floatingZaloHtml =
+    company.zalo && company.zalo.trim()
+      ? `<a href="${escHtml(company.zalo.trim())}" target="_blank" rel="noopener noreferrer" class="floating-circle-btn floating-btn-zalo" aria-label="Chat Zalo" title="Chat Zalo: ${escHtml(company.phone || '')}">
         <span class="floating-pulse"></span>
         <svg width="34" height="34" viewBox="0 0 48 48"><path fill="#ffffff" d="M24 6C13.5 6 5 13.6 5 23c0 3.8 1.4 7.3 3.8 10.2L6.2 40.5a1.2 1.2 0 0 0 1.5 1.5l7.6-2.5C18 40.4 20.9 41 24 41c10.5 0 19-7.6 19-17S34.5 6 24 6z"/><text x="24" y="28" font-size="14" font-weight="900" font-family="Arial, sans-serif" text-anchor="middle" fill="#0068ff">Zalo</text></svg>
       </a>`
-    : '';
-  const floatingPhoneHtml = (company.phone && company.phone.trim())
-    ? `<a href="tel:${escHtml(company.phone.trim())}" class="floating-circle-btn floating-btn-phone" aria-label="Hotline" title="Hotline: ${escHtml(company.phone.trim())}">
+      : '';
+  const floatingPhoneHtml =
+    company.phone && company.phone.trim()
+      ? `<a href="tel:${escHtml(company.phone.trim())}" class="floating-circle-btn floating-btn-phone" aria-label="Hotline" title="Hotline: ${escHtml(company.phone.trim())}">
         <span class="floating-pulse"></span>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
       </a>`
-    : '';
-  const floatingAsideHtml = (floatingZaloHtml || floatingPhoneHtml)
-    ? `<aside class="floating-contact-group" aria-label="${locale === 'vi' ? 'Liên hệ nhanh' : 'Quick contact'}">
+      : '';
+  const floatingAsideHtml =
+    floatingZaloHtml || floatingPhoneHtml
+      ? `<aside class="floating-contact-group" aria-label="${locale === 'vi' ? 'Liên hệ nhanh' : 'Quick contact'}">
         ${floatingZaloHtml}
         ${floatingPhoneHtml}
       </aside>`
-    : '';
+      : '';
 
   return `<!DOCTYPE html>
 <html lang="${locale}">
@@ -1613,8 +1616,12 @@ const contactFormScript = (hasPhone: boolean, hasZalo: boolean): string => `
     var statusEl = $('contact-status');
     var waitEl = $('contact-human-wait');
     var slot = $('contact-human-slot');
-    ${hasPhone ? `var phoneRaw = form.getAttribute('data-phone') || '';
-    var phoneShown = form.getAttribute('data-phone-shown') || phoneRaw;` : ''}
+    ${
+      hasPhone
+        ? `var phoneRaw = form.getAttribute('data-phone') || '';
+    var phoneShown = form.getAttribute('data-phone-shown') || phoneRaw;`
+        : ''
+    }
     ${hasZalo ? `var zalo = form.getAttribute('data-zalo') || '';` : ''}
     var sitekey = form.getAttribute('data-sitekey') || '';
     var CTRL = /[\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]/;

@@ -132,9 +132,6 @@ textarea:focus-visible {
 
 /* Page fade-in transition */
 
-
-
-
 .wrap,
 .container {
   max-width: var(--wrap);
@@ -897,7 +894,10 @@ input[type="checkbox"] {
 .pillar-card,
 .figure-card,
 .partner-logo-item {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease !important;
+  transition:
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease !important;
 }
 .card:hover,
 .output-card:hover,
@@ -930,7 +930,9 @@ input[type="checkbox"] {
   color: #ffffff;
   text-decoration: none;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   cursor: pointer;
 }
@@ -1025,13 +1027,34 @@ input[type="checkbox"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after,
-  html *, body *,
-  a, button, input, select, textarea, summary,
-  .card, .output-card, .pillar-card, .figure-card, .partner-logo-item,
-  .btn, .btn-light, .btn-ghost, .btn-secondary, .btn-outline,
-  .floating-circle-btn, .floating-btn, .floating-pulse,
-  nav a, .lang-switcher a, .site-header, .site-footer {
+  *,
+  *::before,
+  *::after,
+  html *,
+  body *,
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  .card,
+  .output-card,
+  .pillar-card,
+  .figure-card,
+  .partner-logo-item,
+  .btn,
+  .btn-light,
+  .btn-ghost,
+  .btn-secondary,
+  .btn-outline,
+  .floating-circle-btn,
+  .floating-btn,
+  .floating-pulse,
+  nav a,
+  .lang-switcher a,
+  .site-header,
+  .site-footer {
     animation: none !important;
     animation-duration: 0s !important;
     animation-delay: 0s !important;
@@ -1126,11 +1149,10 @@ footer.site-footer a {
   }
 }
 
-
-.site-footer a, footer a {
+.site-footer a,
+footer a {
   display: inline-flex !important;
   align-items: center !important;
   min-height: 24px !important;
   min-width: 24px !important;
 }
-

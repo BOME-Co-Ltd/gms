@@ -69,15 +69,15 @@ export function TechnologyPageView({ locale }: { locale: Locale }): React.ReactE
 
         <section className="section-block">
           <p className="eyebrow">{isVi ? 'Kiểm chuẩn & Giám sát' : 'Quality Assurance & SCADA'}</p>
-          <h2>
-            {isVi ? 'Hạ tầng kiểm chuẩn và trung tâm điều khiển' : 'Quality Control Laboratory & SCADA Center'}
-          </h2>
+          <h2>{isVi ? 'Hạ tầng kiểm chuẩn và trung tâm điều khiển' : 'Quality Control Laboratory & SCADA Center'}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <figure className="card overflow-hidden rounded-2xl border border-[#0f5838]/20 shadow-md bg-white p-0">
               <img
                 src="/img/scada-control-room.jpg"
                 alt={
-                  isVi ? 'Trung tâm điều khiển SCADA và giám sát khí thải CEMS' : 'SCADA control room and CEMS monitoring'
+                  isVi
+                    ? 'Trung tâm điều khiển SCADA và giám sát khí thải CEMS'
+                    : 'SCADA control room and CEMS monitoring'
                 }
                 width={800}
                 height={500}

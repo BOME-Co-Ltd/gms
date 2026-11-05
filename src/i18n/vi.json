@@ -30,11 +30,7 @@
     "kicker": "Hành trình chuyển đổi",
     "heroTitle": "Giải pháp thông minh\\nKiến tạo giá trị xanh",
     "heroSub": "Từ chất thải đến tài nguyên. GMS Hưng Yên đang từng bước xây dựng hệ thống sàng tuyển và chuyển hoá, đưa những dòng vật chất còn giá trị trở lại chu trình sử dụng.",
-    "pillars": [
-      "Công nghệ VPD",
-      "Sàng tuyển",
-      "Tái tạo tài nguyên"
-    ],
+    "pillars": ["Công nghệ VPD", "Sàng tuyển", "Tái tạo tài nguyên"],
     "ctaTech": "Tìm hiểu công nghệ",
     "ctaContact": "Liên hệ hợp tác",
     "photoLabelAi": "",
@@ -47,31 +43,19 @@
         "num": "01",
         "title": "Công nghệ VPD",
         "desc": "Định hướng chuyển hoá một số dòng nguyên liệu phù hợp thành các sản phẩm đầu ra mới.",
-        "chips": [
-          "Syngas",
-          "Than hoạt tính",
-          "Dầu tái chế"
-        ]
+        "chips": ["Syngas", "Than hoạt tính", "Dầu tái chế"]
       },
       {
         "num": "02",
         "title": "Sàng tuyển",
         "desc": "Phân tách các dòng vật chất phù hợp để tiếp tục xử lý hoặc khai thác giá trị.",
-        "chips": [
-          "Nilon",
-          "Mùn hữu cơ",
-          "RDF"
-        ]
+        "chips": ["Nilon", "Mùn hữu cơ", "RDF"]
       },
       {
         "num": "03",
         "title": "Tái tạo tài nguyên",
         "desc": "Đưa những dòng vật chất còn giá trị trở lại chu trình sản xuất, kiến tạo vòng đời tài nguyên mới.",
-        "chips": [
-          "Phân loại",
-          "Chuyển hoá",
-          "Thu hồi giá trị"
-        ]
+        "chips": ["Phân loại", "Chuyển hoá", "Thu hồi giá trị"]
       }
     ],
     "techEyebrow": "Công nghệ",
@@ -140,19 +124,13 @@
         "num": "5",
         "title": "Phân huỷ nhiệt",
         "desc": "Trong buồng kín, nguyên liệu được phân huỷ bằng nhiệt; phần rắn còn lại được thu riêng.",
-        "chips": [
-          "Than hoạt tính"
-        ]
+        "chips": ["Than hoạt tính"]
       },
       {
         "num": "6",
         "title": "Làm sạch và tách dòng khí",
         "desc": "Hỗn hợp khí được làm nguội, lắng bụi rồi tách thành các dòng riêng.",
-        "chips": [
-          "Dầu tái chế",
-          "Nước tách ra",
-          "Syngas"
-        ]
+        "chips": ["Dầu tái chế", "Nước tách ra", "Syngas"]
       },
       {
         "num": "7",

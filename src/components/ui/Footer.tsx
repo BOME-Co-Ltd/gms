@@ -32,13 +32,22 @@ export function Footer({
   const isVi = locale === 'vi';
 
   return (
-    <footer className="site-footer on-dark bg-[#0a3e27] text-white pt-12 pb-8 border-t-2 border-[#1b7a4b]/30" data-testid="footer">
+    <footer
+      className="site-footer on-dark bg-[#0a3e27] text-white pt-12 pb-8 border-t-2 border-[#1b7a4b]/30"
+      data-testid="footer"
+    >
       <div className="container mx-auto max-w-[1200px] px-4">
         <div className="footer-grid grid gap-8 md:grid-cols-2 lg:grid-cols-4 pb-8 border-b border-white/15">
           {/* Cột 1: Thông tin thương hiệu */}
           <div className="space-y-3">
             <div className="flex items-center gap-2.5">
-              <img src="/brand/logo-gms-mark.svg" alt={brandName} width={100} height={28} className="brightness-0 invert h-7 w-auto" />
+              <img
+                src="/brand/logo-gms-mark.svg"
+                alt={brandName}
+                width={100}
+                height={28}
+                className="brightness-0 invert h-7 w-auto"
+              />
             </div>
             <p className="font-bold text-white text-base leading-snug">
               <strong>{brandName}</strong>
@@ -64,7 +73,10 @@ export function Footer({
             {phone ? (
               <p className="text-white/90">
                 <strong className="text-white">📞 {isVi ? 'Điện thoại' : 'Phone'}:</strong>{' '}
-                <a href={`tel:${phone}`} className="text-emerald-300 hover:text-white font-semibold underline underline-offset-2 transition-colors">
+                <a
+                  href={`tel:${phone}`}
+                  className="text-emerald-300 hover:text-white font-semibold underline underline-offset-2 transition-colors"
+                >
                   {phoneDisplay ?? phone}
                 </a>
               </p>
@@ -72,7 +84,12 @@ export function Footer({
             {zalo ? (
               <p className="text-white/90">
                 <strong className="text-white">💬 Zalo:</strong>{' '}
-                <a href={zalo} rel="noopener noreferrer" target="_blank" className="text-emerald-300 hover:text-white underline underline-offset-2 transition-colors">
+                <a
+                  href={zalo}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  className="text-emerald-300 hover:text-white underline underline-offset-2 transition-colors"
+                >
                   {zalo}
                 </a>
               </p>
@@ -91,22 +108,34 @@ export function Footer({
             </h4>
             <ul className="space-y-1.5 list-none p-0 m-0">
               <li>
-                <a href={isVi ? '/' : '/en'} className="text-white/80 hover:text-white hover:underline transition-colors">
+                <a
+                  href={isVi ? '/' : '/en'}
+                  className="text-white/80 hover:text-white hover:underline transition-colors"
+                >
                   {isVi ? 'Trang chủ' : 'Home'}
                 </a>
               </li>
               <li>
-                <a href={isVi ? '/gioi-thieu' : '/en/about'} className="text-white/80 hover:text-white hover:underline transition-colors">
+                <a
+                  href={isVi ? '/gioi-thieu' : '/en/about'}
+                  className="text-white/80 hover:text-white hover:underline transition-colors"
+                >
                   {isVi ? 'Giới thiệu GMS' : 'About GMS'}
                 </a>
               </li>
               <li>
-                <a href={isVi ? '/cong-nghe' : '/en/technology'} className="text-white/80 hover:text-white hover:underline transition-colors">
+                <a
+                  href={isVi ? '/cong-nghe' : '/en/technology'}
+                  className="text-white/80 hover:text-white hover:underline transition-colors"
+                >
                   {isVi ? 'Công nghệ VPD' : 'VPD Technology'}
                 </a>
               </li>
               <li>
-                <a href={isVi ? '/san-pham-dau-ra' : '/en/products'} className="text-white/80 hover:text-white hover:underline transition-colors">
+                <a
+                  href={isVi ? '/san-pham-dau-ra' : '/en/products'}
+                  className="text-white/80 hover:text-white hover:underline transition-colors"
+                >
                   {isVi ? 'Sản phẩm đầu ra' : 'Output Products'}
                 </a>
               </li>

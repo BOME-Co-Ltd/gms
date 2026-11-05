@@ -30,11 +30,7 @@
     "kicker": "The transformation journey",
     "heroTitle": "Smart solutions\\nCreating green value",
     "heroSub": "From waste to resources. GMS Hung Yen is building, step by step, a sorting and conversion system that returns still-valuable material streams to a new cycle of use.",
-    "pillars": [
-      "VPD technology",
-      "Sorting",
-      "Resource recovery"
-    ],
+    "pillars": ["VPD technology", "Sorting", "Resource recovery"],
     "ctaTech": "Explore the technology",
     "ctaContact": "Partner with us",
     "photoLabelAi": "",
@@ -47,31 +43,19 @@
         "num": "01",
         "title": "VPD technology",
         "desc": "Aims to convert suitable feedstock streams into new output products.",
-        "chips": [
-          "Syngas",
-          "Activated carbon",
-          "Recycled oil"
-        ]
+        "chips": ["Syngas", "Activated carbon", "Recycled oil"]
       },
       {
         "num": "02",
         "title": "Sorting",
         "desc": "Separates suitable material streams for further processing or value recovery.",
-        "chips": [
-          "Plastic film",
-          "Organic humus",
-          "RDF"
-        ]
+        "chips": ["Plastic film", "Organic humus", "RDF"]
       },
       {
         "num": "03",
         "title": "Resource recovery",
         "desc": "Returns still-valuable materials to production, creating new resource life cycles.",
-        "chips": [
-          "Separate",
-          "Convert",
-          "Recover value"
-        ]
+        "chips": ["Separate", "Convert", "Recover value"]
       }
     ],
     "techEyebrow": "Technology",
@@ -140,19 +124,13 @@
         "num": "5",
         "title": "Thermal decomposition",
         "desc": "In a closed chamber the material breaks down under heat; the remaining solids are collected separately.",
-        "chips": [
-          "Activated carbon"
-        ]
+        "chips": ["Activated carbon"]
       },
       {
         "num": "6",
         "title": "Gas cleaning and separation",
         "desc": "The gas mixture is cooled, cleared of dust and split into separate streams.",
-        "chips": [
-          "Recycled oil",
-          "Separated water",
-          "Syngas"
-        ]
+        "chips": ["Recycled oil", "Separated water", "Syngas"]
       },
       {
         "num": "7",
