@@ -405,5 +405,10 @@
         "content": "You retain full rights to inspect, rectify, withdraw consent, or request erasure of your personal data at any time by contacting: lienhe@gmshungyen.vn."
       }
     ]
+  },
+  "journeyStatus": {
+    "chưa tới": "Upcoming",
+    "đang làm": "In progress",
+    "đã xong": "Completed"
   }
 }

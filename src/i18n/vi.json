@@ -405,5 +405,10 @@
         "content": "Bạn có toàn quyền yêu cầu xem lại, đính chính, rút lại sự đồng ý hoặc yêu cầu xoá dữ liệu cá nhân của mình bất kỳ lúc nào bằng cách gửi email tới: lienhe@gmshungyen.vn."
       }
     ]
+  },
+  "journeyStatus": {
+    "chưa tới": "chưa tới",
+    "đang làm": "đang làm",
+    "đã xong": "đã xong"
   }
 }
