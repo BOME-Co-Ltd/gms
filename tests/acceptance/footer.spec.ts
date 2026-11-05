@@ -1,5 +1,6 @@
-// Chân trang U10 + quy ước biểu tượng toàn site — nguồn kỳ vọng: ux-spec v0.4 §13b, §14a, bảng kiểm J12–J18, wireframes/footer.html
-// (đã duyệt cùng design_approved, gates seq 41). Mã ca FT-xx; truy vết ở test-plan.md mục 0i.
+// Chân trang U10 + quy ước biểu tượng toàn site — nguồn kỳ vọng: ux-spec v0.5 §13b, §14a, bảng kiểm J12–J18, J24, wireframes/footer.html
+// (design_approved duyệt lại, gates seq 45). Mã ca FT-xx; truy vết ở test-plan.md mục 0j.
+// v0.5 thay: FT-04 (không còn tiêu đề nhóm hiện), FT-13 (bản quyền không lặp tên pháp lý), FT-14 (menu một nhóm). Ca FT-17+ ở visual-v05.spec.ts.
 // Selector chỉ dùng thứ spec đặt tên: <footer data-testid="footer">, data-testid="tax-id", <nav aria-label>, <h2>, <address>, aria-current,
 // aria-hidden/focusable trên <svg>. KHÔNG dùng class nội bộ (.ft-*, .site-footer) — spec không cam kết tên class.
 // Ca "Trường trống" dựng bằng buildSite (fixture company.yaml); ca còn lại chạy trên bản build đang phục vụ (cùng nguồn với LAY-/PERF-).
@@ -27,7 +28,8 @@ const footerOf = (html: string) => /<footer\b[^>]*data-testid="footer"[\s\S]*?<\
 // Chữ theo microcopy ux-spec §14a (C-ft-*) và footer.html (EN của nhãn liên kết).
 const T = {
   vi: {
-    heads: ['Liên hệ', 'Khám phá', 'Thông tin'],
+    contactHead: 'Liên hệ',
+    srLabels: ['Điện thoại', 'Fanpage', 'Địa chỉ'],
     navLabel: 'Liên kết chân trang',
     info: { careers: 'Tuyển dụng', faq: 'FAQ', privacy: 'Chính sách bảo mật', contact: 'Liên hệ' },
     rights: 'Tất cả các quyền được bảo lưu\\.',
@@ -35,7 +37,8 @@ const T = {
     labels: { phone: 'Điện thoại', zalo: 'Zalo', fanpage: 'Fanpage', address: 'Địa chỉ', taxId: 'Mã số thuế' },
   },
   en: {
-    heads: ['Contact', 'Explore', 'Information'],
+    contactHead: 'Contact',
+    srLabels: ['Phone', 'Fanpage', 'Address'],
     navLabel: 'Footer links',
     info: { careers: 'Careers', faq: 'FAQ', privacy: 'Privacy policy', contact: 'Contact' },
     rights: 'All rights reserved\\.',
@@ -141,23 +144,104 @@ for (const locale of LOCALES) {
     }
     if (locale === 'en')
       for (const l of links) expect(l.text, `nav chân trang EN chứa chữ Việt: "${l.text}"`).not.toMatch(VN_DIACRITIC);
+    // v0.5 §14a: menu là MỘT <ul> 10 mục; bốn mục cuối theo thứ tự Tuyển dụng · FAQ · Chính sách bảo mật · Liên hệ
+    await expect(navs.locator('ul'), 'menu là một danh sách duy nhất').toHaveCount(1);
+    expect(links.length, 'số mục menu').toBe(10);
+    expect(
+      links.slice(-4).map((l) => trimSlash(l.path)),
+      'bốn mục cuối menu',
+    ).toEqual((['careers', 'faq', 'privacy', 'contact'] as const).map((k) => trimSlash(path(k, locale))));
   });
 
-  test(`FT-04 ${locale}: ba tiêu đề nhóm h2 đúng chữ và đúng thứ tự Liên hệ → Khám phá → Thông tin (§14a)`, async ({
+  test(`FT-04 ${locale}: không tiêu đề nhóm nào hiện ra; chỉ một h2 .sr-only "${T[locale].contactHead}"; thứ tự DOM Thương hiệu → Liên hệ → Menu (J24, §14a v0.5)`, async ({
     page,
   }) => {
     await open(page, 'home', locale);
-    const footer = tid(page, 'footer');
-    // textContent, không innerText: tiêu đề viết hoa bằng text-transform (§14a).
-    const heads = await footer.locator('h2').evaluateAll((hs) => hs.map((h) => (h.textContent ?? '').trim()));
-    expect(heads).toEqual([...T[locale].heads]);
-    const inNav = await footer.locator('nav h2').evaluateAll((hs) => hs.map((h) => (h.textContent ?? '').trim()));
-    expect(inNav, 'hai nhóm Khám phá/Thông tin nằm trong nav chân trang').toEqual([
-      T[locale].heads[1],
-      T[locale].heads[2],
-    ]);
+    const m = await page.evaluate((legal) => {
+      const f = document.querySelector('[data-testid="footer"]') as HTMLElement;
+      const vis = (e: Element) => {
+        const r = e.getBoundingClientRect();
+        return r.width > 1 && r.height > 1;
+      };
+      const heads = Array.from(f.querySelectorAll('h1, h2, h3, h4, h5, h6')).map((h) => ({
+        tag: h.tagName,
+        text: (h.textContent ?? '').trim(),
+        shown: vis(h),
+      }));
+      const brand = Array.from(f.querySelectorAll('*')).find(
+        (e) => e.children.length === 0 && (e.textContent ?? '').includes(legal),
+      );
+      const before = (a?: Node | null, b?: Node | null) =>
+        !!a && !!b && !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      return {
+        heads,
+        brandBeforeContact: before(brand, f.querySelector('address')),
+        contactBeforeNav: before(f.querySelector('address'), f.querySelector('nav')),
+      };
+    }, squash(siteLegalName()));
+    expect(
+      m.heads.filter((h) => h.shown),
+      'tiêu đề nhóm đang hiện trong chân trang (v0.5: không có)',
+    ).toEqual([]);
+    const h2s = m.heads.filter((h) => h.tag === 'H2');
+    expect(h2s.length, 'số h2 trong chân trang').toBe(1);
+    expect(h2s[0].text).toBe(T[locale].contactHead);
+    expect(m.brandBeforeContact, 'Thương hiệu đứng trước Liên hệ trong DOM').toBe(true);
+    expect(m.contactBeforeNav, 'Liên hệ đứng trước Menu trong DOM').toBe(true);
+  });
+
+  test(`FT-08c ${locale}: nhãn Điện thoại/Fanpage/Địa chỉ chỉ là .sr-only (không hiện); Zalo và Mã số thuế hiện chữ (§13b luật 5, §14a v0.5)`, async ({
+    page,
+  }) => {
+    await open(page, 'home', locale);
+    const m = await page.evaluate((labels) => {
+      const f = document.querySelector('[data-testid="footer"]') as HTMLElement;
+      const leafWith = (re: RegExp) =>
+        Array.from(f.querySelectorAll('*')).filter((e) => e.children.length === 0 && re.test(e.textContent ?? ''));
+      const shown = (e: Element) => {
+        const r = e.getBoundingClientRect();
+        return r.width > 1 && r.height > 1;
+      };
+      return {
+        labels: labels.map((l) => {
+          const hits = leafWith(new RegExp(`^\\s*${l}\\s*:\\s*$`));
+          return { label: l, found: hits.length, shown: hits.filter(shown).length };
+        }),
+        zalo: leafWith(/Zalo/).filter(shown).length,
+        taxId: Array.from(f.querySelectorAll('[data-testid="tax-id"]')).filter(shown).length,
+      };
+    }, [...T[locale].srLabels]);
+    for (const l of m.labels) {
+      expect(l.found, `${locale}: có nhãn .sr-only "${l.label}:" trong hàng`).toBeGreaterThanOrEqual(1);
+      expect(l.shown, `${locale}: nhãn "${l.label}:" đang hiện (v0.5: chỉ .sr-only)`).toBe(0);
+    }
+    expect(m.zalo, `${locale}: chữ "Zalo" hiện`).toBeGreaterThanOrEqual(1);
+    expect(m.taxId, `${locale}: dòng mã số thuế hiện`).toBe(1);
   });
 }
+
+test('FT-04b Menu chân trang một danh sách hai cột, thứ tự đọc cột 1 rồi cột 2 (J24, §14a) ở 768 và 1200', async ({
+  page,
+}) => {
+  for (const width of [768, 1200]) {
+    await page.setViewportSize({ width, height: 900 });
+    await open(page, 'home', 'vi');
+    const xs = await page
+      .locator('[data-testid="footer"] nav a')
+      .evaluateAll((as) => as.map((a) => Math.round(a.getBoundingClientRect().left / 4) * 4));
+    const cols = Array.from(new Set(xs)).sort((a, b) => a - b);
+    expect(cols.length, `${width}: số cột của menu (vị trí x: ${xs.join(',')})`).toBe(2);
+    const half = xs.length / 2;
+    expect(
+      xs.slice(0, half).every((x) => x === cols[0]),
+      `${width}: nửa đầu menu nằm cột 1`,
+    ).toBe(true);
+    expect(
+      xs.slice(half).every((x) => x === cols[1]),
+      `${width}: nửa sau menu nằm cột 2`,
+    ).toBe(true);
+  }
+});
 
 const CURRENT: PageKey[] = ['about', 'technology', 'careers', 'faq', 'privacy', 'contact'];
 for (const locale of LOCALES)
@@ -221,61 +305,68 @@ for (const locale of LOCALES) {
     }
   });
 
-  test(`FT-13 ${locale}: dòng bản quyền "© {năm} {tên pháp lý}. ${T[locale].rights.replace(/\\/g, '')}" (C-ft-rights, §14a)`, async ({
+  // v0.5 thay FT-13 bản v0.4 ("© {năm} {tên pháp lý}. …"): C-ft-rights v0.5 = "© {năm}. Tất cả các quyền được bảo lưu." và
+  // §14a ghi rõ bỏ tên pháp lý khỏi dòng này vì đã nằm ở khối Thương hiệu, không lặp. Tên pháp lý vẫn được FT-07 khẳng định.
+  test(`FT-13 ${locale}: dòng bản quyền "© {năm}. ${T[locale].rights.replace(/\\/g, '')}" và tên pháp lý chỉ xuất hiện MỘT lần trong chân trang (C-ft-rights v0.5, §14a)`, async ({
     page,
   }) => {
     await open(page, 'home', locale);
     const legal = squash(siteLegalName());
     const text = squash((await tid(page, 'footer').textContent()) ?? '');
-    const re = new RegExp(`©\\s*\\d{4}\\s+${esc(legal)}\\.\\s*${T[locale].rights}`);
-    expect(text, 'dòng bản quyền').toMatch(re);
+    expect(text, 'dòng bản quyền').toMatch(new RegExp(`©\\s*\\d{4}\\.\\s*${T[locale].rights}`));
+    expect(text.split(legal).length - 1, `số lần tên pháp lý "${legal}" trong chân trang`).toBe(1);
   });
 }
 
 // ───────────────────────── Bố cục theo điểm gãy 600/900 (§14a) ─────────────────────────
 
-test('FT-14 Bố cục: <600 một cột xếp dọc; 600–899 hai cột; >=900 ba cột (§14a)', async ({ page }) => {
+// v0.5 thay FT-14 bản v0.4: còn ba khối (Thương hiệu | Liên hệ | Menu) thay vì bốn; không còn tiêu đề nhóm để làm mốc.
+// Mốc: tên pháp lý (Thương hiệu), danh sách chứa <address> (Liên hệ), <nav> (Menu).
+test('FT-14 Bố cục: <600 một cột xếp dọc; 600–899 hai cột, menu hàng dưới trải hai cột; >=900 ba cột (§14a v0.5)', async ({
+  page,
+}) => {
   const pos = async () =>
     page.evaluate((legal) => {
       const f = document.querySelector('[data-testid="footer"]') as HTMLElement;
-      const h = (label: string) =>
-        Array.from(f.querySelectorAll('h2'))
-          .find((e) => (e.textContent ?? '').trim() === label)
-          ?.getBoundingClientRect();
-      const brand = Array.from(f.querySelectorAll('*'))
-        .find((e) => e.children.length === 0 && (e.textContent ?? '').includes(legal))
-        ?.getBoundingClientRect();
-      const r = (b?: DOMRect) => (b ? { x: Math.round(b.left), y: Math.round(b.top) } : null);
-      return { brand: r(brand), contact: r(h('Liên hệ')), explore: r(h('Khám phá')), info: r(h('Thông tin')) };
+      const rect = (e?: Element | null) => {
+        const b = e?.getBoundingClientRect();
+        return b ? { x: Math.round(b.left), y: Math.round(b.top), right: Math.round(b.right), bottom: Math.round(b.bottom) } : null;
+      };
+      const brand = Array.from(f.querySelectorAll('*')).find(
+        (e) => e.children.length === 0 && (e.textContent ?? '').includes(legal),
+      );
+      return {
+        brand: rect(brand),
+        contact: rect(f.querySelector('address')?.closest('ul')),
+        nav: rect(f.querySelector('nav')),
+      };
     }, squash(siteLegalName()));
 
   await page.setViewportSize({ width: 375, height: 800 });
   await open(page, 'home', 'vi');
   const a = await pos();
-  expect(a.brand && a.contact && a.explore && a.info, '375: đủ bốn khối').toBeTruthy();
-  expect(Math.abs(a.contact!.x - a.brand!.x), '375: Liên hệ cùng cột Thương hiệu').toBeLessThanOrEqual(2);
-  expect(Math.abs(a.explore!.x - a.contact!.x), '375: Khám phá cùng cột').toBeLessThanOrEqual(2);
-  expect(Math.abs(a.info!.x - a.explore!.x), '375: Thông tin xếp dọc dưới Khám phá').toBeLessThanOrEqual(2);
-  expect(a.contact!.y, '375: Liên hệ dưới Thương hiệu').toBeGreaterThan(a.brand!.y);
-  expect(a.explore!.y, '375: Khám phá dưới Liên hệ').toBeGreaterThan(a.contact!.y);
-  expect(a.info!.y, '375: Thông tin dưới Khám phá').toBeGreaterThan(a.explore!.y);
+  if (!(a.brand && a.contact && a.nav)) throw new Error(`375: thiếu khối chân trang ${JSON.stringify(a)}`);
+  expect(Math.abs(a.contact.x - a.brand.x), '375: Liên hệ cùng cột Thương hiệu').toBeLessThanOrEqual(4);
+  expect(Math.abs(a.nav.x - a.contact.x), '375: Menu cùng cột').toBeLessThanOrEqual(4);
+  expect(a.contact.y, '375: Liên hệ dưới Thương hiệu').toBeGreaterThan(a.brand.y);
+  expect(a.nav.y, '375: Menu dưới Liên hệ').toBeGreaterThanOrEqual(a.contact.bottom - 2);
 
   await page.setViewportSize({ width: 768, height: 900 });
   await open(page, 'home', 'vi');
   const b = await pos();
-  expect(b.contact!.x, '768: Liên hệ nằm cột phải của Thương hiệu').toBeGreaterThan(b.brand!.x + 100);
-  expect(Math.abs(b.explore!.x - b.brand!.x), '768: Khám phá bắt đầu hàng dưới ở cột trái').toBeLessThanOrEqual(4);
-  expect(b.info!.x, '768: hai nhóm liên kết chia hai cột').toBeGreaterThan(b.explore!.x + 100);
-  expect(b.explore!.y, '768: hai nhóm liên kết ở hàng dưới').toBeGreaterThan(b.contact!.y);
+  if (!(b.brand && b.contact && b.nav)) throw new Error(`768: thiếu khối chân trang ${JSON.stringify(b)}`);
+  expect(b.contact.x, '768: Liên hệ nằm cột phải của Thương hiệu').toBeGreaterThan(b.brand.x + 100);
+  expect(Math.abs(b.nav.x - b.brand.x), '768: Menu bắt đầu hàng dưới ở cột trái').toBeLessThanOrEqual(4);
+  expect(b.nav.y, '768: Menu ở hàng dưới').toBeGreaterThanOrEqual(b.contact.bottom - 2);
+  expect(b.nav.right, '768: Menu trải sang cột phải').toBeGreaterThan(b.contact.x + 100);
 
   await page.setViewportSize({ width: 1200, height: 900 });
   await open(page, 'home', 'vi');
   const c = await pos();
-  expect(c.brand!.x, '1200: Thương hiệu → Liên hệ').toBeLessThan(c.contact!.x - 100);
-  expect(c.contact!.x, '1200: Liên hệ → Khám phá').toBeLessThan(c.explore!.x - 100);
-  expect(c.explore!.x, '1200: Khám phá → Thông tin cạnh nhau').toBeLessThan(c.info!.x - 100);
-  expect(Math.abs(c.explore!.y - c.contact!.y), '1200: cùng một hàng').toBeLessThanOrEqual(8);
-  expect(Math.abs(c.info!.y - c.explore!.y), '1200: hai nhóm liên kết cùng hàng').toBeLessThanOrEqual(8);
+  if (!(c.brand && c.contact && c.nav)) throw new Error(`1200: thiếu khối chân trang ${JSON.stringify(c)}`);
+  expect(c.brand.x, '1200: Thương hiệu → Liên hệ').toBeLessThan(c.contact.x - 100);
+  expect(c.contact.x, '1200: Liên hệ → Menu').toBeLessThan(c.nav.x - 100);
+  expect(Math.abs(c.nav.y - c.contact.y), '1200: Liên hệ và Menu cùng một hàng').toBeLessThanOrEqual(8);
 });
 
 // ───────────────────────── Màu, tương phản, focus (J14, §5.2) ─────────────────────────
