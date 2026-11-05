@@ -71,9 +71,7 @@ export function ProductsPageView({ locale }: { locale: Locale }): React.ReactEle
                     />
                   </figure>
                   <div className="mb-2.5">
-                    <h3 className="text-lg md:text-xl font-extrabold text-[#0F5838] leading-snug m-0">
-                      {item.name}
-                    </h3>
+                    <h3 className="text-lg md:text-xl font-extrabold text-[#0F5838] leading-snug m-0">{item.name}</h3>
                   </div>
                   <p className="text-sm leading-relaxed text-[#40773F]">{item.desc}</p>
                 </div>

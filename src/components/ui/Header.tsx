@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
 import Link from 'next/link';
+import React, { useState } from 'react';
 import { LangSwitcher } from './LangSwitcher.tsx';
 
 export interface NavItem {
@@ -39,7 +39,7 @@ export function Header({
 
   // Focus only on core primary items (Remove 'home' because logo links home, remove 'privacy' & 'faq' which belong in footer)
   const focusedNavItems = navItems.filter(
-    (item) => item.key !== 'home' && item.key !== 'privacy' && item.key !== 'faq'
+    (item) => item.key !== 'home' && item.key !== 'privacy' && item.key !== 'faq',
   );
 
   return (
@@ -57,7 +57,13 @@ export function Header({
               data-testid="nav-menu"
               title={locale === 'vi' ? 'Về Trang chủ' : 'Go to Home'}
             >
-              <img src="/brand/logo-gms-mark.svg" alt={brandName} width={96} height={26} className="h-6 md:h-7 w-auto" />
+              <img
+                src="/brand/logo-gms-mark.svg"
+                alt={brandName}
+                width={96}
+                height={26}
+                className="h-6 md:h-7 w-auto"
+              />
               <span className="font-bold tracking-tight">{brandName}</span>
             </Link>
 
@@ -69,15 +75,37 @@ export function Header({
                 type="button"
                 className="mobile-menu-btn lg:hidden inline-flex items-center justify-center p-2 rounded-lg border border-[#0f5838]/20 text-[#0f5838] hover:bg-[#0f5838]/5 transition-colors"
                 aria-expanded={mobileOpen}
-                aria-label={mobileOpen ? (locale === 'vi' ? 'Đóng menu' : 'Close menu') : (locale === 'vi' ? 'Mở menu' : 'Open menu')}
+                aria-label={
+                  mobileOpen
+                    ? locale === 'vi'
+                      ? 'Đóng menu'
+                      : 'Close menu'
+                    : locale === 'vi'
+                      ? 'Mở menu'
+                      : 'Open menu'
+                }
                 onClick={() => setMobileOpen((prev) => !prev)}
               >
                 {mobileOpen ? (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 ) : (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 )}

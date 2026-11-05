@@ -28,7 +28,6 @@ export function ContactFormSection({
   const [website, setWebsite] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [mapOpen, setMapOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,7 +179,11 @@ export function ContactFormSection({
             />
           </div>
           <div className="form-group my-5" data-testid="contact-consent-block">
-            <label htmlFor="contact-consent" data-testid="contact-consent-label" className="flex items-start gap-3 cursor-pointer">
+            <label
+              htmlFor="contact-consent"
+              data-testid="contact-consent-label"
+              className="flex items-start gap-3 cursor-pointer"
+            >
               <input
                 id="contact-consent"
                 name="consent"
@@ -192,7 +195,11 @@ export function ContactFormSection({
               />
               <span className="text-sm leading-relaxed text-[#1b4332]">
                 {c.consentPrefix}
-                <a href={privacyHref} tabIndex={-1} className="font-semibold underline text-[#0f5838] hover:text-[#2d6a4f]">
+                <a
+                  href={privacyHref}
+                  tabIndex={-1}
+                  className="font-semibold underline text-[#0f5838] hover:text-[#2d6a4f]"
+                >
                   {c.consentLinkText}
                 </a>
                 .
@@ -225,7 +232,8 @@ export function ContactFormSection({
           <div>
             <h2 className="text-2xl font-bold text-[#0f5838] m-0">{c.mapTitle}</h2>
             <p className="text-sm text-gray-600 mt-1 mb-0">
-              <strong>{locale === 'vi' ? 'Toạ độ nhà máy:' : 'Plant coordinates:'}</strong> {b.coordinates} ({b.address})
+              <strong>{locale === 'vi' ? 'Toạ độ nhà máy:' : 'Plant coordinates:'}</strong> {b.coordinates} ({b.address}
+              )
             </p>
           </div>
           <a
@@ -238,11 +246,17 @@ export function ContactFormSection({
             {locale === 'vi' ? 'Chỉ đường Google Maps ↗' : 'Open in Google Maps ↗'}
           </a>
         </div>
-        <div data-testid="map-view" data-point={b.coordinates} className="mt-4 rounded-2xl overflow-hidden border border-[#0f5838]/20 shadow-md bg-white">
+        <div
+          data-testid="map-view"
+          data-point={b.coordinates}
+          className="mt-4 rounded-2xl overflow-hidden border border-[#0f5838]/20 shadow-md bg-white"
+        >
           <div className="p-4 bg-[#f8faf7] border-b border-[#0f5838]/10 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-bold text-[#0f5838] m-0 text-base">
-                {locale === 'vi' ? 'Nhà máy Xử lý & Tái tạo Tài nguyên GMS Hưng Yên' : 'GMS Hung Yen Waste-to-Resource Plant'}
+                {locale === 'vi'
+                  ? 'Nhà máy Xử lý & Tái tạo Tài nguyên GMS Hưng Yên'
+                  : 'GMS Hung Yen Waste-to-Resource Plant'}
               </p>
               <p className="text-sm text-gray-600 m-0 mt-1">
                 <strong>{locale === 'vi' ? 'Địa chỉ:' : 'Address:'}</strong> {b.address}
