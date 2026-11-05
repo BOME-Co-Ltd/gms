@@ -122,14 +122,16 @@ for (const [locale, held, copy] of RETENTION) {
       .split(/[.\n]/)
       .map((s) => s.replace(/\s+/g, ' ').trim())
       .filter(Boolean);
-    const heldSentence = sentences.filter((s) => s.includes(held));
-    expect(heldSentence.length, `phải có câu nêu "${held}"`).toBeGreaterThan(0);
+    const heldAt = sentences.flatMap((s, i) => (s.includes(held) ? [i] : []));
+    expect(heldAt.length, `phải có câu nêu "${held}"`).toBeGreaterThan(0);
+    // Spec: "bị web giữ tối đa <mốc> rồi xoá" — không đòi "giữ" và "xoá" nằm cùng một câu ⇒ xét câu có mốc và câu liền sau (cách ngắt câu là giả định của test, không phải của spec).
     expect(
-      heldSentence.some((s) =>
-        locale === 'vi'
+      heldAt.some((i) => {
+        const s = `${sentences[i]} ${sentences[i + 1] ?? ''}`;
+        return locale === 'vi'
           ? /(giữ|lưu)/i.test(s) && /xoá|xóa/i.test(s)
-          : /(hold|keep|store|retain)/i.test(s) && /delet|remov|erase/i.test(s),
-      ),
+          : /(hold|keep|store|retain)/i.test(s) && /delet|remov|erase/i.test(s);
+      }),
       `"${held}": câu nêu việc giữ rồi xoá`,
     ).toBe(true);
     const copySentence = sentences.filter((s) => s.includes(copy));

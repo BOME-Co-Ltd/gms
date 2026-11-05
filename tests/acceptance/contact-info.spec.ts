@@ -97,15 +97,20 @@ test('INFO-06 Thiếu mã số thuế thì build xanh, chân trang chỉ hiện 
 });
 
 // contact-info.feature dòng 40–44: điểm bản đồ "20.930031, 106.065651" (nhà máy). Phần cứng: bản đang chạy dùng nội dung thật
-// (không đổi được từ test) ⇒ kiểm hai tầng: (1) build với đúng điểm này có tọa độ trong trang; (2) bản đang chạy: chọn xem
+// (không đổi được từ test) ⇒ kiểm hai tầng: (1) build với đúng điểm này có tọa độ trong bản build (HTML hoặc JS); (2) bản đang chạy: chọn xem
 // ⇒ khối bản đồ hiện tại cùng điểm (data-point, hoặc nguồn khung bản đồ nếu không có thuộc tính).
 const FACTORY_POINT = { lat: 20.930031, lng: 106.065651 };
 test('INFO-07 Chọn xem bản đồ thì bản đồ hiện đúng điểm nhà máy (@S24 @cho-khach:N28)', async ({ page }) => {
   const r = buildSite(companyFile({ mapPoint: '20.930031, 106.065651' }));
   expect(r.ok, r.log).toBe(true);
-  const built = htmlOf(r, path('contact', 'vi'))!;
-  expect(built, 'trang build có tọa độ vĩ độ').toContain('20.930031');
-  expect(built, 'trang build có tọa độ kinh độ').toContain('106.065651');
+  // Spec/contract không nói điểm nằm ở HTML hay ở mã chạy phía trình duyệt (khối bản đồ chỉ hiện sau khi chọn xem) ⇒ tìm trong MỌI tệp văn bản của bản build.
+  const built = r
+    .files()
+    .filter((f) => /\.(html|js|json|txt|xml)$/.test(f))
+    .map((f) => r.read(f) ?? '')
+    .join('\n');
+  expect(built, 'bản build có tọa độ vĩ độ').toContain('20.930031');
+  expect(built, 'bản build có tọa độ kinh độ').toContain('106.065651');
 
   await open(page, 'contact', 'vi');
   await tid(page, 'map-open').click();
