@@ -351,6 +351,13 @@ nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); co
   white-space: nowrap !important; flex-shrink: 0; padding: 4px 12px; border-radius: 999px;
   background: var(--tint-2); color: var(--g900); font-weight: 700; font-size: 0.85rem; line-height: 1.2;
 }
+/* Nhãn trạng thái lộ trình (ux-review-journey-status-2026-11-05 §3): khác nhau bằng chữ + biểu tượng + độ đặc/kiểu viền, không chỉ màu. */
+.journey-status { margin: 8px 0 0; }
+.badge-status { gap: 6px; font-size: 0.9rem; border: 2px solid transparent; }
+.badge-status svg { flex-shrink: 0; }
+.badge-status--done { background: var(--g900); color: var(--white); border-color: var(--g900); }
+.badge-status--doing { background: var(--tint-b); color: var(--b800); border-color: var(--b600); }
+.badge-status--upcoming { background: var(--white); color: #4A5A52; border: 2px dashed #6B7A72; }
 .pills { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0 0 20px; }
 .pills li {
   display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
@@ -1430,11 +1437,25 @@ function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum:
   const stepRows: Array<{ name: string; status: string | null }> = content.journeySteps
     ? content.journeySteps.map((s) => ({ name: s.name[locale], status: s.status }))
     : defaultNames.map((name) => ({ name, status: null }));
-  // shortcut: ux-spec chưa ghi nhãn EN cho trạng thái lộ trình; dùng bản dịch thẳng, chờ ux_ui/admin chốt chữ.
+  // Nhãn EN theo ux-review-journey-status-2026-11-05 §2; VI giữ nguyên chữ thường của nguồn (feature S12).
   const statusLabel = (status: string | null): string => {
     if (!status) return '';
-    const en: Record<string, string> = { 'chưa tới': 'upcoming', 'đang làm': 'in progress', 'đã xong': 'done' };
+    const en: Record<string, string> = { 'chưa tới': 'Upcoming', 'đang làm': 'In progress', 'đã xong': 'Completed' };
     return isVi ? status : (en[status] ?? '');
+  };
+  // Khoá ASCII cho class CSS, không phụ thuộc dạng Unicode của chữ tiếng Việt.
+  const STATUS_KEY: Record<string, 'done' | 'doing' | 'upcoming'> = {
+    'chưa tới': 'upcoming',
+    'đang làm': 'doing',
+    'đã xong': 'done',
+  };
+  // Biểu tượng lucide check/clock/circle, 14px, nét 2px, currentColor; trang trí nên aria-hidden.
+  const SVG_OPEN =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">';
+  const STATUS_ICON: Record<'done' | 'doing' | 'upcoming', string> = {
+    done: `${SVG_OPEN}<path d="M20 6 9 17l-5-5"/></svg>`,
+    doing: `${SVG_OPEN}<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
+    upcoming: `${SVG_OPEN}<circle cx="12" cy="12" r="10"/></svg>`,
   };
 
   const allItems = content.news[locale];
@@ -1482,8 +1503,9 @@ function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum:
         ${stepRows
           .map((s, idx) => {
             const label = statusLabel(s.status);
+            const key = s.status ? STATUS_KEY[s.status] : undefined;
             const badge = label
-              ? ` <span class="badge" data-status="${escHtml(s.status ?? '')}">${escHtml(label)}</span>`
+              ? `<div class="journey-status"><span class="badge badge-status${key ? ` badge-status--${key}` : ''}" data-status="${escHtml(s.status ?? '')}">${key ? STATUS_ICON[key] : ''}${escHtml(label)}</span></div>`
               : '';
             return `<li class="card" data-testid="journey-step"><strong>${idx + 1}. ${escHtml(s.name)}</strong>${badge}</li>`;
           })
@@ -1604,14 +1626,12 @@ function renderPrivacyPage(content: LoadedSiteContent, locale: Locale): string {
        <p><strong>Căn cứ pháp lý:</strong> Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 và Nghị định 356/2025/NĐ-CP.</p>
        <p><strong>Bên kiểm soát dữ liệu:</strong> ${escHtml(ctrlName)}.</p>
        <p><strong>Mục đích xử lý:</strong> Tiếp nhận, liên hệ lại và trả lời yêu cầu của người gửi từ biểu mẫu liên hệ.</p>
-       <p><strong>Cách lưu trữ và thời hạn lưu:</strong> Website không lưu giữ lâu dài dữ liệu cá nhân trên máy chủ web. Liên hệ được chuyển thành thư báo gửi thẳng về hộp thư của GMS; hàng đợi kỹ thuật trên hạ tầng Cloudflare (bên xử lý dữ liệu) tự động xoá sau khi gửi thành công (tối đa 24 giờ, hoặc tối đa 7 ngày nếu lỗi đường truyền).</p>
        <p><strong>Ai được xem / truy cập:</strong> Bộ phận phụ trách liên hệ của ${escHtml(ctrlName)} và nhà cung cấp hạ tầng kỹ thuật Cloudflare.</p>
        <p><strong>Quyền của chủ thể dữ liệu:</strong> Bạn có quyền yêu cầu xem, sửa, xoá dữ liệu cá nhân hoặc rút lại đồng ý bất cứ lúc nào ${reqEmailLink ? `bằng cách gửi yêu cầu tới địa chỉ email nhận yêu cầu về dữ liệu: ${reqEmailLink}.` : 'bằng cách liên hệ với bên kiểm soát dữ liệu qua các kênh nêu ở trang Liên hệ.'}</p>`
     : `<p><strong>Version:</strong> ${escHtml(ver)} — <strong>Effective date:</strong> ${escHtml(eff)}</p>
        <p><strong>Legal basis:</strong> Personal Data Protection Law No. 91/2025/QH15 and Decree 356/2025/ND-CP.</p>
        <p><strong>Data controller:</strong> ${escHtml(ctrlName)}.</p>
        <p><strong>Purpose of processing:</strong> Receiving, contacting and responding to inquiries submitted via the contact form.</p>
-       <p><strong>Retention & where data is stored:</strong> The website does not retain personal data after email delivery. Submissions are forwarded to the GMS mailbox via Cloudflare infrastructure (data processor) and deleted from the outbox within 24 hours of delivery.</p>
        <p><strong>Who can access:</strong> Authorized staff at ${escHtml(ctrlName)} and technical processor Cloudflare.</p>
        <p><strong>Your rights:</strong> You have the right to access, rectify or request deletion / erasure of your personal data, or withdraw your consent at any time by ${reqEmailLink ? `contacting: ${reqEmailLink}.` : 'contacting the data controller through the channels listed on the Contact page.'}</p>`;
 
