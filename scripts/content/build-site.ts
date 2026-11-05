@@ -358,6 +358,13 @@ nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); co
 .badge-status--done { background: var(--g900); color: var(--white); border-color: var(--g900); }
 .badge-status--doing { background: var(--tint-b); color: var(--b800); border-color: var(--b600); }
 .badge-status--upcoming { background: var(--white); color: #4A5A52; border: 2px dashed #6B7A72; }
+/* J11: tương phản cao — không dựa vào nền; viền (đậm/liền/nét đứt) + biểu tượng phân biệt, màu hệ thống. */
+@media (forced-colors: active) {
+  .badge-status { background: Canvas; color: CanvasText; }
+  .badge-status--done { border: 3px solid CanvasText; }
+  .badge-status--doing { border: 2px solid Highlight; }
+  .badge-status--upcoming { border: 2px dashed CanvasText; }
+}
 .pills { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0 0 20px; }
 .pills li {
   display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
