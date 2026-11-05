@@ -273,7 +273,7 @@ h1, h2, h3 { line-height: 1.25; margin: 0 0 0.5em; color: var(--g900); text-wrap
 p, li { margin: 0 0 0.75em; overflow-wrap: break-word; word-break: break-word; }
 ul, ol { margin: 0; padding-left: 20px; }
 a:focus-visible, button:focus-visible, summary:focus-visible, .skip-link:focus {
-  outline: 2px solid var(--g700) !important;
+  outline: 3px solid var(--g700) !important;
   outline-offset: 2px !important;
   box-shadow: 0 0 0 3px rgba(15, 88, 56, 0.25) !important;
 }
@@ -283,7 +283,7 @@ input:focus, input:focus-visible, select:focus, select:focus-visible, textarea:f
   box-shadow: 0 0 0 3px rgba(15, 88, 56, 0.22) !important;
 }
 .on-dark a:focus-visible, .on-dark button:focus-visible {
-  outline: 2px solid var(--white) !important;
+  outline: 3px solid var(--white) !important;
   outline-offset: 2px !important;
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35) !important;
 }
