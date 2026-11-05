@@ -71,7 +71,9 @@ async function gotoAny(page: Page, url: string) {
 // ───────────────────────── J12 / J13: kích thước ─────────────────────────
 
 for (const width of [320, 375]) {
-  test(`FT-01 Chân trang không cuộn ngang ở ${width}px, chữ dài xuống dòng không tràn (J12, §14a)`, async ({ page }) => {
+  test(`FT-01 Chân trang không cuộn ngang ở ${width}px, chữ dài xuống dòng không tràn (J12, §14a)`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width, height: 800 });
     const bad: string[] = [];
     for (const t of listTargets()) {
@@ -315,7 +317,10 @@ test('FT-16 Nền chân trang #0F5838 và mọi chữ trong chân trang đạt t
       const parse = (c: string) => {
         const m = /rgba?\(([^)]+)\)/.exec(c);
         if (!m) return null;
-        const p = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+        const p = m[1]
+          .split(/[\s,/]+/)
+          .filter(Boolean)
+          .map(Number);
         return { r: p[0], g: p[1], b: p[2], a: p[3] ?? 1 };
       };
       const lin = (v: number) => {
@@ -324,9 +329,17 @@ test('FT-16 Nền chân trang #0F5838 và mọi chữ trong chân trang đạt t
       };
       const lum = (c: { r: number; g: number; b: number }) => 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
       const bgRaw = getComputedStyle(f).backgroundColor;
-      const bg = parse(bgRaw);
+      const footerBg = parse(bgRaw);
       const fails: string[] = [];
-      if (!bg) return { bg: bgRaw, fails: [`không đọc được nền: ${bgRaw}`] };
+      if (!footerBg) return { bg: bgRaw, fails: [`không đọc được nền: ${bgRaw}`] };
+      // nền đặc gần nhất của tổ tiên (vd ô logo .ft-logo nền trắng riêng); không có thì lấy nền chân trang
+      const solidBgOf = (el: Element) => {
+        for (let n: Element | null = el; n && f.contains(n); n = n.parentElement) {
+          const c = parse(getComputedStyle(n).backgroundColor);
+          if (c && c.a >= 1) return c;
+        }
+        return footerBg;
+      };
       for (const el of Array.from(f.querySelectorAll('*'))) {
         const own = Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.textContent ?? '').trim() !== '');
         if (!own) continue;
@@ -337,12 +350,15 @@ test('FT-16 Nền chân trang #0F5838 và mọi chữ trong chân trang đạt t
           fails.push(`không đọc được màu chữ: ${getComputedStyle(el).color}`);
           continue;
         }
+        const bg = solidBgOf(el);
         const mix = (k: 'r' | 'g' | 'b') => fg[k] * fg.a + bg[k] * (1 - fg.a);
         const l1 = lum({ r: mix('r'), g: mix('g'), b: mix('b') });
         const l2 = lum(bg);
         const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
         if (ratio < 4.5)
-          fails.push(`${ratio.toFixed(2)}:1 "${(el.textContent ?? '').trim().slice(0, 30)}" ${getComputedStyle(el).color}`);
+          fails.push(
+            `${ratio.toFixed(2)}:1 "${(el.textContent ?? '').trim().slice(0, 30)}" ${getComputedStyle(el).color}`,
+          );
       }
       return { bg: bgRaw, fails };
     });
@@ -363,7 +379,8 @@ test('FT-09 Giao diện không có emoji/ký tự hình: không trong header/ch�
       ([src]) => {
         const re = new RegExp(src, 'u');
         const out: string[] = [];
-        const chrome = 'header, footer, nav, button, form, summary, [role="button"], a[class*="btn" i], a[class*="cta" i]';
+        const chrome =
+          'header, footer, nav, button, form, summary, [role="button"], a[class*="btn" i], a[class*="cta" i]';
         for (const el of Array.from(document.querySelectorAll(chrome))) {
           const m = re.exec((el as HTMLElement).outerHTML);
           if (m) out.push(`<${el.tagName.toLowerCase()}> chứa U+${m[0].codePointAt(0)?.toString(16).toUpperCase()}`);
@@ -388,7 +405,11 @@ test('FT-09b HTML sinh ra của mọi trang không có emoji/ký tự hình ngo�
   const bad: string[] = [];
   for (const t of listTargets()) {
     const res = await page.request.get(t.url);
-    const html = await res.text();
+    // bỏ <script>/<style> và comment HTML: ký tự trong mã/comment không phải chữ hiển thị; vẫn quét chữ và thuộc tính
+    const html = (await res.text())
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
+      .replace(/<style\b[\s\S]*?<\/style\s*>/gi, '');
     const hit = new Set<string>();
     for (const m of html.matchAll(FORBIDDEN_ALL)) if (!allowed.has(m[0])) hit.add(m[0]);
     for (const ch of hit) bad.push(`${t.url}: U+${ch.codePointAt(0)?.toString(16).toUpperCase()} (${ch})`);
@@ -399,7 +420,8 @@ test('FT-09b HTML sinh ra của mọi trang không có emoji/ký tự hình ngo�
 test('FT-09c Không dùng font biểu tượng (class fa-/material-icons/glyphicon/bi-) trên mọi trang (J17, §13b luật 1)', async ({
   page,
 }) => {
-  const ICON_FONT = /\bclass="[^"]*\b(fa-[a-z]|fas|far|fab|material-icons|material-symbols|glyphicon|bi-[a-z]|icon-font)\b/;
+  const ICON_FONT =
+    /\bclass="[^"]*\b(fa-[a-z]|fas|far|fab|material-icons|material-symbols|glyphicon|bi-[a-z]|icon-font)\b/;
   const bad: string[] = [];
   for (const t of listTargets()) {
     const html = await (await page.request.get(t.url)).text();
@@ -433,7 +455,10 @@ test('FT-10 Mọi <svg> trang trí có aria-hidden="true" focusable="false"; nú
       for (const el of Array.from(document.querySelectorAll('a[href], button, [role="button"]'))) {
         const clone = el.cloneNode(true) as HTMLElement;
         for (const s of Array.from(clone.querySelectorAll('svg'))) s.remove();
-        const named = (clone.textContent ?? '').trim() !== '' || !!el.getAttribute('aria-label')?.trim() || el.hasAttribute('aria-labelledby');
+        const named =
+          (clone.textContent ?? '').trim() !== '' ||
+          !!el.getAttribute('aria-label')?.trim() ||
+          el.hasAttribute('aria-labelledby');
         if (!named) out.push(`điều khiển không có tên: ${(el as HTMLElement).outerHTML.slice(0, 90)}`);
       }
       return Array.from(new Set(out));
@@ -461,7 +486,10 @@ for (const locale of LOCALES) {
           .map((s) => {
             const st = getComputedStyle(s);
             const r = s.getBoundingClientRect();
-            return { html: s.outerHTML.slice(0, 70), ok: st.display !== 'none' && st.visibility !== 'hidden' && r.width > 0 && r.height > 0 };
+            return {
+              html: s.outerHTML.slice(0, 70),
+              ok: st.display !== 'none' && st.visibility !== 'hidden' && r.width > 0 && r.height > 0,
+            };
           })
           .filter((x) => !x.ok)
           .map((x) => x.html),
