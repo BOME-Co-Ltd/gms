@@ -1,5 +1,6 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { parse as parseYaml } from 'yaml';
 import { formStatusOf } from '../../contracts/build.ts';
@@ -16,6 +17,9 @@ import {
 import { getDictionary } from '../../src/i18n/index.ts';
 import { formatPublicPhone } from '../../src/shared/contact/schema.ts';
 import { computeContentHash } from '../deploy/deploy-prod.ts';
+
+// Tài sản tĩnh (public/) theo vị trí script, không theo cwd: bản build ở thư mục tạm/fixture vẫn có ảnh.
+const PUBLIC_DIR = join(resolve(dirname(fileURLToPath(import.meta.url)), '..', '..'), 'public');
 
 const MENU_ORDER = [
   'home',
@@ -416,8 +420,9 @@ nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); co
 .step-fig { aspect-ratio: 16 / 9; margin: 0; border-radius: 16px; overflow: hidden; position: relative; background: var(--tint); }
 .step-fig img { width: 100%; height: 100%; object-fit: cover; }
 .step-fig figcaption { position: absolute; left: 8px; bottom: 8px; padding: 2px 10px; border-radius: 999px; background: rgb(0 0 0 / 0.65); color: var(--white); font-size: 0.8rem; }
-.step-head { display: flex; align-items: center; gap: 12px; }
-.step-head h3 { margin: 0; }
+.stp-head { display: flex; align-items: center; gap: 12px; }
+.stp-head h3 { margin: 0; }
+.card > h3 { font-size: 1.25rem; margin: 0 0 8px; }
 .step-badge { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #0F5838; color: var(--white); font-weight: 700; }
 .step-card p { margin: 0; }
 .badge-status { gap: 8px; font-size: 0.9rem; border: 2px solid transparent; }
@@ -1047,7 +1052,7 @@ function renderSolutionsPage(content: LoadedSiteContent, locale: Locale): string
               : '';
             return `<li class="card step-card" data-testid="solution-item">
               ${fig}
-              <div class="step-head"><span class="step-badge" aria-hidden="true">${i + 1}</span><h3><span class="sr-only">${isVi ? 'Bước' : 'Step'} ${i + 1}: </span>${escHtml(item.title)}</h3></div>
+              <div class="stp-head"><span class="step-badge" aria-hidden="true">${i + 1}</span><h3><span class="sr-only">${isVi ? 'Bước' : 'Step'} ${i + 1}: </span>${escHtml(item.title)}</h3></div>
               <div>${item.bodyHtml}</div>
               <p><a href="${ROUTES.contact[locale]}" class="btn" data-testid="cta-contact">${isVi ? 'Liên hệ tư vấn' : 'Contact us'}</a></p>
             </li>`;
@@ -1583,14 +1588,17 @@ function renderProjectsListPage(content: LoadedSiteContent, locale: Locale): str
 function renderCareersListPage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
   const items = content.jobs[locale];
+  // Tin tuyển dụng chưa có trường địa điểm riêng: nơi làm việc là địa chỉ công ty (cùng nguồn JSON-LD JobPosting).
+  const place = content.company.address?.[locale]?.trim() || content.company.address?.vi?.trim() || '';
   const body =
     items.length > 0
       ? `<div class="grid-cards">
           ${items
             .map(
               (j) => `<article class="card" data-testid="list-item">
-                <h2><a href="${ROUTES.careers[locale]}/${j.slug}">${escHtml(j.title)}</a></h2>
-                <p class="il">${icon('circle-alert')}<span>${isVi ? 'Hạn nộp' : 'Deadline'}: ${escHtml(formatDateLocale(j.validThrough, locale))}</span></p>
+                <h3><a href="${ROUTES.careers[locale]}/${j.slug}">${escHtml(j.title)}</a></h3>
+                ${place ? `<p class="il">${icon('map-pin')}<span><span class="sr-only">${isVi ? 'Địa điểm' : 'Location'}: </span>${escHtml(place)}</span></p>` : ''}
+                <p class="il">${icon('circle-alert')}<span><span class="sr-only">${isVi ? 'Hạn nộp' : 'Deadline'}: </span>${escHtml(formatDateLocale(j.validThrough, locale))}</span></p>
               </article>`,
             )
             .join('')}
@@ -2282,7 +2290,7 @@ export async function runBuildSite(options?: {
     .toBuffer();
   writeFileSync(join(ogDir, 'default.png'), defaultOgBytes);
   try {
-    const publicOg = join(process.cwd(), 'public', 'og', 'default.png');
+    const publicOg = join(PUBLIC_DIR, 'og', 'default.png');
     mkdirSync(dirname(publicOg), { recursive: true });
     writeFileSync(publicOg, defaultOgBytes);
   } catch {}
@@ -2290,7 +2298,7 @@ export async function runBuildSite(options?: {
   const brandDir = join(outDir, 'brand');
   mkdirSync(brandDir, { recursive: true });
   try {
-    const pubBrand = join(process.cwd(), 'public', 'brand');
+    const pubBrand = join(PUBLIC_DIR, 'brand');
     if (existsSync(pubBrand)) {
       for (const f of readdirSync(pubBrand)) {
         writeFileSync(join(brandDir, f), readFileSync(join(pubBrand, f)));
@@ -2300,7 +2308,7 @@ export async function runBuildSite(options?: {
 
   try {
     for (const f of ['favicon.ico', 'favicon.png', 'icon.svg']) {
-      const srcFile = join(process.cwd(), 'public', f);
+      const srcFile = join(PUBLIC_DIR, f);
       if (existsSync(srcFile)) {
         writeFileSync(join(outDir, f), readFileSync(srcFile));
       }
@@ -2310,7 +2318,7 @@ export async function runBuildSite(options?: {
   for (const img of loaded.images.values()) {
     await processAndWriteImage(img, outDir);
   }
-  copyStaticImages(join(process.cwd(), 'public', 'img'), join(outDir, 'img'), new Set(loaded.images.keys()));
+  copyStaticImages(join(PUBLIC_DIR, 'img'), join(outDir, 'img'), new Set(loaded.images.keys()));
 
   const sitemapUrls: string[] = [];
   const addSitemapUrl = (urlPath: string, noindex: boolean) => {
