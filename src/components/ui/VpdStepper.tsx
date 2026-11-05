@@ -1,5 +1,6 @@
 'use client';
 
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 
@@ -55,13 +56,13 @@ export function VpdStepper({
       <p>{lead}</p>
       <div className="step-controls">
         <button type="button" className="btn btn-outline" onClick={goPrev}>
-          ← {prevLabel}
+          <ArrowLeft size={18} aria-hidden="true" focusable="false" /> {prevLabel}
         </button>
         <button type="button" className="btn" aria-pressed={playing} onClick={togglePlay}>
           {playing ? stopLabel : playLabel}
         </button>
         <button type="button" className="btn btn-outline" onClick={goNext}>
-          {nextLabel} →
+          {nextLabel} <ArrowRight size={18} aria-hidden="true" focusable="false" />
         </button>
       </div>
       <ol className="steps">

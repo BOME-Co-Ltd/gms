@@ -1,3 +1,4 @@
+import { ArrowRight } from 'lucide-react';
 import type React from 'react';
 import { ROUTES } from '../../../contracts/routes.ts';
 import { getDictionary, type Locale } from '../../i18n/index.ts';
@@ -76,7 +77,8 @@ export function SolutionsPageView({ locale }: { locale: Locale }): React.ReactEl
                 </div>
                 <p className="mt-4 pt-2 border-t border-[#0f5838]/10">
                   <a href={ROUTES.contact[locale]} className="btn btn-outline" data-testid="cta-contact">
-                    {isVi ? 'Liên hệ tư vấn' : 'Inquire now'} →
+                    {isVi ? 'Liên hệ tư vấn' : 'Inquire now'}{' '}
+                    <ArrowRight size={18} aria-hidden="true" focusable="false" />
                   </a>
                 </p>
               </article>
@@ -93,7 +95,7 @@ export function SolutionsPageView({ locale }: { locale: Locale }): React.ReactEl
           </p>
           <p className="mt-4">
             <a href={ROUTES.technology[locale]} className="btn">
-              {dict.home.ctaTech} →
+              {dict.home.ctaTech} <ArrowRight size={18} aria-hidden="true" focusable="false" />
             </a>
           </p>
         </section>

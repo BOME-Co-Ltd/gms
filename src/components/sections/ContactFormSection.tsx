@@ -1,5 +1,6 @@
 'use client';
 
+import { ExternalLink } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { getDictionary, type Locale } from '../../i18n/index.ts';
@@ -243,7 +244,9 @@ export function ContactFormSection({
             className="btn btn-secondary text-sm px-4 py-2"
             data-testid="map-open"
           >
-            {locale === 'vi' ? 'Chỉ đường Google Maps ↗' : 'Open in Google Maps ↗'}
+            {locale === 'vi' ? 'Chỉ đường Google Maps' : 'Open in Google Maps'}
+            <span className="sr-only"> {locale === 'vi' ? '(mở tab mới)' : '(opens in a new tab)'}</span>{' '}
+            <ExternalLink size={18} aria-hidden="true" focusable="false" />
           </a>
         </div>
         <div

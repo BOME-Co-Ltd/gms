@@ -1,3 +1,4 @@
+import { ArrowRight } from 'lucide-react';
 import type React from 'react';
 
 export interface TechSummarySectionProps {
@@ -31,7 +32,7 @@ export function TechSummarySection({
           <p>{lead}</p>
           <p>
             <a className="btn btn-light" href={techHref}>
-              {btnLabel} →
+              {btnLabel} <ArrowRight size={18} aria-hidden="true" focusable="false" />
             </a>
           </p>
         </div>

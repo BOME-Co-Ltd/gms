@@ -1,4 +1,13 @@
+import { Lock, MapPin, MessageCircle, Phone, ReceiptText } from 'lucide-react';
 import type React from 'react';
+
+const IC = {
+  size: 16,
+  strokeWidth: 1.8,
+  'aria-hidden': true,
+  focusable: false,
+  className: 'inline-block align-[-3px]',
+};
 
 export interface FooterProps {
   locale: 'vi' | 'en';
@@ -55,7 +64,7 @@ export function Footer({
             <p className="text-white/80 text-sm leading-relaxed">{slogan}</p>
             <div className="pt-1">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#1b7a4b]/40 text-emerald-200 border border-emerald-500/20">
-                🌿 {isVi ? 'Công nghệ sạch tuần hoàn' : 'Clean circular technology'}
+                {isVi ? 'Công nghệ sạch tuần hoàn' : 'Clean circular technology'}
               </span>
             </div>
           </div>
@@ -67,12 +76,17 @@ export function Footer({
             </h4>
             {address ? (
               <p className="text-white/90 leading-relaxed">
-                <strong className="text-white">📍 {isVi ? 'Địa chỉ' : 'Address'}:</strong> {address}
+                <strong className="text-white">
+                  <MapPin {...IC} /> {isVi ? 'Địa chỉ' : 'Address'}:
+                </strong>{' '}
+                {address}
               </p>
             ) : null}
             {phone ? (
               <p className="text-white/90">
-                <strong className="text-white">📞 {isVi ? 'Điện thoại' : 'Phone'}:</strong>{' '}
+                <strong className="text-white">
+                  <Phone {...IC} /> {isVi ? 'Điện thoại' : 'Phone'}:
+                </strong>{' '}
                 <a
                   href={`tel:${phone}`}
                   className="text-emerald-300 hover:text-white font-semibold underline underline-offset-2 transition-colors"
@@ -83,7 +97,9 @@ export function Footer({
             ) : null}
             {zalo ? (
               <p className="text-white/90">
-                <strong className="text-white">💬 Zalo:</strong>{' '}
+                <strong className="text-white">
+                  <MessageCircle {...IC} /> Zalo:
+                </strong>{' '}
                 <a
                   href={zalo}
                   rel="noopener noreferrer"
@@ -96,7 +112,10 @@ export function Footer({
             ) : null}
             {taxId ? (
               <p data-testid="tax-id" className="text-white/90">
-                <strong className="text-white">🏛️ {isVi ? 'Mã số thuế' : 'Tax ID'}:</strong> {taxId}
+                <strong className="text-white">
+                  <ReceiptText {...IC} /> {isVi ? 'Mã số thuế' : 'Tax ID'}:
+                </strong>{' '}
+                {taxId}
               </p>
             ) : null}
           </div>
@@ -162,7 +181,7 @@ export function Footer({
                 href={privacyHref}
                 className="inline-flex items-center gap-1 text-emerald-300 hover:text-white font-semibold underline underline-offset-2 transition-colors text-sm"
               >
-                🔒 {privacyLabel}
+                <Lock {...IC} /> {privacyLabel}
               </a>
             </div>
           </div>
