@@ -2030,27 +2030,43 @@ function renderContactPage(
     </div>
   `;
 
-  const mapPoint = '20.930031, 106.065651';
-  const hasMap = Boolean((company.mapUrl && company.mapUrl.trim()) || (company.mapImage && company.mapImage.trim()));
-  const mapBlockHtml = hasMap
-    ? `<section class="section-block" data-testid="map-block">
-        <h2>${isVi ? 'Bản đồ vị trí nhà máy' : 'Plant Location Map'}</h2>
-        <p>${isVi ? 'Toạ độ: 20.930031, 106.065651 (Quốc lộ 39, Bần Yên Nhân, Mỹ Hào, Hưng Yên)' : 'Coordinates: 20.930031, 106.065651 (National Route 39, Ban Yen Nhan, My Hao, Hung Yen)'}</p>
+  // Điểm bản đồ chỉ lấy từ Thông tin công ty (loader đã kiểm dạng MAP_POINT; vắng/sai ⇒ null).
+  const mapPoint = company.mapPoint ?? null;
+  const mapQuery = mapPoint ? encodeURIComponent(mapPoint.replace(/\s+/g, '')) : '';
+  const mapLinkUrl =
+    (company.mapUrl && company.mapUrl.trim()) || (mapQuery ? `https://maps.google.com/?q=${mapQuery}` : '');
+  const hasMap = Boolean(mapPoint || mapLinkUrl || (company.mapImage && company.mapImage.trim()));
+  const mapTitle = isVi ? 'Bản đồ vị trí nhà máy' : 'Plant Location Map';
+  const mapLinkHtml = mapLinkUrl
+    ? `<a href="${escHtml(mapLinkUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="min-height: 36px; padding: 6px 14px; font-size: 0.85rem;">${isVi ? 'Mở trên Google Maps ↗' : 'Open in Google Maps ↗'}</a>`
+    : '';
+  const mapAddress = isVi
+    ? 'Quốc lộ 39, Bần Yên Nhân, Mỹ Hào, Hưng Yên'
+    : 'National Route 39, Ban Yen Nhan, My Hao, Hung Yen';
+  const mapBlockHtml = !hasMap
+    ? ''
+    : !mapPoint
+      ? `<section class="section-block" data-testid="map-block">
+        <h2>${mapTitle}</h2>
+        <p>${mapLinkHtml}</p>
+      </section>`
+      : `<section class="section-block" data-testid="map-block">
+        <h2>${mapTitle}</h2>
+        <p>${isVi ? 'Toạ độ:' : 'Coordinates:'} ${escHtml(mapPoint)} (${mapAddress})</p>
         <button type="button" class="btn btn-secondary" data-testid="map-open" id="btn-map-open">
           ${isVi ? 'Hiện bản đồ tương tác' : 'Show interactive map'}
         </button>
-        <div data-testid="map-view" id="map-view-container" data-point="${mapPoint}" hidden style="margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+        <div data-testid="map-view" id="map-view-container" data-point="${escHtml(mapPoint)}" hidden style="margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
           <div style="padding: 14px 16px; background: #f8faf7; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;">
             <div>
               <p style="margin: 0; font-weight: 700; color: var(--g900); font-size: 1rem;">${isVi ? 'Nhà máy Xử lý & Tái tạo Tài nguyên GMS Hưng Yên' : 'GMS Hung Yen Waste-to-Resource Plant'}</p>
-              <p style="margin: 4px 0 0; font-size: 0.875rem; color: #555;"><strong>${isVi ? 'Toạ độ:' : 'Coordinates:'}</strong> ${mapPoint} (${isVi ? 'Quốc lộ 39, Bần Yên Nhân, Mỹ Hào, Hưng Yên' : 'National Route 39, Ban Yen Nhan, My Hao, Hung Yen'})</p>
+              <p style="margin: 4px 0 0; font-size: 0.875rem; color: #555;"><strong>${isVi ? 'Toạ độ:' : 'Coordinates:'}</strong> ${escHtml(mapPoint)} (${mapAddress})</p>
             </div>
-            <p style="margin: 0;"><a href="${escHtml(company.mapUrl || 'https://maps.google.com/?q=20.930031,106.065651')}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="min-height: 36px; padding: 6px 14px; font-size: 0.85rem;">${isVi ? 'Mở trên Google Maps ↗' : 'Open in Google Maps ↗'}</a></p>
+            <p style="margin: 0;">${mapLinkHtml}</p>
           </div>
-          <iframe id="map-iframe" title="${isVi ? 'Bản đồ vị trí nhà máy' : 'Plant Location Map'}" width="100%" height="380" style="border:0; display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" data-src="https://maps.google.com/maps?q=20.930031,106.065651&hl=${locale}&z=15&output=embed"></iframe>
+          <iframe id="map-iframe" title="${mapTitle}" width="100%" height="380" style="border:0; display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" data-src="https://maps.google.com/maps?q=${mapQuery}&hl=${locale}&z=15&output=embed"></iframe>
         </div>
-      </section>`
-    : '';
+      </section>`;
 
   const consentText = isVi
     ? `Tôi đồng ý để ${escHtml(company.legalName ?? '')} thu thập và dùng họ tên, email hoặc số điện thoại, công ty và nội dung tôi nhập với mục đích trả lời liên hệ này. Xem <a href="${ROUTES.privacy.vi}" tabindex="-1">Chính sách bảo mật</a>.`
