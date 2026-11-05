@@ -27,6 +27,16 @@ export type HumanCheckMode =
   | 'wrong-hostname'
   | 'wrong-action';
 
+// Hình dạng một dòng của op `seed-outbox` (contracts/test-control.ts:94–103). Chỉ các trường contract khai.
+export type SeedOutboxRow = {
+  batch: 'summary' | 'single';
+  createdAtIso: string;
+  attempts?: number;
+  sentAtIso?: string;
+  leaseUntilIso?: string;
+  bodyB64?: string;
+};
+
 async function call<T = unknown>(op: string, args: object = {}): Promise<T> {
   const res = await fetch(`${CONTROL_URL}/${op}`, {
     method: 'POST',
@@ -82,6 +92,9 @@ export const control = {
   seedAttempts: (ip: string, n: number, kind: 'ok' | 'trap' | 'invalid', atIso?: string) =>
     call('seed-attempts', { ip, n, kind, atIso }),
   seedNotifyCount: (n: number, windowStartIso: string) => call('seed-notify-count', { n, windowStartIso }),
+  // contract lượt 11 (test-control.ts, op seed-outbox): ghi THÊM dòng outbox, ⇒ { ids } cùng thứ tự `rows`.
+  seedOutbox: async (rows: SeedOutboxRow[]): Promise<string[]> =>
+    (await call<{ ids: string[] }>('seed-outbox', { rows })).ids,
 };
 
 export async function pollUntil<T>(

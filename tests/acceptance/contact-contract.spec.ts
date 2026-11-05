@@ -2,6 +2,7 @@
 // Nguồn kỳ vọng: threat-model.md §00000.4/XQ-35, design.md §6g, contracts/README "Lượt 10". Mọi tên op theo test-control.ts.
 // Ca nào Worker chưa đạt thì để ĐỎ (không nới); xem bug-report ở 04-build/.
 import { expect, test } from '@playwright/test';
+import { CRON_LIMITS, OUTBOX } from '../../contracts/api';
 import { control } from '../support/control';
 import { postContact, VALID } from '../support/ui';
 
@@ -407,10 +408,133 @@ test('CC-12b M30-b: tên có chữ "Reply-To:" nhưng KHÔNG có ký tự điề
   expect(r.json?.ok).toBe(true);
 });
 
-// ---- Q10-2 trên D1 cục bộ thật: chưa dựng được ca độc lập (xem test-plan §Ca chưa có) --------------------------------
-test.fixme('CC-13 Q10-2: phần đầy maxSummaryContacts=100 trên D1 cục bộ thật — lease, không lỗi bound-parameter, bước xoá >7 ngày chạy (@S19 XQ-35)', async () => {
-  // Cần op đặt outbox.attempts / chạy `wrangler d1 --local` ngoài Worker; chưa có op ⇒ ghi "chưa có" trong test-plan.
+// ---- Q10-2 / CC-14 trên D1 cục bộ thật, dựng bằng op seed-outbox (test-control.ts:81–103, lượt 11) -----------------------
+// Chuỗi: reset (beforeEach) → seed-outbox → run-cron → đọc mailbox / store-dump / app-logs / alerts. Mọi số lấy từ contract
+// (api.ts CRON_LIMITS, OUTBOX), không viết cứng. Adapter điền PII giả theo chỉ số dòng: email `seed-<i>@vi-du.test`
+// (test-control.ts:86–90) ⇒ dùng email để đếm liên hệ trong thân thư.
+const T = at(61); // 11:01 giờ VN: hết giờ tròn 10:00–11:00 ⇒ thư tóm tắt của giờ 10:00 đến hạn (design.md §6g bước 4)
+const iso = (sec: number) => new Date(Date.parse(HOUR0) + sec * 1000).toISOString();
+const seedIds = (text: string) => [...text.matchAll(/seed-(\d+)@vi-du\.test/g)].map((m) => Number(m[1]));
+const summaries = async () => (await control.mailbox(TO)).filter((m) => m.kind === 'summary');
+const outboxById = async () =>
+  new Map(((await control.storeDump()).tables.outbox ?? []).map((r) => [String(r.id), r] as const));
+
+test('CC-13 Q10-2: phần đầy maxSummaryContacts trên D1 cục bộ thật — Cron không lỗi bound-parameter, lease đúng (hai lượt chồng + lượt ngay sau không gửi lặp) (@S19 XQ-35; design.md §6g bước 4)', async () => {
+  const N = CRON_LIMITS.maxSummaryContacts;
+  // N liên hệ tóm tắt chưa gửi, created_at lệch 30 s, đều trước đầu giờ tròn của T (04:00Z ⇒ 03:00Z..03:49:30Z).
+  const rows = Array.from({ length: N }, (_, i) => ({ batch: 'summary' as const, createdAtIso: iso(i * 30) }));
+  const ids = await control.seedOutbox(rows);
+  expect(ids, 'seed-outbox trả một id cho mỗi dòng').toHaveLength(N);
+  expect(new Set(ids).size).toBe(N);
+
+  await control.setNow(T);
+  await Promise.all([control.runCron(T), control.runCron(T)]); // chồng nhau: chỉ một lượt lấy được lease
+  await control.runCron(at(62)); // lượt ngay sau: các dòng đã gửi/đang lease ⇒ không gửi lại
+
+  const sums = await summaries();
+  expect(sums, 'đúng 1 thư tóm tắt cho phần đầy, không lặp').toHaveLength(1);
+  const got = seedIds(sums[0]?.text ?? '');
+  expect(got, 'mỗi liên hệ đúng 1 lần trong thân thư').toHaveLength(N);
+  expect([...new Set(got)].sort((a, b) => a - b)).toEqual(Array.from({ length: N }, (_, i) => i));
+
+  const byId = await outboxById();
+  for (const [i, id] of ids.entries()) {
+    const row = byId.get(id);
+    expect(row, `dòng ${i} còn trong outbox (gửi < ${OUTBOX.deleteSentWithinSeconds}s ⇒ chưa xoá)`).toBeDefined();
+    expect(row?.sent_at, `dòng ${i} đã gửi`).toBeTruthy();
+    expect(Number(row?.attempts), `dòng ${i}: attempts +1 đúng một lần lúc lấy lease`).toBe(1);
+  }
+  const logRows = ((await control.storeDump()).tables.mail_log ?? []).filter((r) => r.kind === 'summary');
+  expect(logRows, 'một hàng mail_log summary').toHaveLength(1);
+  expect(
+    (await control.alerts()).filter((a) => /SUMMARY_SPLIT/.test(a.subject + a.text)),
+    'vừa một phần ⇒ không SUMMARY_SPLIT',
+  ).toHaveLength(0);
+  const { lines } = await control.appLogs();
+  const dbErrors = lines.filter((l) => /bound|too many (sql )?(variables|parameters)|SQLITE_|D1_ERROR|parameter/i.test(l));
+  expect(dbErrors, 'app-logs không có lỗi D1 / bound-parameter').toEqual([]);
 });
-test.fixme('CC-14 design §6g: bản ghi đầu hàng đợi attempts ≥ 3 ⇒ phần thư chỉ chứa bản ghi đó', async () => {
-  // Không có op seed outbox.attempts ⇒ XQ gửi backend/architect (test-plan).
+
+test('CC-13b Q10-2: bước 3 xoá dòng quá OUTBOX.maxRetentionUnsentSeconds (kể cả dòng đã gửi), ≤ maxDeletesPerRun mỗi lượt; dòng chưa quá hạn còn nguyên (@S19 XQ-35; api.ts:215–217, 160–162)', async () => {
+  const OLD = CRON_LIMITS.maxDeletesPerRun + 1; // đủ chạm trần xoá của một lượt
+  const nowSec = Date.parse(T) / 1000;
+  const sentIso = new Date((nowSec - 60) * 1000).toISOString(); // vừa gửi 1 phút trước: chưa tới hạn xoá dòng đã gửi
+  const ago = (sec: number) => new Date((nowSec - sec) * 1000).toISOString();
+  const oldIds = await control.seedOutbox(
+    Array.from({ length: OLD }, (_, i) => ({
+      batch: 'single' as const,
+      createdAtIso: ago(OUTBOX.maxRetentionUnsentSeconds + 3600 + i), // quá hạn 1 giờ+
+      sentAtIso: sentIso,
+    })),
+  );
+  const [keepId] = await control.seedOutbox([
+    { batch: 'single', createdAtIso: ago(OUTBOX.maxRetentionUnsentSeconds - 3600), sentAtIso: sentIso }, // còn 1 giờ nữa mới quá hạn
+  ]);
+  expect(oldIds).toHaveLength(OLD);
+
+  await control.setNow(T);
+  await control.runCron(T);
+  let byId = await outboxById();
+  const left1 = oldIds.filter((id) => byId.has(id)).length;
+  const deleted1 = OLD - left1;
+  expect(deleted1, 'lượt 1 xoá được dòng quá hạn trên D1 thật').toBeGreaterThan(0);
+  expect(deleted1, `lượt 1 xoá ≤ maxDeletesPerRun=${CRON_LIMITS.maxDeletesPerRun}`).toBeLessThanOrEqual(
+    CRON_LIMITS.maxDeletesPerRun,
+  );
+
+  await control.runCron(at(62));
+  byId = await outboxById();
+  expect(oldIds.filter((id) => byId.has(id)), 'lượt 2 xoá nốt phần còn lại').toEqual([]);
+  expect(byId.has(keepId ?? ''), 'dòng chưa quá hạn không bị xoá').toBe(true);
+  const { lines } = await control.appLogs();
+  expect(lines.filter((l) => /bound|too many (sql )?(variables|parameters)|SQLITE_|D1_ERROR|parameter/i.test(l))).toEqual([]);
+});
+
+// design.md §6g (dòng 207–219, 233) + api.ts:172–175: bản ghi đầu hàng (rn = 1, thứ tự (created_at, id)) có attempts ≥
+// summaryHeadAttemptsIsolate ⇒ phần kế CHỈ gồm bản ghi đó. Id ngẫu nhiên ⇒ bản ghi đầu xác định nhờ created_at lệch ≥ 1 s.
+const SIBLINGS = 4;
+async function seedHeadAndSiblings(headAttempts: number) {
+  const ids = await control.seedOutbox([
+    { batch: 'summary', createdAtIso: iso(0), attempts: headAttempts },
+    ...Array.from({ length: SIBLINGS }, (_, i) => ({ batch: 'summary' as const, createdAtIso: iso(60 * (i + 1)) })),
+  ]);
+  await control.setNow(T);
+  return ids;
+}
+
+test('CC-14 design §6g: bản ghi đầu hàng attempts ≥ summaryHeadAttemptsIsolate ⇒ phần thư chỉ chứa bản ghi đó; phần sau đi tiếp, không mất liên hệ (@S19 XQ-35)', async () => {
+  const head = CRON_LIMITS.summaryHeadAttemptsIsolate;
+  const ids = await seedHeadAndSiblings(head);
+
+  await control.runCron(T);
+  let sums = await summaries();
+  expect(sums, 'lượt 1: đúng 1 thư tóm tắt').toHaveLength(1);
+  expect(seedIds(sums[0]?.text ?? ''), 'phần 1 chỉ gồm bản ghi đầu (seed-0)').toEqual([0]);
+  let byId = await outboxById();
+  expect(Number(byId.get(ids[0] ?? '')?.attempts), 'attempts tăng +1 lúc lấy lease').toBe(head + 1);
+  expect(byId.get(ids[0] ?? '')?.sent_at, 'bản ghi đầu đã gửi').toBeTruthy();
+  for (const id of ids.slice(1)) {
+    expect(byId.get(id)?.sent_at ?? null, 'bản ghi sau chưa bị kéo vào phần cô lập').toBeNull();
+    expect(Number(byId.get(id)?.attempts), 'bản ghi sau chưa lấy lease').toBe(0);
+  }
+
+  await control.runCron(at(62));
+  sums = await summaries();
+  expect(sums, 'lượt 2: thêm 1 phần').toHaveLength(2);
+  expect(
+    seedIds(sums[1]?.text ?? '').sort((a, b) => a - b),
+    'phần 2 gồm đủ các bản ghi còn lại, không có bản ghi đầu',
+  ).toEqual(Array.from({ length: SIBLINGS }, (_, i) => i + 1));
+  byId = await outboxById();
+  for (const id of ids) expect(byId.get(id)?.sent_at, 'không liên hệ nào bị bỏ sót').toBeTruthy();
+});
+
+test('CC-14b biên: bản ghi đầu attempts = summaryHeadAttemptsIsolate − 1 ⇒ KHÔNG cô lập, cả hàng nằm chung một phần (@S19 XQ-35)', async () => {
+  await seedHeadAndSiblings(CRON_LIMITS.summaryHeadAttemptsIsolate - 1);
+  await control.runCron(T);
+  const sums = await summaries();
+  expect(sums, 'đúng 1 thư tóm tắt').toHaveLength(1);
+  expect(seedIds(sums[0]?.text ?? '').sort((a, b) => a - b)).toEqual(
+    Array.from({ length: SIBLINGS + 1 }, (_, i) => i),
+  );
 });
