@@ -33,32 +33,32 @@ cùng bảng 16 rule với cùng số đếm (bảng dưới). Phần khác duy 
 
 ## Số chẩn đoán theo mức (A = trước, B = sau)
 
-| Mức | A | B | Chênh |
-|---|---|---|---|
-| error | 35 | 35 | 0 |
-| warning | 142 | 142 | 0 |
-| info | 24 | 24 | 0 |
+| Mức     | A   | B   | Chênh |
+| ------- | --- | --- | ----- |
+| error   | 35  | 35  | 0     |
+| warning | 142 | 142 | 0     |
+| info    | 24  | 24  | 0     |
 
 ## Theo rule
 
-| Rule | Mức | A | B | Chênh |
-|---|---|---|---|---|
-| assist/source/organizeImports | error | 8 | 8 | 0 |
-| lint/a11y/noSvgWithoutTitle | error | 4 | 4 | 0 |
-| lint/correctness/noUnusedVariables | error | 2 | 2 | 0 |
-| lint/complexity/noExcessiveCognitiveComplexity | warning | 19 | 19 | 0 |
-| lint/complexity/noImportantStyles | warning | 48 | 48 | 0 |
-| lint/complexity/useOptionalChain | warning | 12 | 12 | 0 |
-| lint/correctness/noUnusedFunctionParameters | warning | 1 | 1 | 0 |
-| lint/performance/noAccumulatingSpread | warning | 1 | 1 | 0 |
-| lint/performance/noImgElement | warning | 11 | 11 | 0 |
-| lint/performance/useDomNodeTextContent | warning | 7 | 7 | 0 |
-| lint/style/noDescendingSpecificity | warning | 5 | 5 | 0 |
-| lint/style/noNonNullAssertion | warning | 35 | 35 | 0 |
-| lint/style/useImportType | warning | 2 | 2 | 0 |
-| lint/suspicious/noConfusingVoidType | warning | 1 | 1 | 0 |
-| lint/complexity/useLiteralKeys | info | 7 | 7 | 0 |
-| lint/style/useTemplate | info | 17 | 17 | 0 |
+| Rule                                           | Mức     | A   | B   | Chênh |
+| ---------------------------------------------- | ------- | --- | --- | ----- |
+| assist/source/organizeImports                  | error   | 8   | 8   | 0     |
+| lint/a11y/noSvgWithoutTitle                    | error   | 4   | 4   | 0     |
+| lint/correctness/noUnusedVariables             | error   | 2   | 2   | 0     |
+| lint/complexity/noExcessiveCognitiveComplexity | warning | 19  | 19  | 0     |
+| lint/complexity/noImportantStyles              | warning | 48  | 48  | 0     |
+| lint/complexity/useOptionalChain               | warning | 12  | 12  | 0     |
+| lint/correctness/noUnusedFunctionParameters    | warning | 1   | 1   | 0     |
+| lint/performance/noAccumulatingSpread          | warning | 1   | 1   | 0     |
+| lint/performance/noImgElement                  | warning | 11  | 11  | 0     |
+| lint/performance/useDomNodeTextContent         | warning | 7   | 7   | 0     |
+| lint/style/noDescendingSpecificity             | warning | 5   | 5   | 0     |
+| lint/style/noNonNullAssertion                  | warning | 35  | 35  | 0     |
+| lint/style/useImportType                       | warning | 2   | 2   | 0     |
+| lint/suspicious/noConfusingVoidType            | warning | 1   | 1   | 0     |
+| lint/complexity/useLiteralKeys                 | info    | 7   | 7   | 0     |
+| lint/style/useTemplate                         | info    | 17  | 17  | 0     |
 
 Còn 21 file "need to be formatted" (chẩn đoán format, không nằm trong bảng rule), cùng danh sách ở A và B.
 
