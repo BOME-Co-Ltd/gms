@@ -1,6 +1,7 @@
 // layout-and-language.feature → LAY-01..LAY-06 (S1, S2). v0.3: site tĩnh; Tin mẫu nằm trong bản build mặc định (SITE_FIXTURE, XQ-21).
 import { expect, test } from '@playwright/test';
 import { BASE_URL } from '../support/env';
+import { siteLegalName } from '../support/fixtures';
 import { detailPath, type Locale, PAGE_KEYS, type PageKey, path } from '../support/routes';
 import { bodyText, htmlLang, open, tid, VN_DIACRITIC } from '../support/ui';
 
@@ -42,7 +43,18 @@ test('LAY-02 Đường dẫn không tồn tại trả 404 đúng ngôn ngữ (@S
   const r = await page.goto(NOT_FOUND.en);
   expect(r?.status()).toBe(404);
   expect(await htmlLang(page)).toBe('en');
-  expect(await bodyText(page)).not.toMatch(VN_DIACRITIC);
+  // Tên pháp lý là dữ liệu công ty một chuỗi không tách locale (content-model.ts Company.legalName; contact-info.feature:30 đòi chân trang en hiện tên này)
+  // ⇒ loại nó ra trước khi kiểm dấu. Không nới gì khác: mọi chữ có dấu còn lại vẫn làm test đỏ. innerText áp text-transform ⇒ so khớp không phân biệt hoa/thường.
+  const legal = new RegExp(
+    siteLegalName()
+      .trim()
+      .split(/\s+/)
+      .map((w) => esc(w))
+      .join('\\s+'),
+    'giu',
+  );
+  const rest = (await bodyText(page)).replace(legal, ' ');
+  expect(rest, 'trang 404 en còn chữ có dấu ngoài tên pháp lý').not.toMatch(VN_DIACRITIC);
   await expect(page.locator(`a[href="${path('home', 'en')}"]`).first()).toBeVisible();
   const vi = await page.goto(NOT_FOUND.vi);
   expect(vi?.status()).toBe(404);

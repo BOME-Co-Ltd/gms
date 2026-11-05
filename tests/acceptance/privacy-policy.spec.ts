@@ -107,6 +107,12 @@ test('PRIV-07 Thiếu email nhận yêu cầu về dữ liệu thì build xanh, 
   expect(status.reasons, 'chỉ một lý do: thiếu email nhận yêu cầu dữ liệu').toEqual(['no-privacy-email']);
 });
 
+const sentencesOf = (t: string): string[] =>
+  t
+    .split(/[.\n]/)
+    .map((s) => s.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
 // privacy-policy.feature dòng 48–58 (v0.5.1): hạn 7 ngày (liên hệ chưa gửi được thư) và 14 ngày (bản khôi phục của Cloudflare).
 const RETENTION: Array<[Locale, string, string]> = [
   ['vi', '7 ngày', '14 ngày'],
@@ -118,21 +124,22 @@ for (const [locale, held, copy] of RETENTION) {
   }) => {
     await open(page, 'privacy', locale);
     const t = await bodyText(page);
-    const sentences = t
-      .split(/[.\n]/)
-      .map((s) => s.replace(/\s+/g, ' ').trim())
-      .filter(Boolean);
+    const sentences = sentencesOf(t);
     const heldAt = sentences.flatMap((s, i) => (s.includes(held) ? [i] : []));
     expect(heldAt.length, `phải có câu nêu "${held}"`).toBeGreaterThan(0);
     // Spec: "bị web giữ tối đa <mốc> rồi xoá" — không đòi "giữ" và "xoá" nằm cùng một câu ⇒ xét câu có mốc và câu liền sau (cách ngắt câu là giả định của test, không phải của spec).
+    // Hai bản cùng một tiêu chí: vi khớp gốc từ "giữ|lưu"; en khớp theo gốc từ cho mọi dạng chia (held/kept/stored/retained/retention…), không chỉ dạng nguyên mẫu.
     expect(
       heldAt.some((i) => {
         const s = `${sentences[i]} ${sentences[i + 1] ?? ''}`;
         return locale === 'vi'
           ? /(giữ|lưu)/i.test(s) && /xoá|xóa/i.test(s)
-          : /(hold|keep|store|retain)/i.test(s) && /delet|remov|erase/i.test(s);
+          : /(hold|held|keep|kept|stor|retain|retention|saved?)/i.test(s) &&
+              /(delet|remov|erase|erasure|purg|discard)/i.test(s);
       }),
-      `"${held}": câu nêu việc giữ rồi xoá`,
+      `"${held}": câu nêu việc giữ rồi xoá. Các câu chứa mốc (cùng câu liền sau): ${JSON.stringify(
+        heldAt.map((i) => `${sentences[i]} ${sentences[i + 1] ?? ''}`.trim()),
+      )}`,
     ).toBe(true);
     const copySentence = sentences.filter((s) => s.includes(copy));
     expect(copySentence.length, `phải có câu nêu "${copy}"`).toBeGreaterThan(0);
@@ -150,5 +157,53 @@ for (const [locale, held, copy] of RETENTION) {
         : /encrypt/i.test(s) && /(stor|held|retain|contact)/i.test(s),
     );
     expect(encClaim, 'không nêu dữ liệu liên hệ lưu phía web được mã hoá').toEqual([]);
+  });
+}
+
+// privacy-policy.feature dòng 41–46 và 48–58: thời hạn lưu liên hệ chỉ có ba mốc — 24 tháng (hộp thư GMS), 7 ngày (web giữ khi chưa gửi được thư),
+// 14 ngày (bản khôi phục của Cloudflare). Quyết định admin 05/11: câu "24 giờ / 24 hours" về lưu/xoá liên hệ (khối chữ cứng trong renderPrivacyPage) trái spec.
+const RETENTION_ONCE: Array<[Locale, string, string, string, string, RegExp, RegExp]> = [
+  ['vi', '7 ngày', '14 ngày', '24 tháng', '24 giờ', /(?<![\d.,])24 giờ(?!\p{L})/iu, /(giữ|lưu|xoá|xóa|hết hạn)/i],
+  [
+    'en',
+    '7 days',
+    '14 days',
+    '24 months',
+    '24 hours',
+    /(?<![\d.,])24[- ]hours?(?![\p{L}])/iu,
+    /(hold|held|keep|kept|stor|retain|retention|delet|remov|erase|purg|expire)/i,
+  ],
+];
+for (const [locale, held, copy, mailbox, dayHours, hoursRe, keepRe] of RETENTION_ONCE) {
+  test(`PRIV-09 Chính sách không còn mốc "${dayHours}" về lưu liên hệ, có hạn lưu hộp thư GMS "${mailbox}", mốc "${held}"/"${copy}" mỗi mốc một lần (${locale}) (@S25 @risk:pii-log)`, async ({
+    page,
+  }) => {
+    await open(page, 'privacy', locale);
+    const t = await bodyText(page);
+    const sentences = sentencesOf(t);
+    const countOf = (needle: string) => {
+      const [n, unit] = needle.split(' ');
+      return sentences.filter((s) => new RegExp(`(?<![\\d.,])${n} ${unit}(?![\\p{L}])`, 'iu').test(s)).length;
+    };
+
+    // (1) Không còn câu "24 giờ" nói về lưu/giữ/xoá liên hệ (trái dòng 51: web giữ tối đa 7 ngày rồi xoá; dòng 46: hộp thư 24 tháng).
+    const dayHourRetention = sentences.filter((s) => hoursRe.test(s) && keepRe.test(s));
+    expect(dayHourRetention, `câu nêu "${dayHours}" gắn với lưu/giữ/xoá liên hệ trái spec`).toEqual([]);
+
+    // (2) Hạn lưu thư liên hệ trong hộp thư GMS là tối đa 24 tháng (dòng 46) — mốc và "hộp thư/mailbox" trong cùng câu hoặc câu liền kề.
+    const mailboxAt = sentences.flatMap((s, i) => (s.includes(mailbox) ? [i] : []));
+    expect(mailboxAt.length, `phải có câu nêu "${mailbox}"`).toBeGreaterThan(0);
+    expect(
+      mailboxAt.some((i) =>
+        (locale === 'vi' ? /hộp thư/i : /(mailbox|inbox)/i).test(
+          [sentences[i - 1], sentences[i], sentences[i + 1]].filter(Boolean).join(' '),
+        ),
+      ),
+      `"${mailbox}": câu nêu hạn lưu trong hộp thư GMS. Các câu chứa mốc: ${JSON.stringify(mailboxAt.map((i) => sentences[i]))}`,
+    ).toBe(true);
+
+    // (3) Mốc 7 ngày và 14 ngày mỗi mốc xuất hiện đúng một câu — không câu nhắc lại/mâu thuẫn.
+    expect(countOf(held), `số câu chứa "${held}"`).toBe(1);
+    expect(countOf(copy), `số câu chứa "${copy}"`).toBe(1);
   });
 }
