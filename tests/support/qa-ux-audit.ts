@@ -159,9 +159,16 @@ async function checkBadges(page: Page, path: string, vp: Viewport, state: AuditS
 // 5. Kiểm tra Nút Floating Contact
 async function checkFloatingContact(page: Page, path: string, vp: Viewport, state: AuditState) {
   const floatingBtnCheck = await page.evaluate(() => {
-    const group = document.querySelector('.floating-contact-group');
-    if (!group) return null;
-    const btns = Array.from(group.querySelectorAll('a'));
+    // Không dựa tên class nội bộ (ux-spec v0.4 đổi cấu trúc): nút liên hệ nổi = liên kết tel:/Zalo ngoài header/footer
+    // có tổ tiên (hoặc chính nó) position:fixed.
+    const isFixed = (el: Element | null) => {
+      for (let e = el; e; e = e.parentElement) if (getComputedStyle(e).position === 'fixed') return true;
+      return false;
+    };
+    const btns = Array.from(document.querySelectorAll('a[href^="tel:"], a[href*="zalo.me"]')).filter(
+      (a) => !a.closest('header, footer') && isFixed(a),
+    );
+    if (btns.length === 0) return null;
     return btns.map((b) => {
       const rect = b.getBoundingClientRect();
       const computed = getComputedStyle(b);
@@ -297,7 +304,8 @@ async function checkHeroHover(page: Page, state: AuditState) {
 
 // 6.3. Test Floating Buttons Hover Scale
 async function checkZaloHoverScale(page: Page, state: AuditState) {
-  const zaloBtn = page.locator('.floating-btn-zalo, .floating-circle-btn[href*="zalo"]');
+  // Không dựa tên class nội bộ: liên kết Zalo ngoài header/footer (nút nổi).
+  const zaloBtn = page.locator('a[href*="zalo.me"]:not(header a):not(footer a)').first();
   if (!(await zaloBtn.isVisible())) return;
 
   await zaloBtn.hover();
