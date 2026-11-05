@@ -90,4 +90,37 @@ describe('loadSiteContent — journey-steps.yaml và company.yaml', () => {
     expect(loaded.errors.filter((e) => e.code.startsWith('PRIVACY_EMAIL'))).toEqual([]);
     expect(loaded.company.privacyRequestEmail).toBe('');
   });
+
+  it('company.yaml có mapPoint đúng dạng ⇒ company.mapPoint giữ nguyên, không lỗi', () => {
+    const loaded = loadSiteContent(dirWith({ 'company.yaml': 'mapPoint: "20.930031, 106.065651"\n' }));
+    expect(loaded.errors.filter((e) => e.code === 'MAP_POINT_INVALID')).toEqual([]);
+    expect(loaded.company.mapPoint).toBe('20.930031, 106.065651');
+  });
+
+  it('company.yaml vắng mapPoint ⇒ company.mapPoint = null, không lỗi', () => {
+    const loaded = loadSiteContent(dirWith({ 'company.yaml': 'legalName: "GMS"\n' }));
+    expect(loaded.errors.filter((e) => e.code === 'MAP_POINT_INVALID')).toEqual([]);
+    expect(loaded.company.mapPoint).toBeNull();
+  });
+
+  it('company.yaml mapPoint sai dạng ⇒ MAP_POINT_INVALID và company.mapPoint = null', () => {
+    const loaded = loadSiteContent(dirWith({ 'company.yaml': 'mapPoint: "Mỹ Hào, Hưng Yên"\n' }));
+    expect(loaded.errors.map((e) => e.code)).toContain('MAP_POINT_INVALID');
+    expect(loaded.company.mapPoint).toBeNull();
+  });
+});
+
+describe('validateCompanyRaw — mapPoint (content-model.ts MAP_POINT)', () => {
+  it('thiếu, null ⇒ không lỗi; "vĩ, kinh" có hoặc không dấu cách ⇒ không lỗi', () => {
+    expect(validateCompanyRaw({})).toEqual([]);
+    expect(validateCompanyRaw({ mapPoint: null })).toEqual([]);
+    expect(validateCompanyRaw({ mapPoint: '20.930031, 106.065651' })).toEqual([]);
+    expect(validateCompanyRaw({ mapPoint: '20.930031,106.065651' })).toEqual([]);
+  });
+
+  it('sai dạng (thiếu phần thập phân, một số, không phải chuỗi) ⇒ MAP_POINT_INVALID', () => {
+    for (const mapPoint of ['20, 106', '20.930031', '', 20.930031, 'abc, def']) {
+      expect(validateCompanyRaw({ mapPoint }).map((e) => e.code)).toEqual(['MAP_POINT_INVALID']);
+    }
+  });
 });

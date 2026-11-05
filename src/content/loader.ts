@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import MarkdownIt from 'markdown-it';
 import { parse as parseYaml } from 'yaml';
+import { MAP_POINT } from '../../contracts/content-model.ts';
 import { ROUTES } from '../../contracts/routes.ts';
 import {
   buildBaseInternalPaths,
@@ -35,6 +36,8 @@ export type LoadedCompany = {
   zalo: string | null;
   mapImage: string | null;
   mapUrl: string | null;
+  // shortcut: tuỳ chọn để literal LoadedCompany trong tests/unit/all.test.ts (ngoài lãnh địa) còn biên dịch; bỏ `?` khi test đó được cập nhật.
+  mapPoint?: string | null;
   taxId: string | null;
   privacyRequestEmail: string;
 };
@@ -366,6 +369,9 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
     mapImage:
       typeof rawCompany?.mapImage === 'string' && rawCompany.mapImage.trim() ? rawCompany.mapImage.trim() : null,
     mapUrl: typeof rawCompany?.mapUrl === 'string' && rawCompany.mapUrl.trim() ? rawCompany.mapUrl.trim() : null,
+    // giá trị sai dạng đã báo MAP_POINT_INVALID ở validateCompanyRaw; không chuyển tiếp cho bộ dựng
+    mapPoint:
+      typeof rawCompany?.mapPoint === 'string' && MAP_POINT.test(rawCompany.mapPoint) ? rawCompany.mapPoint : null,
     taxId: typeof rawCompany?.taxId === 'string' && rawCompany.taxId.trim() ? rawCompany.taxId.trim() : null,
     privacyRequestEmail:
       typeof rawCompany?.privacyRequestEmail === 'string' ? rawCompany.privacyRequestEmail.trim() : '',
