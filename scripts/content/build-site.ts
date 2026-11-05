@@ -420,8 +420,8 @@ nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); co
 .step-fig { aspect-ratio: 16 / 9; margin: 0; border-radius: 16px; overflow: hidden; position: relative; background: var(--tint); }
 .step-fig img { width: 100%; height: 100%; object-fit: cover; }
 .step-fig figcaption { position: absolute; left: 8px; bottom: 8px; padding: 2px 10px; border-radius: 999px; background: rgb(0 0 0 / 0.65); color: var(--white); font-size: 0.8rem; }
-.stp-head { display: flex; align-items: center; gap: 12px; }
-.stp-head h3 { margin: 0; }
+.stp-head { display: flex; align-items: flex-start; gap: 12px; }
+.stp-head h3 { margin: 0; min-height: 40px; display: flex; align-items: center; }
 .card > h3 { font-size: 1.25rem; margin: 0 0 8px; }
 .step-badge { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #0F5838; color: var(--white); font-weight: 700; }
 .step-card p { margin: 0; }

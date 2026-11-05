@@ -110,7 +110,7 @@ export function buildContactRowsHtml(input: FooterInput): string {
       row({
         iconHtml: zaloLogo({ size: 24, className: 'ft-zalo' }),
         label: t.zalo,
-        valueHtml: `${t.zaloShown} ${esc(input.zalo.text)}${sr(t.newTab)}`,
+        valueHtml: `<span>${t.zaloShown} ${esc(input.zalo.text)}</span>${sr(t.newTab)}`,
         href: input.zalo.href,
         external: true,
       }),
