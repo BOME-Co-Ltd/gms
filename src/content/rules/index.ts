@@ -1,5 +1,5 @@
 import { CONTENT_RULE_MESSAGES } from '../../../contracts/build.ts';
-import { IMAGE_LIMITS, JOURNEY_STATUSES } from '../../../contracts/content-model.ts';
+import { IMAGE_LIMITS, JOURNEY_STATUSES, MAP_POINT } from '../../../contracts/content-model.ts';
 import { ROUTES } from '../../../contracts/routes.ts';
 import { safeHref } from '../../../contracts/safe-url.ts';
 import { isValidPublicVNPhone } from '../../shared/contact/schema.ts';
@@ -254,6 +254,14 @@ export function validateCompanyRaw(company: Record<string, unknown> | null): Con
         message: `company.yaml: số điện thoại công khai "${phoneStr}" không phải số điện thoại Việt Nam hợp lệ`,
       });
     }
+  }
+  // content-model.ts Company.mapPoint: thiếu ⇒ không có khối bản đồ; đã khai thì phải đúng MAP_POINT.
+  const rawPoint = company.mapPoint;
+  if (rawPoint !== undefined && rawPoint !== null && (typeof rawPoint !== 'string' || !MAP_POINT.test(rawPoint))) {
+    errors.push({
+      code: 'MAP_POINT_INVALID',
+      message: 'company.yaml: điểm bản đồ (mapPoint) phải có dạng "vĩ độ, kinh độ", ví dụ "20.930031, 106.065651"',
+    });
   }
   return errors;
 }
