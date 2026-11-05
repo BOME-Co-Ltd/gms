@@ -1,5 +1,6 @@
 // Cổng điều khiển kiểm thử của Worker `gms-contact` (lượt 6, 31/10/2026 — trả lời qa XQ-QA20).
 // Lượt 9 (04/11): human-check thêm mode; thêm op turnstile-secret (M31).
+// Lượt 11 (05/11, change_api_contract người dùng duyệt, phương án A): thêm op seed-outbox (CC-13, CC-14).
 // SỐ PHẬN (lượt 8, 04/11): DÙNG, là contract hiện hành giữa backend và qa. Không xoá khi design_approved. Bản lượt 3–4
 // (gắn với CMS, đã bỏ raw 31/10) chỉ còn trong lịch sử git.
 // Máy validate: `bun x tsc --noEmit` (design.md "Đã kiểm").
@@ -26,6 +27,7 @@
 // Op lạ ⇒ 404 { error: "UNKNOWN_OP" }; thân sai schema ⇒ 400 { error: "BAD_BODY", issues }.
 // Op chỉ dựng tiền điều kiện và đọc trạng thái; khẳng định hành vi phải qua `POST /api/contact` như người dùng thật.
 import { z } from "zod";
+import { CRON_LIMITS } from "./api";
 
 export const TEST_CONTROL_BASE = "/__test__" as const; // Worker không có quy ước thư mục "_" của Next ⇒ dùng được
 export const TEST_PEER_IP_HEADER = "x-test-peer-ip" as const; // chỉ dùng nếu wrangler dev ghi đè CF-Connecting-IP
@@ -47,7 +49,7 @@ export const MailboxMessage = z.object({
 });
 
 export const TestControlOps = {
-  // Xoá mọi bảng D1, hộp thư giả, cảnh báo, log; tắt mọi lỗi tiêm; đồng hồ về giờ thật; policyVersion và
+  // Xoá mọi bảng D1 (outbox, rate_counter, dedupe, mail_log, heartbeat — kể cả dòng do seed-outbox ghi), hộp thư giả, cảnh báo, log; tắt mọi lỗi tiêm; đồng hồ về giờ thật; policyVersion và
   // người nhận về giá trị của wrangler.test.jsonc; HumanCheck về "pass"; TURNSTILE_SECRET về giá trị test.
   reset: z.object({}),
   "set-now": z.object({ iso: Iso.nullable() }),                    // Clock giả; null = giờ thật
@@ -76,5 +78,28 @@ export const TestControlOps = {
   // Dựng bộ đếm D1 cho một IP: kind "ok" ghi cả bộ đếm thành công lẫn lần thử; "trap"/"invalid" chỉ lần thử.
   "seed-attempts": z.object({ ip: z.string().min(2), n: z.number().int().positive(), kind: z.enum(["ok", "trap", "invalid"]), atIso: Iso.optional() }),
   "seed-notify-count": z.object({ n: z.number().int().nonnegative(), windowStartIso: Iso }), // dòng mail_log kind notify
+  // Lượt 11 (05/11): ghi THẲNG dòng outbox (d1-schema.sql) qua adapter kiểm thử ở worker/testing/** — không đi qua
+  // POST, không qua ContactQueue production. Cho CC-13 (phần đầy maxSummaryContacts + lease + xoá > 7 ngày trên D1
+  // cục bộ) và CC-14 (bản ghi đầu hàng có attempts ≥ summaryHeadAttemptsIsolate ⇒ phần chỉ gồm bản ghi đó). Chuỗi ca:
+  // seed-outbox → run-cron (nowIso) → store-dump / mailbox / app-logs. Ghi THÊM vào outbox (không xoá dòng cũ; xoá
+  // bằng reset). ⇒ { ids: string[] } cùng thứ tự `rows`.
+  // Cột không có trong thân do adapter điền: id = UUID v4 mới; locale 'vi'; PII giả cố định theo chỉ số dòng
+  // (full_name "Seed <i>", email "seed-<i>@vi-du.test", phone NULL, message "seed <i>", page_path "/lien-he");
+  // policy_version = POLICY_VERSION hiện hành của Worker test; consent_at = next_attempt_at = created_at;
+  // dedupe_hash = hex ngẫu nhiên riêng mỗi dòng; utm_json, company, last_error, alerted_at = NULL.
+  // bodyB64 thiếu ⇒ adapter dựng khối từ PII giả bằng ĐÚNG hàm dựng khối của POST (đệm bội bodyBlockBytesMultiple).
+  // Thứ tự Cron là (created_at, id) và id ngẫu nhiên ⇒ ca cần bản ghi đầu xác định (CC-14) đặt createdAtIso khác giây.
+  // Trần dòng: một phần đầy (maxSummaryContacts) + số dòng cũ đủ chạm trần xoá một lượt (maxDeletesPerRun + 1).
+  // Adapter ghi mỗi dòng một câu INSERT (gom bằng db.batch), số tham số mỗi câu hằng số (api.ts CRON_LIMITS §5b).
+  "seed-outbox": z.object({
+    rows: z.array(z.object({
+      batch: z.enum(["summary", "single"]),
+      createdAtIso: Iso,                       // ⇒ created_at (epoch giây, làm tròn xuống)
+      attempts: z.number().int().nonnegative().default(0),
+      sentAtIso: Iso.optional(),               // thiếu ⇒ sent_at NULL (chưa gửi)
+      leaseUntilIso: Iso.optional(),           // thiếu ⇒ lease_until NULL
+      bodyB64: z.string().min(1).max(CRON_LIMITS.bodyB64MaxBytes).regex(/^[A-Za-z0-9+/=\r\n]+$/).optional(),
+    }).strict()).min(1).max(CRON_LIMITS.maxSummaryContacts + CRON_LIMITS.maxDeletesPerRun + 1),
+  }),
 } as const;
 export type TestControlOp = keyof typeof TestControlOps;

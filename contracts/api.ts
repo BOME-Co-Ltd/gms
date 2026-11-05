@@ -188,7 +188,8 @@ export const CRON_SELECT_COLUMNS = {
 // §5d Mã cảnh báo tới ALERT_TO (lượt 9). Thư cảnh báo chỉ có mã + số đếm, không id, không PII. Ghi mail_log kind
 // 'alert' kèm cột code (d1-schema.sql) để giới hạn lặp.
 export const MAIL_ALERT_CODES = {
-  // M29(1): có bản ghi quá hạn gửi > OUTBOX.overdueAlertSeconds. MỘT thư mỗi đợt hỏng: chỉ gửi khi mail_log chưa có
+  // M29(1): có bản ghi quá hạn gửi ≥ OUTBOX.overdueAlertSeconds (lượt 11: biên gồm, hạn gửi ≤ now − 900; health.ok
+  // vẫn dùng ≤ ở §3, design.md §6a "Tín hiệu"). MỘT thư mỗi đợt hỏng: chỉ gửi khi mail_log chưa có
   // dòng code này với sent_at ≥ hạn gửi của bản ghi quá hạn lâu nhất, và chưa có trong giờ tròn hiện tại. Đợt kéo dài
   // thì chỉ PENDING_OVERDUE_24H lặp (không 24 thư/ngày khi đường thư chết).
   overdue15m: "PENDING_OVERDUE_15M",

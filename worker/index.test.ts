@@ -11,6 +11,7 @@ import { isUsableTurnstileSecret, judgeSiteverify } from './domain/human-check.t
 import { decodeBodyB64 } from './domain/mail-builder.ts';
 import type { Env } from './index.ts';
 import type { AppLogger, Clock, HumanCheck, Mailer, MailSendInput, MailSendResult } from './ports.ts';
+import { runSeedOutbox } from './testing/seed-outbox.ts';
 
 type CapturedMail = {
   kind: 'notify' | 'summary' | 'alert';
@@ -325,6 +326,10 @@ async function handleTestControl(req: Request, env: Env, op: string): Promise<Re
         await queue.recordMailLog('notify', ts);
       }
       return Response.json({ ok: true });
+    }
+    case 'seed-outbox': {
+      const res = await runSeedOutbox(env.DB, body, state.policyVersion);
+      return Response.json(res.json, { status: res.status });
     }
     default:
       return new Response(JSON.stringify({ error: 'UNKNOWN_OP' }), { status: 404 });

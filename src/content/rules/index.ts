@@ -260,7 +260,7 @@ export function validateCompanyRaw(company: Record<string, unknown> | null): Con
   if (rawPoint !== undefined && rawPoint !== null && (typeof rawPoint !== 'string' || !MAP_POINT.test(rawPoint))) {
     errors.push({
       code: 'MAP_POINT_INVALID',
-      message: 'company.yaml: điểm bản đồ (mapPoint) phải có dạng "vĩ độ, kinh độ", ví dụ "20.930031, 106.065651"',
+      message: CONTENT_RULE_MESSAGES.MAP_POINT_INVALID(),
     });
   }
   return errors;
