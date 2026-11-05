@@ -10,6 +10,7 @@ import {
   type Locale,
   loadSiteContent,
 } from '../../src/content/loader.ts';
+import { getDictionary } from '../../src/i18n/index.ts';
 import { formatPublicPhone } from '../../src/shared/contact/schema.ts';
 import { computeContentHash } from '../deploy/deploy-prod.ts';
 
@@ -1444,11 +1445,11 @@ function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum:
   const stepRows: Array<{ name: string; status: string | null }> = content.journeySteps
     ? content.journeySteps.map((s) => ({ name: s.name[locale], status: s.status }))
     : defaultNames.map((name) => ({ name, status: null }));
-  // Nhãn EN theo ux-review-journey-status-2026-11-05 §2; VI giữ nguyên chữ thường của nguồn (feature S12).
+  // Nhãn theo ux-spec C34–C36, nguồn src/i18n/*.json → journeyStatus (content-model.ts:104-106).
   const statusLabel = (status: string | null): string => {
     if (!status) return '';
-    const en: Record<string, string> = { 'chưa tới': 'Upcoming', 'đang làm': 'In progress', 'đã xong': 'Completed' };
-    return isVi ? status : (en[status] ?? '');
+    const labels: Record<string, string> = getDictionary(locale).journeyStatus;
+    return labels[status] ?? '';
   };
   // Khoá ASCII cho class CSS, không phụ thuộc dạng Unicode của chữ tiếng Việt.
   const STATUS_KEY: Record<string, 'done' | 'doing' | 'upcoming'> = {
