@@ -114,6 +114,18 @@ describe('quá hạn gửi 15 phút tính từ created_at với thư riêng (sin
     expect(await s.overdueAlerts()).toBe(1);
   });
 
+  it('biên: 899 s chưa cảnh báo, đúng 900 s (≥) có đúng 1 cảnh báo (contact-form.feature:101-102)', async () => {
+    const s = await setup();
+    await s.add('single-1', 'single', T0);
+
+    await s.at(T0 + OUTBOX.overdueAlertSeconds - 1);
+    expect(await s.overdueAlerts()).toBe(0);
+
+    await s.at(T0 + OUTBOX.overdueAlertSeconds);
+    expect(await s.overdueAlerts()).toBe(1);
+    expect((await s.queue.pendingStats(T0 + OUTBOX.overdueAlertSeconds, OUTBOX.overdueAlertSeconds)).overdue).toBe(1);
+  });
+
   it('pendingStats: 14 phút overdue=0, 16 phút overdue=1, oldestDueSec = created_at', async () => {
     const s = await setup();
     await s.add('single-1', 'single', T0);

@@ -1,5 +1,5 @@
 import { CONTENT_RULE_MESSAGES } from '../../../contracts/build.ts';
-import { IMAGE_LIMITS } from '../../../contracts/content-model.ts';
+import { IMAGE_LIMITS, JOURNEY_STATUSES } from '../../../contracts/content-model.ts';
 import { ROUTES } from '../../../contracts/routes.ts';
 import { safeHref } from '../../../contracts/safe-url.ts';
 import { isValidPublicVNPhone } from '../../shared/contact/schema.ts';
@@ -211,17 +211,39 @@ export function validateOutputLinesRaw(items: Array<Record<string, unknown>>): C
   return errors;
 }
 
+const JOURNEY_STATUS_SET: readonly string[] = JOURNEY_STATUSES;
+
+/** news-and-journey.feature dòng 23–26: `status` của bước (nếu có) phải thuộc JOURNEY_STATUSES; bước đánh số từ `order`. */
+export function validateJourneyStepsRaw(steps: unknown[]): ContentError[] {
+  const errors: ContentError[] = [];
+  steps.forEach((raw, idx) => {
+    const step = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+    if (step.status === undefined || step.status === null) return;
+    const status = String(step.status);
+    if (JOURNEY_STATUS_SET.includes(status)) return;
+    const order = typeof step.order === 'number' ? step.order : idx + 1;
+    errors.push({
+      code: 'JOURNEY_STATUS_INVALID',
+      message: CONTENT_RULE_MESSAGES.JOURNEY_STATUS_INVALID({ step: order, status }),
+    });
+  });
+  return errors;
+}
+
 export function validateCompanyRaw(company: Record<string, unknown> | null): ContentError[] {
   const errors: ContentError[] = [];
   if (!company) {
     errors.push({ code: 'COMPANY_MISSING', message: 'Thiếu tệp company.yaml' });
     return errors;
   }
-  const privacyEmail = typeof company.privacyRequestEmail === 'string' ? company.privacyRequestEmail.trim() : '';
-  if (!privacyEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(privacyEmail)) {
+  // V14 (build.ts §9): thiếu email ⇒ build XANH, form tạm đóng (reason no-privacy-email). Đã khai thì phải đúng dạng.
+  const rawEmail = company.privacyRequestEmail;
+  const privacyEmail = typeof rawEmail === 'string' ? rawEmail.trim() : '';
+  const declared = rawEmail !== undefined && rawEmail !== null && (typeof rawEmail !== 'string' || privacyEmail !== '');
+  if (declared && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(privacyEmail)) {
     errors.push({
-      code: 'PRIVACY_EMAIL_MISSING',
-      message: 'company.yaml: thiếu email nhận yêu cầu về dữ liệu (privacyRequestEmail)',
+      code: 'PRIVACY_EMAIL_INVALID',
+      message: 'company.yaml: email nhận yêu cầu về dữ liệu (privacyRequestEmail) không đúng dạng địa chỉ email',
     });
   }
   if (company.phone !== undefined && company.phone !== null && String(company.phone).trim() !== '') {

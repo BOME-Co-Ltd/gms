@@ -15,6 +15,7 @@ import {
   validateFigureRaw,
   validateImageBinary,
   validateImageMetaRaw,
+  validateJourneyStepsRaw,
   validateLinksInBody,
   validateOutputLinesRaw,
   validatePageClaimsAndFigures,
@@ -149,9 +150,18 @@ export type LoadedPolicy = {
   bodyHtml: string;
 };
 
+/** content/journey-steps.yaml (content-model.ts JourneyStep). `status` giữ nguyên chuỗi nguồn (đã qua JOURNEY_STATUS_INVALID). */
+export type LoadedJourneyStep = {
+  order: number;
+  name: { vi: string; en: string };
+  status: string | null;
+};
+
 export type LoadedSiteContent = {
   errors: ContentError[];
   company: LoadedCompany;
+  /** null khi không có journey-steps.yaml (trang dùng lộ trình mặc định, không nhãn). Đã sắp theo `order`. */
+  journeySteps: LoadedJourneyStep[] | null;
   images: Map<string, LoadedImage>;
   figures: LoadedFigure[];
   outputLines: LoadedOutputLine[];
@@ -839,6 +849,27 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
     }
   }
 
+  // 12b. journey-steps.yaml (S12): lộ trình 5 bước, trạng thái kiểm theo JOURNEY_STATUSES
+  let journeySteps: LoadedJourneyStep[] | null = null;
+  const journeyPath = join(contentDir, 'journey-steps.yaml');
+  if (existsSync(journeyPath)) {
+    const rawSteps = parseYaml(readFileSync(journeyPath, 'utf8')) as unknown;
+    if (Array.isArray(rawSteps)) {
+      errors.push(...validateJourneyStepsRaw(rawSteps));
+      journeySteps = rawSteps
+        .map((rs, idx) => {
+          const o = (rs && typeof rs === 'object' ? rs : {}) as Record<string, unknown>;
+          const nameObj = o.name as { vi?: unknown; en?: unknown } | undefined;
+          return {
+            order: typeof o.order === 'number' ? o.order : idx + 1,
+            name: { vi: String(nameObj?.vi ?? ''), en: String(nameObj?.en ?? '') },
+            status: o.status === undefined || o.status === null ? null : String(o.status),
+          };
+        })
+        .sort((a, b) => a.order - b.order);
+    }
+  }
+
   // 13. Build valid internal paths set & check all markdown links (BUILD-02, NEWS-08)
   const validPaths = buildBaseInternalPaths();
   for (const n of news.vi) validPaths.add(`/tin-tuc/${n.slug}`);
@@ -885,6 +916,7 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
   return {
     errors,
     company,
+    journeySteps,
     images,
     figures,
     outputLines,
