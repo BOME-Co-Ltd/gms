@@ -3,14 +3,29 @@
 // ghi môi trường vào báo cáo; không so số giữa máy khác nhau.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { chromium, expect, test } from '@playwright/test';
 import { BASE_URL } from '../support/env';
-import { aggregate, JS_BUDGET_GZIP_BYTES, listTargets, median, type Run } from '../support/perf';
+import { aggregate, JS_BUDGET_GZIP_BYTES, listTargets, median, NOT_FOUND_SAMPLE, type Run } from '../support/perf';
 
 const RUNS = 3;
+// Báo cáo ghi vào tests/.results (đã nằm trong biome ignore, .gitignore, sandbox outputs), tính theo vị trí file, không theo cwd.
+const RESULTS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '.results');
 const modName = 'lighthouse'; // import động: pha 1 chưa có package, file vẫn biên dịch được
-async function lighthouseRuns(url: string): Promise<Run[]> {
+
+// Mã HTTP mong đợi: trang thường 200, trang 404 mẫu đúng 404. Không nới redirect (3xx) — spec không khai redirect cho 30 đích đo.
+const NOT_FOUND_URLS: string[] = Object.values(NOT_FOUND_SAMPLE);
+const expectedStatus = (t: { label: string; url: string }) =>
+  t.label === '404' || NOT_FOUND_URLS.includes(t.url) ? 404 : 200;
+// redirect: 'manual' để 3xx hiện nguyên mã thay vì bị theo đuôi thành 200.
+async function httpStatus(url: string): Promise<number> {
+  return (await fetch(BASE_URL + url, { redirect: 'manual' })).status;
+}
+
+// ignoreStatusCode chỉ bật cho đích 404; 29 đích còn lại giữ mặc định Lighthouse (trang lỗi HTTP làm lần đo hỏng).
+async function lighthouseRuns(url: string, expected = 200): Promise<Run[]> {
   const browser = await chromium.launch({ args: ['--remote-debugging-port=9333'] });
   try {
     const lh = (await import(modName)).default as (
@@ -27,7 +42,7 @@ async function lighthouseRuns(url: string): Promise<Run[]> {
         onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
         formFactor: 'mobile',
         screenEmulation: { mobile: true, width: 375, height: 667, deviceScaleFactor: 2, disabled: false },
-        ignoreStatusCode: true,
+        ...(expected === 404 ? { ignoreStatusCode: true } : {}),
       });
       out.push({
         performance: lhr.categories.performance.score * 100,
@@ -48,11 +63,19 @@ async function lighthouseRuns(url: string): Promise<Run[]> {
 test('PERF-01 Mỗi trang đạt ngưỡng Lighthouse mobile — 30 dòng (@S3)', async () => {
   const targets = listTargets();
   expect(targets).toHaveLength(30); // 15 trang x 2 locale (Bối cảnh)
+  const wrongStatus: string[] = [];
+  for (const t of targets) {
+    const want = expectedStatus(t);
+    const got = await httpStatus(t.url);
+    if (got !== want) wrongStatus.push(`${t.label} / ${t.locale} (${t.url}): mã thực tế ${got}, cần ${want}`);
+  }
+  expect(wrongStatus, wrongStatus.join('\n')).toEqual([]);
   const results = [] as Array<{ page: string; locale: 'vi' | 'en'; runs: Run[] }>;
-  for (const t of targets) results.push({ page: t.label, locale: t.locale, runs: await lighthouseRuns(t.url) });
+  for (const t of targets)
+    results.push({ page: t.label, locale: t.locale, runs: await lighthouseRuns(t.url, expectedStatus(t)) });
   const report = aggregate(results);
-  mkdirSync('.results', { recursive: true });
-  writeFileSync('.results/lighthouse-report.json', JSON.stringify(report, null, 2));
+  mkdirSync(RESULTS_DIR, { recursive: true });
+  writeFileSync(join(RESULTS_DIR, 'lighthouse-report.json'), JSON.stringify(report, null, 2));
   const failed = report.rows
     .filter((r) => r.verdict === 'Không đạt')
     .map((r) => `${r.page} / ${r.locale} / ${r.metric}: ${r.median} (cần ${r.limit})`);
@@ -97,6 +120,7 @@ test('PERF-02 Ngân sách JS gzip mỗi trang, tính cả bên thứ ba (@S3)', 
 
 test('PERF-03 Trang Liên hệ có bản đồ + chống spam vẫn trong ngưỡng (@S3)', async () => {
   // Bản build đo có điểm bản đồ + số Zalo trong Thông tin công ty (XQ-21).
+  expect(await httpStatus('/en/contact'), 'Contact / en: mã HTTP phải là 200').toBe(200);
   const runs = await lighthouseRuns('/en/contact');
   expect(median(runs.map((r) => r.performance))).toBeGreaterThanOrEqual(95);
   expect(median(runs.map((r) => r.tbtMs))).toBeLessThan(200);
