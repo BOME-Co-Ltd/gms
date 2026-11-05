@@ -15,7 +15,6 @@ import { type Locale, type PageKey, path } from '../support/routes';
 import { open, tid, VN_DIACRITIC } from '../support/ui';
 
 const LOCALES: Locale[] = ['vi', 'en'];
-const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const squash = (s: string) => s.replace(/\s+/g, ' ').trim();
 const trimSlash = (p: string) => (p.length > 1 ? p.replace(/\/$/, '') : p);
 const textOf = (html: string) =>
@@ -194,23 +193,26 @@ for (const locale of LOCALES) {
     page,
   }) => {
     await open(page, 'home', locale);
-    const m = await page.evaluate((labels) => {
-      const f = document.querySelector('[data-testid="footer"]') as HTMLElement;
-      const leafWith = (re: RegExp) =>
-        Array.from(f.querySelectorAll('*')).filter((e) => e.children.length === 0 && re.test(e.textContent ?? ''));
-      const shown = (e: Element) => {
-        const r = e.getBoundingClientRect();
-        return r.width > 1 && r.height > 1;
-      };
-      return {
-        labels: labels.map((l) => {
-          const hits = leafWith(new RegExp(`^\\s*${l}\\s*:\\s*$`));
-          return { label: l, found: hits.length, shown: hits.filter(shown).length };
-        }),
-        zalo: leafWith(/Zalo/).filter(shown).length,
-        taxId: Array.from(f.querySelectorAll('[data-testid="tax-id"]')).filter(shown).length,
-      };
-    }, [...T[locale].srLabels]);
+    const m = await page.evaluate(
+      (labels) => {
+        const f = document.querySelector('[data-testid="footer"]') as HTMLElement;
+        const leafWith = (re: RegExp) =>
+          Array.from(f.querySelectorAll('*')).filter((e) => e.children.length === 0 && re.test(e.textContent ?? ''));
+        const shown = (e: Element) => {
+          const r = e.getBoundingClientRect();
+          return r.width > 1 && r.height > 1;
+        };
+        return {
+          labels: labels.map((l) => {
+            const hits = leafWith(new RegExp(`^\\s*${l}\\s*:\\s*$`));
+            return { label: l, found: hits.length, shown: hits.filter(shown).length };
+          }),
+          zalo: leafWith(/Zalo/).filter(shown).length,
+          taxId: Array.from(f.querySelectorAll('[data-testid="tax-id"]')).filter(shown).length,
+        };
+      },
+      [...T[locale].srLabels],
+    );
     for (const l of m.labels) {
       expect(l.found, `${locale}: có nhãn .sr-only "${l.label}:" trong hàng`).toBeGreaterThanOrEqual(1);
       expect(l.shown, `${locale}: nhãn "${l.label}:" đang hiện (v0.5: chỉ .sr-only)`).toBe(0);
@@ -330,7 +332,9 @@ test('FT-14 Bố cục: <600 một cột xếp dọc; 600–899 hai cột, menu 
       const f = document.querySelector('[data-testid="footer"]') as HTMLElement;
       const rect = (e?: Element | null) => {
         const b = e?.getBoundingClientRect();
-        return b ? { x: Math.round(b.left), y: Math.round(b.top), right: Math.round(b.right), bottom: Math.round(b.bottom) } : null;
+        return b
+          ? { x: Math.round(b.left), y: Math.round(b.top), right: Math.round(b.right), bottom: Math.round(b.bottom) }
+          : null;
       };
       const brand = Array.from(f.querySelectorAll('*')).find(
         (e) => e.children.length === 0 && (e.textContent ?? '').includes(legal),

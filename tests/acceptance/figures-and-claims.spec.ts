@@ -165,7 +165,10 @@ test('FIG-18 Đối tác hợp lệ: build xanh, trang Công nghệ nêu tên + 
   const vi = r.read('cong-nghe/index.html') ?? r.read('technology/index.html') ?? '';
   expect(vi).toContain('Xanh Asian');
   expect(vi).toContain('đối tác chuyển giao công nghệ');
-  expect(vi).not.toMatch(/<img[^>]*(logo|xanh-?asian)[^>]*>/i);
+  // Chỉ quét vùng nội dung chính: logo GMS thật ở chân trang (ux-spec v0.5) không phải logo đối tác.
+  const main = vi.match(/<main[\s\S]*?<\/main>/i)?.[0];
+  expect(main, 'trang Công nghệ phải có <main>').toBeDefined();
+  expect(main).not.toMatch(/<img[^>]*(logo|xanh-?asian)[^>]*>/i);
 });
 
 test('FIG-19 Bản vẽ 3D "giữ khung tên" ra bản build là tệp gốc không cắt, kèm nhãn ảnh dựng (@S33 @kiem-luc-build)', () => {

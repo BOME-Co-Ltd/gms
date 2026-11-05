@@ -34,10 +34,22 @@ async function markTargets(page: Page): Promise<Key[]> {
     };
     const all = Array.from(document.querySelectorAll('a[href]'));
     const inFooter = (e: Element) => !!e.closest('[data-testid="footer"]');
-    mark('fab-zalo', all.find((a) => /zalo\.me/.test(a.getAttribute('href') ?? '') && !inFooter(a) && fixed(a)));
-    mark('fab-call', all.find((a) => (a.getAttribute('href') ?? '').startsWith('tel:') && !inFooter(a) && fixed(a)));
-    mark('footer-zalo', all.find((a) => /zalo\.me/.test(a.getAttribute('href') ?? '') && inFooter(a)));
-    mark('footer-phone', all.find((a) => (a.getAttribute('href') ?? '').startsWith('tel:') && inFooter(a)));
+    mark(
+      'fab-zalo',
+      all.find((a) => /zalo\.me/.test(a.getAttribute('href') ?? '') && !inFooter(a) && fixed(a)),
+    );
+    mark(
+      'fab-call',
+      all.find((a) => (a.getAttribute('href') ?? '').startsWith('tel:') && !inFooter(a) && fixed(a)),
+    );
+    mark(
+      'footer-zalo',
+      all.find((a) => /zalo\.me/.test(a.getAttribute('href') ?? '') && inFooter(a)),
+    );
+    mark(
+      'footer-phone',
+      all.find((a) => (a.getAttribute('href') ?? '').startsWith('tel:') && inFooter(a)),
+    );
     mark(
       'footer-nav',
       Array.from(document.querySelectorAll('[data-testid="footer"] nav a:not([aria-current])')).find(shown),
@@ -99,12 +111,14 @@ for (const locale of LOCALES) {
     const fab = await read('fab-zalo');
     const row = await read('footer-zalo');
     // §13b luật 6: nút nổi 56px, hàng chân trang 24px
-    expect(fab && Math.abs(fab.w - 56) <= 1 && Math.abs(fab.h - 56) <= 1, `nút nổi Zalo 56px (đo: ${fab?.w}x${fab?.h})`).toBe(
-      true,
-    );
-    expect(row && Math.abs(row.w - 24) <= 1 && Math.abs(row.h - 24) <= 1, `biểu tượng Zalo chân trang 24px (đo: ${row?.w}x${row?.h})`).toBe(
-      true,
-    );
+    expect(
+      fab && Math.abs(fab.w - 56) <= 1 && Math.abs(fab.h - 56) <= 1,
+      `nút nổi Zalo 56px (đo: ${fab?.w}x${fab?.h})`,
+    ).toBe(true);
+    expect(
+      row && Math.abs(row.w - 24) <= 1 && Math.abs(row.h - 24) <= 1,
+      `biểu tượng Zalo chân trang 24px (đo: ${row?.w}x${row?.h})`,
+    ).toBe(true);
   });
 
   // Số đo spec nêu thẳng (bo 16px/6px, viền trắng 2px). Có thể bo/viền nằm trong path của logo thay vì CSS: nếu đỏ, xem ảnh
@@ -161,25 +175,30 @@ const PROPS = [
 
 /** Phóng to hiệu dụng (transform + thuộc tính scale) lớn nhất của phần tử và con cháu; cùng ảnh chụp thuộc tính màu. */
 async function snap(loc: Locator) {
-  return loc.evaluate((el, props) => {
-    const scaleOf = (e: Element) => {
-      const s = getComputedStyle(e);
-      let k = 1;
-      const m = /^matrix(?:3d)?\(([^)]+)\)/.exec(s.transform);
-      if (m) {
-        const v = m[1].split(',').map(Number);
-        k *= Math.hypot(v[0], v[1]);
-      }
-      if (s.scale && s.scale !== 'none') k *= Number(s.scale.split(' ')[0]);
-      return k;
-    };
-    const nodes = [el, ...Array.from(el.querySelectorAll('*'))];
-    return {
-      scale: Math.max(...nodes.map(scaleOf)),
-      hovered: el.matches(':hover'),
-      style: nodes.map((e) => props.map((p) => (getComputedStyle(e) as unknown as Record<string, string>)[p]).join('|')),
-    };
-  }, PROPS as unknown as string[]);
+  return loc.evaluate(
+    (el, props) => {
+      const scaleOf = (e: Element) => {
+        const s = getComputedStyle(e);
+        let k = 1;
+        const m = /^matrix(?:3d)?\(([^)]+)\)/.exec(s.transform);
+        if (m) {
+          const v = m[1].split(',').map(Number);
+          k *= Math.hypot(v[0], v[1]);
+        }
+        if (s.scale && s.scale !== 'none') k *= Number(s.scale.split(' ')[0]);
+        return k;
+      };
+      const nodes = [el, ...Array.from(el.querySelectorAll('*'))];
+      return {
+        scale: Math.max(...nodes.map(scaleOf)),
+        hovered: el.matches(':hover'),
+        style: nodes.map((e) =>
+          props.map((p) => (getComputedStyle(e) as unknown as Record<string, string>)[p]).join('|'),
+        ),
+      };
+    },
+    PROPS as unknown as string[],
+  );
 }
 
 async function hoverResults(page: Page, reduced: boolean) {
@@ -235,7 +254,9 @@ test('FT-18 Hover chỉ phóng to 1.04–1.08: nền, chữ, viền, gạch châ
   expect(bad, bad.join('\n')).toEqual([]);
 });
 
-test('FT-19 prefers-reduced-motion: reduce — hover không phóng to và không đổi màu (V25, V23, J21b)', async ({ page }) => {
+test('FT-19 prefers-reduced-motion: reduce — hover không phóng to và không đổi màu (V25, V23, J21b)', async ({
+  page,
+}) => {
   const bad = await hoverResults(page, true);
   expect(bad, bad.join('\n')).toEqual([]);
 });
@@ -418,7 +439,10 @@ for (const locale of LOCALES)
           };
         });
       });
-      expect(cards.length, `${locale}: số thẻ tuyển dụng (article) ở trang Tuyển dụng — cần ít nhất 1 tin còn hạn`).toBeGreaterThan(0);
+      expect(
+        cards.length,
+        `${locale}: số thẻ tuyển dụng (article) ở trang Tuyển dụng — cần ít nhất 1 tin còn hạn`,
+      ).toBeGreaterThan(0);
       for (const [i, c] of cards.entries()) {
         expect(c.h3, `thẻ ${i}: có h3 cỡ 20px`).toBe(20);
         expect(c.icons.length, `thẻ ${i}: số biểu tượng (địa điểm + hạn nộp)`).toBeGreaterThanOrEqual(2);
@@ -426,7 +450,10 @@ for (const locale of LOCALES)
           expect(`${ic.w}x${ic.h}`, `thẻ ${i}: cỡ biểu tượng`).toBe('20x20');
           expect(ic.hidden, `thẻ ${i}: biểu tượng trang trí aria-hidden`).toBe('true');
         }
-        expect(c.labels.length, `thẻ ${i}: nhãn .sr-only địa điểm/hạn nộp (có: ${JSON.stringify(c.labels)})`).toBeGreaterThanOrEqual(2);
+        expect(
+          c.labels.length,
+          `thẻ ${i}: nhãn .sr-only địa điểm/hạn nộp (có: ${JSON.stringify(c.labels)})`,
+        ).toBeGreaterThanOrEqual(2);
         if (locale === 'vi') {
           expect(c.labels, `thẻ ${i}: nhãn VI`).toEqual(expect.arrayContaining(['Địa điểm:', 'Hạn nộp:']));
         }
@@ -450,7 +477,10 @@ async function stepPages(page: Page, locale: Locale): Promise<string[]> {
     const res = await page.goto(t.url);
     if (!res || res.status() !== 200) continue;
     const n = await page.evaluate(
-      () => Array.from(document.querySelectorAll('ol > li')).filter((li) => li.querySelector('figure') && li.querySelector('h3')).length,
+      () =>
+        Array.from(document.querySelectorAll('ol > li')).filter(
+          (li) => li.querySelector('figure') && li.querySelector('h3'),
+        ).length,
     );
     if (n >= 3) found.push(t.url);
   }
@@ -510,9 +540,12 @@ for (const locale of LOCALES)
               const nb = box(num);
               const nm = getComputedStyle(num);
               const hb = box(h3);
-              if (Math.abs(nb.w - 40) > 1 || Math.abs(nb.h - 40) > 1) err.push(`huy hiệu ${Math.round(nb.w)}x${Math.round(nb.h)} (cần 40x40)`);
-              if (!(nm.borderTopLeftRadius === '50%' || Number.parseFloat(nm.borderTopLeftRadius) >= 20)) err.push(`huy hiệu không tròn (${nm.borderTopLeftRadius})`);
-              if (nm.position === 'absolute' || nm.position === 'fixed') err.push('huy hiệu dùng position absolute/fixed');
+              if (Math.abs(nb.w - 40) > 1 || Math.abs(nb.h - 40) > 1)
+                err.push(`huy hiệu ${Math.round(nb.w)}x${Math.round(nb.h)} (cần 40x40)`);
+              if (!(nm.borderTopLeftRadius === '50%' || Number.parseFloat(nm.borderTopLeftRadius) >= 20))
+                err.push(`huy hiệu không tròn (${nm.borderTopLeftRadius})`);
+              if (nm.position === 'absolute' || nm.position === 'fixed')
+                err.push('huy hiệu dùng position absolute/fixed');
               if (num.getAttribute('aria-hidden') !== 'true') err.push('huy hiệu thiếu aria-hidden="true"');
               if (hit(nb, fb)) err.push('huy hiệu số đè lên vùng ảnh');
               const cy = (nb.t + nb.b) / 2;
@@ -523,9 +556,11 @@ for (const locale of LOCALES)
               if (below < 15 || below > 17) err.push(`vùng chữ cách ảnh ${Math.round(below)}px (cần 16)`);
               if (p && box(p).t < Math.max(nb.b, hb.b) - 1) err.push('mô tả không nằm dưới hàng huy hiệu + tiêu đề');
             }
-            for (const e of [h3, ...(p ? [p] : [])]) if (hit(box(e), fb)) err.push(`<${e.tagName.toLowerCase()}> đè lên vùng ảnh`);
+            for (const e of [h3, ...(p ? [p] : [])])
+              if (hit(box(e), fb)) err.push(`<${e.tagName.toLowerCase()}> đè lên vùng ảnh`);
             const inside = leaves.filter((e) => fig.contains(e));
-            if (inside.length > 1) err.push(`${inside.length} chữ nằm trên ảnh (chỉ cho phép nhãn "Phối cảnh dự kiến")`);
+            if (inside.length > 1)
+              err.push(`${inside.length} chữ nằm trên ảnh (chỉ cho phép nhãn "Phối cảnh dự kiến")`);
             for (const e of inside) {
               const b = box(e);
               if (!((b.l + b.r) / 2 < (fb.l + fb.r) / 2 && (b.t + b.b) / 2 > (fb.t + fb.b) / 2))
