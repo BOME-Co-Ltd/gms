@@ -83,7 +83,9 @@ test('INFO-06 Thiếu mã số thuế thì build xanh, chân trang chỉ hiện 
   expect(r.ok, r.log).toBe(true);
   for (const locale of ['vi', 'en'] as Locale[]) {
     const html = htmlOf(r, path('contact', locale))!;
-    const footer = /<footer[\s\S]*?<\/footer>/i.exec(html)?.[0];
+    // Cấu trúc chân trang đổi theo ux-spec v0.4 §14a (nhiều <footer>/khối): chốt đúng chân trang site bằng data-testid="footer";
+    // mọi khẳng định bên dưới giữ nguyên.
+    const footer = /<footer\b[^>]*data-testid="footer"[\s\S]*?<\/footer>/i.exec(html)?.[0];
     expect(footer, `${locale}: có chân trang`).toBeDefined();
     const ft = text(footer!);
     expect(ft, `${locale}: chân trang hiện tên pháp lý`).toContain('Công ty Mẫu GMS');

@@ -1,0 +1,543 @@
+// Chân trang U10 + quy ước biểu tượng toàn site — nguồn kỳ vọng: ux-spec v0.4 §13b, §14a, bảng kiểm J12–J18, wireframes/footer.html
+// (đã duyệt cùng design_approved, gates seq 41). Mã ca FT-xx; truy vết ở test-plan.md mục 0i.
+// Selector chỉ dùng thứ spec đặt tên: <footer data-testid="footer">, data-testid="tax-id", <nav aria-label>, <h2>, <address>, aria-current,
+// aria-hidden/focusable trên <svg>. KHÔNG dùng class nội bộ (.ft-*, .site-footer) — spec không cam kết tên class.
+// Ca "Trường trống" dựng bằng buildSite (fixture company.yaml); ca còn lại chạy trên bản build đang phục vụ (cùng nguồn với LAY-/PERF-).
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { expect, type Page, test } from '@playwright/test';
+import { buildSite, htmlOf } from '../support/build';
+import { companyFile, siteLegalName } from '../support/fixtures';
+import { listTargets } from '../support/perf';
+import { type Locale, type PageKey, path } from '../support/routes';
+import { open, tid, VN_DIACRITIC } from '../support/ui';
+
+const LOCALES: Locale[] = ['vi', 'en'];
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const squash = (s: string) => s.replace(/\s+/g, ' ').trim();
+const trimSlash = (p: string) => (p.length > 1 ? p.replace(/\/$/, '') : p);
+const textOf = (html: string) =>
+  html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ');
+const footerOf = (html: string) => /<footer\b[^>]*data-testid="footer"[\s\S]*?<\/footer>/i.exec(html)?.[0];
+
+// Chữ theo microcopy ux-spec §14a (C-ft-*) và footer.html (EN của nhãn liên kết).
+const T = {
+  vi: {
+    heads: ['Liên hệ', 'Khám phá', 'Thông tin'],
+    navLabel: 'Liên kết chân trang',
+    info: { careers: 'Tuyển dụng', faq: 'FAQ', privacy: 'Chính sách bảo mật', contact: 'Liên hệ' },
+    rights: 'Tất cả các quyền được bảo lưu\\.',
+    newTab: '(mở tab mới)',
+    labels: { phone: 'Điện thoại', zalo: 'Zalo', fanpage: 'Fanpage', address: 'Địa chỉ', taxId: 'Mã số thuế' },
+  },
+  en: {
+    heads: ['Contact', 'Explore', 'Information'],
+    navLabel: 'Footer links',
+    info: { careers: 'Careers', faq: 'FAQ', privacy: 'Privacy policy', contact: 'Contact' },
+    rights: 'All rights reserved\\.',
+    newTab: '(opens in a new tab)',
+    labels: { phone: 'Phone', zalo: 'Zalo', fanpage: 'Fanpage', address: 'Address', taxId: 'Tax ID' },
+  },
+} as const;
+
+// ux-spec §13b luật 3 / J17: emoji và ký tự hình. Dải theo yêu cầu: U+2190–21FF, U+2600–27BF, U+1F300–1FAFF.
+const FORBIDDEN = /[←-⇿☀-➿\u{1F300}-\u{1FAFF}]/u;
+const FORBIDDEN_ALL = new RegExp(FORBIDDEN.source, 'gu');
+
+const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+// Ký tự hình có trong NỘI DUNG BÀI (content/**) thì không tính lỗi chân trang/giao diện — "ngoài nội dung bài".
+const contentSymbols = (): Set<string> => {
+  const seen = new Set<string>();
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.(md|mdx|ya?ml|json|txt)$/.test(name))
+        for (const m of readFileSync(p, 'utf8').matchAll(FORBIDDEN_ALL)) seen.add(m[0]);
+    }
+  };
+  walk(join(REPO, 'content'));
+  return seen;
+};
+
+async function gotoAny(page: Page, url: string) {
+  await page.goto(url); // gồm cả trang 404 — không dùng open() vì open() đòi 200
+}
+
+// ───────────────────────── J12 / J13: kích thước ─────────────────────────
+
+for (const width of [320, 375]) {
+  test(`FT-01 Chân trang không cuộn ngang ở ${width}px, chữ dài xuống dòng không tràn (J12, §14a)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    const bad: string[] = [];
+    for (const t of listTargets()) {
+      await gotoAny(page, t.url);
+      const m = await page.evaluate(() => {
+        const f = document.querySelector('[data-testid="footer"]') as HTMLElement | null;
+        if (!f) return null;
+        const doc = document.documentElement;
+        const wide = Array.from(f.querySelectorAll('*'))
+          .filter((e) => {
+            const r = e.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 && (r.right > window.innerWidth + 0.5 || r.left < -0.5);
+          })
+          .map((e) => (e as HTMLElement).outerHTML.slice(0, 70));
+        return { page: doc.scrollWidth - doc.clientWidth, footer: f.scrollWidth - f.clientWidth, wide };
+      });
+      if (!m) bad.push(`${t.url}: không có <footer data-testid="footer">`);
+      else if (m.page > 0 || m.footer > 0 || m.wide.length > 0)
+        bad.push(`${t.url}: trang +${m.page}px, chân trang +${m.footer}px, tràn: ${m.wide.slice(0, 3).join(' | ')}`);
+    }
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+}
+
+for (const width of [320, 375]) {
+  test(`FT-02 Mọi liên kết/hàng bấm của chân trang cao và rộng >= 44px ở ${width}px (J13, §14a)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    const small: string[] = [];
+    for (const t of listTargets()) {
+      await gotoAny(page, t.url);
+      const found = await page.locator('[data-testid="footer"] a').evaluateAll((as) =>
+        as
+          .map((a) => ({ r: a.getBoundingClientRect(), html: (a as HTMLElement).outerHTML.slice(0, 70) }))
+          .filter(({ r }) => r.width > 0 && r.height > 0 && (r.height < 43.99 || r.width < 43.99))
+          .map(({ r, html }) => `${Math.round(r.width)}x${Math.round(r.height)} ${html}`),
+      );
+      for (const s of found) small.push(`${t.url}: ${s}`);
+    }
+    expect(small, small.join('\n')).toEqual([]);
+  });
+}
+
+// ───────────────────────── Cấu trúc, microcopy, thứ tự (§14a) ─────────────────────────
+
+for (const locale of LOCALES) {
+  test(`FT-03 ${locale}: đúng MỘT nav "${T[locale].navLabel}" chứa Tuyển dụng, FAQ, Chính sách bảo mật, Liên hệ (J-§14a)`, async ({
+    page,
+  }) => {
+    await open(page, 'home', locale);
+    const footer = tid(page, 'footer');
+    await expect(footer).toHaveCount(1);
+    const navs = footer.locator('nav');
+    await expect(navs, 'một <nav> duy nhất bọc cả hai nhóm liên kết').toHaveCount(1);
+    await expect(navs).toHaveAttribute('aria-label', T[locale].navLabel);
+    const links = await navs.locator('a').evaluateAll((as) =>
+      as.map((a) => ({
+        path: new URL((a as HTMLAnchorElement).href).pathname,
+        text: (a.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      })),
+    );
+    for (const key of ['careers', 'faq', 'privacy', 'contact'] as const) {
+      const hit = links.filter((l) => trimSlash(l.path) === trimSlash(path(key, locale)));
+      expect(hit.length, `${key}: số liên kết tới ${path(key, locale)} trong nav chân trang`).toBe(1);
+      expect(hit[0].text.toLowerCase(), `${key}: chữ liên kết`).toBe(T[locale].info[key].toLowerCase());
+    }
+    if (locale === 'en')
+      for (const l of links) expect(l.text, `nav chân trang EN chứa chữ Việt: "${l.text}"`).not.toMatch(VN_DIACRITIC);
+  });
+
+  test(`FT-04 ${locale}: ba tiêu đề nhóm h2 đúng chữ và đúng thứ tự Liên hệ → Khám phá → Thông tin (§14a)`, async ({
+    page,
+  }) => {
+    await open(page, 'home', locale);
+    const footer = tid(page, 'footer');
+    // textContent, không innerText: tiêu đề viết hoa bằng text-transform (§14a).
+    const heads = await footer.locator('h2').evaluateAll((hs) => hs.map((h) => (h.textContent ?? '').trim()));
+    expect(heads).toEqual([...T[locale].heads]);
+    const inNav = await footer.locator('nav h2').evaluateAll((hs) => hs.map((h) => (h.textContent ?? '').trim()));
+    expect(inNav, 'hai nhóm Khám phá/Thông tin nằm trong nav chân trang').toEqual([
+      T[locale].heads[1],
+      T[locale].heads[2],
+    ]);
+  });
+}
+
+const CURRENT: PageKey[] = ['about', 'technology', 'careers', 'faq', 'privacy', 'contact'];
+for (const locale of LOCALES)
+  for (const key of CURRENT) {
+    test(`FT-05 ${locale}/${key}: đúng MỘT liên kết chân trang có aria-current="page" và là trang đang xem (§14a)`, async ({
+      page,
+    }) => {
+      await open(page, key, locale);
+      const cur = await page
+        .locator('[data-testid="footer"] [aria-current]')
+        .evaluateAll((as) =>
+          as.map((a) => ({ v: a.getAttribute('aria-current'), path: new URL((a as HTMLAnchorElement).href).pathname })),
+        );
+      expect(cur.length, 'số phần tử aria-current trong chân trang').toBe(1);
+      expect(cur[0].v).toBe('page');
+      expect(trimSlash(cur[0].path)).toBe(trimSlash(path(key, locale)));
+    });
+  }
+
+test('FT-06 Mục "đang ở" nhận ra không chỉ bằng màu: chữ đậm + vạch trái (J15, §14a)', async ({ page }) => {
+  await open(page, 'faq', 'vi');
+  const m = await page.evaluate(() => {
+    const f = document.querySelector('[data-testid="footer"]') as HTMLElement;
+    const cue = (a: Element) => {
+      const s = getComputedStyle(a);
+      return {
+        weight: Number(s.fontWeight),
+        bar: s.boxShadow !== 'none' || parseFloat(s.borderLeftWidth) >= 3,
+      };
+    };
+    const cur = f.querySelector('nav a[aria-current="page"]');
+    const others = Array.from(f.querySelectorAll('nav a:not([aria-current])'));
+    return { cur: cur ? cue(cur) : null, others: others.map(cue) };
+  });
+  expect(m.cur, 'có liên kết aria-current trong nav chân trang').not.toBeNull();
+  expect(m.cur?.weight, 'chữ đậm (>= 700)').toBeGreaterThanOrEqual(700);
+  expect(m.cur?.bar, 'có vạch trái (box-shadow inset hoặc border-left >= 3px)').toBe(true);
+  expect(m.others.length).toBeGreaterThan(0);
+  expect(
+    m.others.filter((o) => o.weight >= 700 || o.bar).length,
+    'liên kết KHÔNG ở trang này không được mang cùng dấu hiệu',
+  ).toBe(0);
+});
+
+for (const locale of LOCALES) {
+  test(`FT-07 ${locale}: chân trang hiện tên pháp lý (bug footer-legalname-en, §14a: giữ nguyên chuỗi, khối lang="vi" ở EN)`, async ({
+    page,
+  }) => {
+    await open(page, 'home', locale);
+    const legal = squash(siteLegalName());
+    const footer = tid(page, 'footer');
+    expect(squash((await footer.textContent()) ?? ''), `${locale}: chân trang chứa tên pháp lý`).toContain(legal);
+    if (locale === 'en') {
+      const inVi = await footer
+        .locator('[lang="vi"]')
+        .evaluateAll((els) => els.map((e) => (e.textContent ?? '').replace(/\s+/g, ' ').trim()));
+      expect(
+        inVi.some((t) => t.includes(legal)),
+        `EN: tên pháp lý nằm trong khối lang="vi" (có: ${JSON.stringify(inVi)})`,
+      ).toBe(true);
+    }
+  });
+
+  test(`FT-13 ${locale}: dòng bản quyền "© {năm} {tên pháp lý}. ${T[locale].rights.replace(/\\/g, '')}" (C-ft-rights, §14a)`, async ({
+    page,
+  }) => {
+    await open(page, 'home', locale);
+    const legal = squash(siteLegalName());
+    const text = squash((await tid(page, 'footer').textContent()) ?? '');
+    const re = new RegExp(`©\\s*\\d{4}\\s+${esc(legal)}\\.\\s*${T[locale].rights}`);
+    expect(text, 'dòng bản quyền').toMatch(re);
+  });
+}
+
+// ───────────────────────── Bố cục theo điểm gãy 600/900 (§14a) ─────────────────────────
+
+test('FT-14 Bố cục: <600 một cột xếp dọc; 600–899 hai cột; >=900 ba cột (§14a)', async ({ page }) => {
+  const pos = async () =>
+    page.evaluate((legal) => {
+      const f = document.querySelector('[data-testid="footer"]') as HTMLElement;
+      const h = (label: string) =>
+        Array.from(f.querySelectorAll('h2'))
+          .find((e) => (e.textContent ?? '').trim() === label)
+          ?.getBoundingClientRect();
+      const brand = Array.from(f.querySelectorAll('*'))
+        .find((e) => e.children.length === 0 && (e.textContent ?? '').includes(legal))
+        ?.getBoundingClientRect();
+      const r = (b?: DOMRect) => (b ? { x: Math.round(b.left), y: Math.round(b.top) } : null);
+      return { brand: r(brand), contact: r(h('Liên hệ')), explore: r(h('Khám phá')), info: r(h('Thông tin')) };
+    }, squash(siteLegalName()));
+
+  await page.setViewportSize({ width: 375, height: 800 });
+  await open(page, 'home', 'vi');
+  const a = await pos();
+  expect(a.brand && a.contact && a.explore && a.info, '375: đủ bốn khối').toBeTruthy();
+  expect(Math.abs(a.contact!.x - a.brand!.x), '375: Liên hệ cùng cột Thương hiệu').toBeLessThanOrEqual(2);
+  expect(Math.abs(a.explore!.x - a.contact!.x), '375: Khám phá cùng cột').toBeLessThanOrEqual(2);
+  expect(Math.abs(a.info!.x - a.explore!.x), '375: Thông tin xếp dọc dưới Khám phá').toBeLessThanOrEqual(2);
+  expect(a.contact!.y, '375: Liên hệ dưới Thương hiệu').toBeGreaterThan(a.brand!.y);
+  expect(a.explore!.y, '375: Khám phá dưới Liên hệ').toBeGreaterThan(a.contact!.y);
+  expect(a.info!.y, '375: Thông tin dưới Khám phá').toBeGreaterThan(a.explore!.y);
+
+  await page.setViewportSize({ width: 768, height: 900 });
+  await open(page, 'home', 'vi');
+  const b = await pos();
+  expect(b.contact!.x, '768: Liên hệ nằm cột phải của Thương hiệu').toBeGreaterThan(b.brand!.x + 100);
+  expect(Math.abs(b.explore!.x - b.brand!.x), '768: Khám phá bắt đầu hàng dưới ở cột trái').toBeLessThanOrEqual(4);
+  expect(b.info!.x, '768: hai nhóm liên kết chia hai cột').toBeGreaterThan(b.explore!.x + 100);
+  expect(b.explore!.y, '768: hai nhóm liên kết ở hàng dưới').toBeGreaterThan(b.contact!.y);
+
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await open(page, 'home', 'vi');
+  const c = await pos();
+  expect(c.brand!.x, '1200: Thương hiệu → Liên hệ').toBeLessThan(c.contact!.x - 100);
+  expect(c.contact!.x, '1200: Liên hệ → Khám phá').toBeLessThan(c.explore!.x - 100);
+  expect(c.explore!.x, '1200: Khám phá → Thông tin cạnh nhau').toBeLessThan(c.info!.x - 100);
+  expect(Math.abs(c.explore!.y - c.contact!.y), '1200: cùng một hàng').toBeLessThanOrEqual(8);
+  expect(Math.abs(c.info!.y - c.explore!.y), '1200: hai nhóm liên kết cùng hàng').toBeLessThanOrEqual(8);
+});
+
+// ───────────────────────── Màu, tương phản, focus (J14, §5.2) ─────────────────────────
+
+test('FT-15 Focus bàn phím trong chân trang: viền trắng >= 3px, offset 2px (J14, §14a, §5.2)', async ({ page }) => {
+  await open(page, 'home', 'vi');
+  const links = tid(page, 'footer').locator('a');
+  const n = await links.count();
+  expect(n, 'chân trang có liên kết').toBeGreaterThan(0);
+  for (const i of [0, n - 1]) {
+    // Shift+Tab rồi Tab: ép phương thức nhập là bàn phím để :focus-visible áp dụng.
+    await links.nth(i).focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    const ring = await page.evaluate(() => {
+      const e = document.activeElement as HTMLElement;
+      const s = getComputedStyle(e);
+      return {
+        inFooter: !!e.closest('[data-testid="footer"]'),
+        style: s.outlineStyle,
+        width: parseFloat(s.outlineWidth),
+        color: s.outlineColor,
+        offset: parseFloat(s.outlineOffset),
+      };
+    });
+    expect(ring.inFooter, `liên kết #${i}: focus trở lại đúng liên kết`).toBe(true);
+    expect(ring.style, `#${i} kiểu viền`).not.toBe('none');
+    expect(ring.width, `#${i} độ dày viền`).toBeGreaterThanOrEqual(3);
+    expect(ring.color, `#${i} màu viền`).toBe('rgb(255, 255, 255)');
+    expect(ring.offset, `#${i} offset`).toBe(2);
+  }
+});
+
+test('FT-16 Nền chân trang #0F5838 và mọi chữ trong chân trang đạt tương phản >= 4.5:1 (J14, T1)', async ({ page }) => {
+  for (const locale of LOCALES) {
+    await open(page, 'home', locale);
+    const r = await page.evaluate(() => {
+      const f = document.querySelector('[data-testid="footer"]') as HTMLElement;
+      const parse = (c: string) => {
+        const m = /rgba?\(([^)]+)\)/.exec(c);
+        if (!m) return null;
+        const p = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+        return { r: p[0], g: p[1], b: p[2], a: p[3] ?? 1 };
+      };
+      const lin = (v: number) => {
+        const s = v / 255;
+        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      };
+      const lum = (c: { r: number; g: number; b: number }) => 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
+      const bgRaw = getComputedStyle(f).backgroundColor;
+      const bg = parse(bgRaw);
+      const fails: string[] = [];
+      if (!bg) return { bg: bgRaw, fails: [`không đọc được nền: ${bgRaw}`] };
+      for (const el of Array.from(f.querySelectorAll('*'))) {
+        const own = Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.textContent ?? '').trim() !== '');
+        if (!own) continue;
+        const b = el.getBoundingClientRect();
+        if (b.width <= 1 || b.height <= 1) continue; // chữ .sr-only
+        const fg = parse(getComputedStyle(el).color);
+        if (!fg) {
+          fails.push(`không đọc được màu chữ: ${getComputedStyle(el).color}`);
+          continue;
+        }
+        const mix = (k: 'r' | 'g' | 'b') => fg[k] * fg.a + bg[k] * (1 - fg.a);
+        const l1 = lum({ r: mix('r'), g: mix('g'), b: mix('b') });
+        const l2 = lum(bg);
+        const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+        if (ratio < 4.5)
+          fails.push(`${ratio.toFixed(2)}:1 "${(el.textContent ?? '').trim().slice(0, 30)}" ${getComputedStyle(el).color}`);
+      }
+      return { bg: bgRaw, fails };
+    });
+    expect(r.bg, `${locale}: nền chân trang`).toBe('rgb(15, 88, 56)');
+    expect(r.fails, `${locale}: ${r.fails.join('\n')}`).toEqual([]);
+  }
+});
+
+// ───────────────────────── §13b / J16 / J17: biểu tượng ─────────────────────────
+
+test('FT-09 Giao diện không có emoji/ký tự hình: không trong header/chân trang/nav/nút/form và không trong ::before/::after (J17, §13b luật 3)', async ({
+  page,
+}) => {
+  const bad: string[] = [];
+  for (const t of listTargets()) {
+    await gotoAny(page, t.url);
+    const found = await page.evaluate(
+      ([src]) => {
+        const re = new RegExp(src, 'u');
+        const out: string[] = [];
+        const chrome = 'header, footer, nav, button, form, summary, [role="button"], a[class*="btn" i], a[class*="cta" i]';
+        for (const el of Array.from(document.querySelectorAll(chrome))) {
+          const m = re.exec((el as HTMLElement).outerHTML);
+          if (m) out.push(`<${el.tagName.toLowerCase()}> chứa U+${m[0].codePointAt(0)?.toString(16).toUpperCase()}`);
+        }
+        for (const el of Array.from(document.querySelectorAll('*')))
+          for (const ps of ['::before', '::after'] as const) {
+            const c = getComputedStyle(el, ps).content;
+            if (c && c !== 'none' && c !== 'normal' && re.test(c))
+              out.push(`${el.tagName.toLowerCase()}${ps} content=${c}`);
+          }
+        return Array.from(new Set(out));
+      },
+      [FORBIDDEN.source],
+    );
+    for (const f of found) bad.push(`${t.url}: ${f}`);
+  }
+  expect(bad, bad.join('\n')).toEqual([]);
+});
+
+test('FT-09b HTML sinh ra của mọi trang không có emoji/ký tự hình ngoài nội dung bài (J17, V17)', async ({ page }) => {
+  const allowed = contentSymbols(); // ký tự hình vốn có trong content/** là nội dung bài
+  const bad: string[] = [];
+  for (const t of listTargets()) {
+    const res = await page.request.get(t.url);
+    const html = await res.text();
+    const hit = new Set<string>();
+    for (const m of html.matchAll(FORBIDDEN_ALL)) if (!allowed.has(m[0])) hit.add(m[0]);
+    for (const ch of hit) bad.push(`${t.url}: U+${ch.codePointAt(0)?.toString(16).toUpperCase()} (${ch})`);
+  }
+  expect(bad, bad.join('\n')).toEqual([]);
+});
+
+test('FT-09c Không dùng font biểu tượng (class fa-/material-icons/glyphicon/bi-) trên mọi trang (J17, §13b luật 1)', async ({
+  page,
+}) => {
+  const ICON_FONT = /\bclass="[^"]*\b(fa-[a-z]|fas|far|fab|material-icons|material-symbols|glyphicon|bi-[a-z]|icon-font)\b/;
+  const bad: string[] = [];
+  for (const t of listTargets()) {
+    const html = await (await page.request.get(t.url)).text();
+    const m = ICON_FONT.exec(html);
+    if (m) bad.push(`${t.url}: ${m[0].slice(0, 80)}`);
+  }
+  expect(bad, bad.join('\n')).toEqual([]);
+});
+
+test('FT-10 Mọi <svg> trang trí có aria-hidden="true" focusable="false"; nút/liên kết chỉ có biểu tượng có tên; không sprite ngoài (J17, §13b luật 1,4)', async ({
+  page,
+}) => {
+  const bad: string[] = [];
+  for (const t of listTargets()) {
+    await gotoAny(page, t.url);
+    const found = await page.evaluate(() => {
+      const out: string[] = [];
+      for (const s of Array.from(document.querySelectorAll('svg'))) {
+        const meaningful =
+          s.getAttribute('role') === 'img' ||
+          s.hasAttribute('aria-label') ||
+          s.hasAttribute('aria-labelledby') ||
+          s.querySelector(':scope > title') !== null; // hình có nghĩa riêng (vd sơ đồ), không phải biểu tượng trang trí
+        if (!meaningful && (s.getAttribute('aria-hidden') !== 'true' || s.getAttribute('focusable') !== 'false'))
+          out.push(`svg trang trí thiếu aria-hidden/focusable: ${s.outerHTML.slice(0, 90)}`);
+      }
+      for (const u of Array.from(document.querySelectorAll('svg use'))) {
+        const ref = u.getAttribute('href') ?? u.getAttribute('xlink:href') ?? '';
+        if (!ref.startsWith('#')) out.push(`<use> trỏ tệp ngoài: ${ref}`);
+      }
+      for (const el of Array.from(document.querySelectorAll('a[href], button, [role="button"]'))) {
+        const clone = el.cloneNode(true) as HTMLElement;
+        for (const s of Array.from(clone.querySelectorAll('svg'))) s.remove();
+        const named = (clone.textContent ?? '').trim() !== '' || !!el.getAttribute('aria-label')?.trim() || el.hasAttribute('aria-labelledby');
+        if (!named) out.push(`điều khiển không có tên: ${(el as HTMLElement).outerHTML.slice(0, 90)}`);
+      }
+      return Array.from(new Set(out));
+    });
+    for (const f of found) bad.push(`${t.url}: ${f}`);
+  }
+  expect(bad, bad.join('\n')).toEqual([]);
+});
+
+for (const locale of LOCALES) {
+  test(`FT-11 ${locale}: forced-colors: active — biểu tượng chân trang vẫn thấy được, số lượng không đổi (J16, §13b)`, async ({
+    page,
+  }) => {
+    await open(page, 'home', locale);
+    const count = () => tid(page, 'footer').locator('svg').count();
+    const before = await count();
+    expect(before, 'chân trang có biểu tượng khi bình thường').toBeGreaterThan(0);
+    await page.emulateMedia({ forcedColors: 'active' });
+    await open(page, 'home', locale);
+    expect(await count(), 'số biểu tượng không đổi dưới forced-colors').toBe(before);
+    const hidden = await tid(page, 'footer')
+      .locator('svg')
+      .evaluateAll((svgs) =>
+        svgs
+          .map((s) => {
+            const st = getComputedStyle(s);
+            const r = s.getBoundingClientRect();
+            return { html: s.outerHTML.slice(0, 70), ok: st.display !== 'none' && st.visibility !== 'hidden' && r.width > 0 && r.height > 0 };
+          })
+          .filter((x) => !x.ok)
+          .map((x) => x.html),
+      );
+    expect(hidden, 'biểu tượng bị ẩn hoặc kích thước 0 dưới forced-colors').toEqual([]);
+  });
+}
+
+// ───────────────────────── J18: trường trống ⇒ ẩn hàng (build fixture) ─────────────────────────
+
+const FULL = {
+  legalName: 'Công ty Mẫu GMS',
+  address: { vi: 'Số 1 Đường Mẫu, Hưng Yên', en: '1 Sample Street, Hung Yen' },
+  phone: '+84900000000',
+  zalo: 'https://zalo.me/0900000000',
+  social: [{ name: 'Facebook', url: 'https://facebook.com/gmshungyen' }],
+  taxId: '0900000000',
+};
+type RowKey = keyof (typeof T)['vi']['labels'];
+
+test('FT-08 Đủ trường ⇒ chân trang hiện đủ 5 hàng có nhãn chữ ở cả vi và en, mã số thuế có data-testid="tax-id" (J18, §14a)', () => {
+  const r = buildSite(companyFile(FULL), { CONTACT_MAIL_READY: 'true' });
+  expect(r.ok, r.log).toBe(true);
+  for (const locale of LOCALES) {
+    const footer = footerOf(htmlOf(r, path('contact', locale))!);
+    expect(footer, `${locale}: có chân trang`).toBeDefined();
+    const ft = textOf(footer!);
+    for (const label of Object.values(T[locale].labels)) expect(ft, `${locale}: nhãn "${label}"`).toContain(label);
+    expect(footer, `${locale}: href tel:`).toContain('href="tel:+84900000000"');
+    expect(footer, `${locale}: href Zalo`).toMatch(/href="https:\/\/zalo\.me\/0900000000"/);
+    expect(footer, `${locale}: href Fanpage`).toContain('facebook.com/gmshungyen');
+    expect(footer, `${locale}: <address>`).toMatch(/<address\b/);
+    expect(footer, `${locale}: dòng mã số thuế`).toContain('data-testid="tax-id"');
+    expect(ft, `${locale}: số mã số thuế`).toContain('0900000000');
+    expect(ft, `${locale}: địa chỉ theo locale`).toContain(locale === 'vi' ? 'Số 1 Đường Mẫu' : '1 Sample Street');
+  }
+});
+
+const EMPTY_CASES: Array<{ row: RowKey; over: Record<string, unknown>; gone: RegExp }> = [
+  { row: 'phone', over: { phone: null }, gone: /href="tel:/ },
+  { row: 'zalo', over: { zalo: null }, gone: /zalo\.me/ },
+  { row: 'fanpage', over: { social: null }, gone: /facebook\.com\/gmshungyen/ },
+  { row: 'taxId', over: { taxId: null }, gone: /data-testid="tax-id"/ },
+];
+for (const c of EMPTY_CASES) {
+  test(`FT-08 Trường trống "${c.row}" ⇒ ẩn cả hàng và nhãn, không khoảng trống; các hàng khác còn nguyên (J18, §14a)`, () => {
+    const r = buildSite(companyFile({ ...FULL, ...c.over }), { CONTACT_MAIL_READY: 'true' });
+    expect(r.ok, r.log).toBe(true);
+    for (const locale of LOCALES) {
+      const footer = footerOf(htmlOf(r, path('contact', locale))!);
+      expect(footer, `${locale}: có chân trang`).toBeDefined();
+      const ft = textOf(footer!);
+      expect(footer, `${locale}: còn dấu vết hàng "${c.row}"`).not.toMatch(c.gone);
+      expect(ft, `${locale}: còn nhãn "${T[locale].labels[c.row]}"`).not.toContain(T[locale].labels[c.row]);
+      for (const [k, label] of Object.entries(T[locale].labels))
+        if (k !== c.row && k !== 'fanpage' && k !== 'zalo' && k !== 'phone' && k !== 'taxId')
+          expect(ft, `${locale}: hàng "${k}" phải còn`).toContain(label);
+      for (const other of EMPTY_CASES.filter((o) => o.row !== c.row))
+        expect(ft, `${locale}: hàng "${other.row}" phải còn nguyên`).toContain(T[locale].labels[other.row]);
+      const empty = (footer!.match(/<li\b[^>]*>[\s\S]*?<\/li>/g) ?? []).filter((li) => textOf(li).trim() === '');
+      expect(empty, `${locale}: có <li> rỗng (khoảng trống thay thế)`).toEqual([]);
+      expect(footer, `${locale}: <ul> rỗng`).not.toMatch(/<ul\b[^>]*>\s*<\/ul>/);
+    }
+  });
+}
+
+test('FT-12 Liên kết mở tab mới trong chân trang có rel noopener và chữ .sr-only "(mở tab mới)"/"(opens in a new tab)" (§13b luật 7, C-ft-newtab)', () => {
+  const r = buildSite(companyFile(FULL), { CONTACT_MAIL_READY: 'true' });
+  expect(r.ok, r.log).toBe(true);
+  for (const locale of LOCALES) {
+    const footer = footerOf(htmlOf(r, path('contact', locale))!)!;
+    const external = footer.match(/<a\b[^>]*target="_blank"[^>]*>[\s\S]*?<\/a>/g) ?? [];
+    expect(external.length, `${locale}: số liên kết target=_blank (Zalo + Fanpage)`).toBeGreaterThanOrEqual(2);
+    for (const a of external) {
+      expect(a, `${locale}: rel`).toMatch(/rel="[^"]*\bnoopener\b/);
+      expect(textOf(a), `${locale}: chữ báo mở tab mới`).toContain(T[locale].newTab);
+    }
+  }
+});
