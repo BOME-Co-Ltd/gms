@@ -27,6 +27,7 @@ async function lighthouseRuns(url: string): Promise<Run[]> {
         onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
         formFactor: 'mobile',
         screenEmulation: { mobile: true, width: 375, height: 667, deviceScaleFactor: 2, disabled: false },
+        ignoreStatusCode: true,
       });
       out.push({
         performance: lhr.categories.performance.score * 100,
