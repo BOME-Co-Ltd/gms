@@ -16,7 +16,10 @@ const EMAIL = 'an@vi-du.test';
 function d1(db: DatabaseSync): D1Database {
   const stmt = (sql: string, params: unknown[] = []): D1PreparedStatement => ({
     bind: (...values: unknown[]) => stmt(sql, values),
-    run: async () => ({ success: true, meta: { changes: Number(db.prepare(sql).run(...(params as never[])).changes) } }),
+    run: async () => ({
+      success: true,
+      meta: { changes: Number(db.prepare(sql).run(...(params as never[])).changes) },
+    }),
     all: async <T>() => ({ results: db.prepare(sql).all(...(params as never[])) as T[] }),
     first: async <T>() => (db.prepare(sql).get(...(params as never[])) ?? null) as T | null,
   });
@@ -69,7 +72,15 @@ async function setup(alertTo = 'kythuat@gmshungyen.vn') {
       consentAt: HOUR + 60,
       dedupeHash: `h${i}`,
       bodyB64: encodeBodyB64(
-        notifyBodyText({ fullName: NAME, email: EMAIL, message, locale: 'vi', pagePath: '/lien-he', policyVersion: '1.0', consentAt: HOUR + 60 } as never),
+        notifyBodyText({
+          fullName: NAME,
+          email: EMAIL,
+          message,
+          locale: 'vi',
+          pagePath: '/lien-he',
+          policyVersion: '1.0',
+          consentAt: HOUR + 60,
+        } as never),
       ),
       batch: 'summary',
       nextAttemptAt: HOUR + 60,
@@ -100,7 +111,8 @@ describe('thư tóm tắt tách phần', () => {
 
     const split = alerts(s.sent).filter((a) => (a.subject + a.text).includes(MAIL_ALERT_CODES.summaryParts));
     expect(split).toHaveLength(1);
-    for (const pii of [NAME, EMAIL, 'id-0']) expect(split[0].subject + split[0].text + split[0].rawMime).not.toContain(pii);
+    for (const pii of [NAME, EMAIL, 'id-0'])
+      expect(split[0].subject + split[0].text + split[0].rawMime).not.toContain(pii);
     expect(split[0].text).toContain('đã gửi 2 phần, còn 50 liên hệ chờ'); // cảnh báo gửi sau phần 2: 250 − 200
   });
 
@@ -146,7 +158,11 @@ describe('thư tóm tắt tách phần', () => {
     expect(bytes + oneBlock, 'thêm một khối nữa sẽ vượt trần').toBeGreaterThan(CRON_LIMITS.maxSummaryPartB64Bytes);
 
     // Trả lease rồi chạy Cron thật: phủ đủ, không trùng
-    await s.queue.releaseLeases(first.map((r) => r.id), HOUR + 3661, 'TEST');
+    await s.queue.releaseLeases(
+      first.map((r) => r.id),
+      HOUR + 3661,
+      'TEST',
+    );
     for (let m = 61; m < 70; m++) await s.cron(m);
     const parts = summaries(s.sent);
     expect(parts.length).toBeGreaterThanOrEqual(2);

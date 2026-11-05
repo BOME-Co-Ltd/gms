@@ -24,13 +24,7 @@ import type {
   RateCounter,
   WorkerConfig,
 } from '../ports.ts';
-import {
-  buildAlertMail,
-  buildNotifyMail,
-  buildSummaryMail,
-  encodeBodyB64,
-  notifyBodyText,
-} from './mail-builder.ts';
+import { buildAlertMail, buildNotifyMail, buildSummaryMail, encodeBodyB64, notifyBodyText } from './mail-builder.ts';
 
 export type ContactDeps = {
   queue: ContactQueue;
@@ -86,10 +80,7 @@ export async function handleContactPost(req: Request, deps: ContactDeps): Promis
   const mediaType = (req.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
   if (!(CONTACT_CONTENT_TYPES as readonly string[]).includes(mediaType)) {
     deps.logger.error('UNSUPPORTED_MEDIA_TYPE');
-    return jsonResponse(
-      { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' },
-      CONTACT_HTTP_STATUS.UNSUPPORTED_MEDIA_TYPE,
-    );
+    return jsonResponse({ ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' }, CONTACT_HTTP_STATUS.UNSUPPORTED_MEDIA_TYPE);
   }
 
   const rawBuffer = await req.arrayBuffer();
@@ -149,10 +140,7 @@ export async function handleContactPost(req: Request, deps: ContactDeps): Promis
   const humanRes = await deps.human.verify(token, ip);
   if (humanRes.error) {
     deps.logger.error(humanRes.reason ?? 'TURNSTILE_UNAVAILABLE');
-    return jsonResponse(
-      { ok: false, code: 'HUMAN_CHECK_UNAVAILABLE' },
-      CONTACT_HTTP_STATUS.HUMAN_CHECK_UNAVAILABLE,
-    );
+    return jsonResponse({ ok: false, code: 'HUMAN_CHECK_UNAVAILABLE' }, CONTACT_HTTP_STATUS.HUMAN_CHECK_UNAVAILABLE);
   }
   if (!humanRes.ok) {
     deps.logger.error(humanRes.reason ?? 'HUMAN_CHECK_FAILED');
