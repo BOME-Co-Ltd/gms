@@ -1,11 +1,12 @@
 // contact-form.feature (v0.5.2) → FORM-01..FORM-35. Form → Worker `gms-contact` → thư báo (Mailer giả) → web không giữ PII.
 // Đi qua UI khi kịch bản nói "trang hiện"; đi thẳng POST /api/contact khi kịch bản nói về máy/địa chỉ/kích thước (postContact).
 // [giả định — chờ khách] V3, V4, N27. Cửa điều khiển: XQ-20; lệnh build: XQ-21 (tên biến CONTACT_RECIPIENT là đề xuất).
-import { expect, test } from '../support/turnstile-stub';
+
 import { buildSite, htmlOf } from '../support/build';
 import { control, pollUntil } from '../support/control';
 import { companyFile } from '../support/fixtures';
 import { type Locale, path } from '../support/routes';
+import { expect, test } from '../support/turnstile-stub';
 import { bodyText, fillAndSubmit, open, postContact, RETRY_LATER, tid, VALID, VN_DIACRITIC } from '../support/ui';
 
 const TO = 'lienhe@vi-du.test';
@@ -238,12 +239,15 @@ test('FORM-35 Liên hệ chờ gửi thư quá 15 phút: đúng 1 cảnh báo ch
   await control.runCron(ISO(10, 59));
   await control.runCron(ISO(11, 0));
 
-  expect(await alertCodes(), 'cả đợt hỏng 09:20–11:00: đúng 1 cảnh báo "quá 15 phút", Cron chạy nhiều lần').toEqual([CODE_15M]);
+  expect(await alertCodes(), 'cả đợt hỏng 09:20–11:00: đúng 1 cảnh báo "quá 15 phút", Cron chạy nhiều lần').toEqual([
+    CODE_15M,
+  ]);
   const alerts = await control.alerts();
   expect(alerts).toHaveLength(1);
   const text = alerts[0].subject + alerts[0].body;
   expect(text).toMatch(/có liên hệ chờ gửi thư báo quá 15 phút/i);
-  for (const pii of [...piiAll, 'Nguyen Van An', 'an%40vi-du.test']) expect(text, `cảnh báo không chứa "${pii}"`).not.toContain(pii);
+  for (const pii of [...piiAll, 'Nguyen Van An', 'an%40vi-du.test'])
+    expect(text, `cảnh báo không chứa "${pii}"`).not.toContain(pii);
 
   expect((await control.storeDump()).tables.outbox, 'lúc 11:00 cả 3 liên hệ vẫn giữ').toHaveLength(3);
   expect(await inbox(), 'dịch vụ thư còn lỗi: chưa có thư báo nào').toHaveLength(0);
@@ -380,14 +384,21 @@ for (const loc of ['vi', 'en'] as Locale[]) {
   }) => {
     await open(page, 'contact', loc);
     const label = (await tid(page, 'contact-consent-label').innerText()).trim();
-    expect(label).toMatch(/Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên|Công ty Mẫu GMS|Hung Yen Green Energy Environment JSC/);
+    expect(label).toMatch(
+      /Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên|Công ty Mẫu GMS|Hung Yen Green Energy Environment JSC/,
+    );
     if (loc === 'vi') {
       expect(label).toMatch(/họ tên/i);
       expect(label).toMatch(/email|số điện thoại/i);
       expect(label).toMatch(/nội dung/i);
       expect(label).toMatch(/trả lời/i);
     } else {
-      expect(label.replace(/Hung Yen Green Energy Environment JSC|Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên|Công ty Mẫu GMS/g, '')).not.toMatch(VN_DIACRITIC);
+      expect(
+        label.replace(
+          /Hung Yen Green Energy Environment JSC|Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên|Công ty Mẫu GMS/g,
+          '',
+        ),
+      ).not.toMatch(VN_DIACRITIC);
       expect(label).toMatch(/name/i);
       expect(label).toMatch(/email|phone/i);
       expect(label).toMatch(/message/i);

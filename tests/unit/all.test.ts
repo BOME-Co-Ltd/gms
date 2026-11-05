@@ -9,9 +9,9 @@ import {
   CONTACT_HEALTH_ENDPOINT,
   CONTACT_HTTP_STATUS,
   CONTACT_LIMITS,
-  CRON_LIMITS,
   ContactSubmitRequest,
   ContactSubmitResponse,
+  CRON_LIMITS,
   HEADER_UNSAFE_CHARS,
   MAIL_CAPS,
   OUTBOX,
@@ -53,7 +53,9 @@ import {
 } from '../../scripts/content/build-site.ts';
 import { runContentCheck } from '../../scripts/content/check.ts';
 import { computeContentHash, verifyDeployApproval } from '../../scripts/deploy/deploy-prod.ts';
+import PrivacyPage from '../../src/app/chinh-sach-bao-mat/page.tsx';
 import TechnologyPage, { TechnologyPageView } from '../../src/app/cong-nghe/page.tsx';
+import ProjectsPage from '../../src/app/du-an-thu-vien/page.tsx';
 import EnglishAboutPage from '../../src/app/en/about/page.tsx';
 import EnglishCareersPage from '../../src/app/en/careers/page.tsx';
 import EnglishContactPage from '../../src/app/en/contact/page.tsx';
@@ -65,17 +67,15 @@ import EnglishProductsPage from '../../src/app/en/products/page.tsx';
 import EnglishProjectsPage from '../../src/app/en/projects-library/page.tsx';
 import EnglishSolutionsPage from '../../src/app/en/solutions/page.tsx';
 import EnglishTechnologyPage from '../../src/app/en/technology/page.tsx';
+import FaqPage from '../../src/app/faq/page.tsx';
+import SolutionsPage from '../../src/app/giai-phap/page.tsx';
+import AboutPage from '../../src/app/gioi-thieu/page.tsx';
 import RootLayout, { metadata } from '../../src/app/layout.tsx';
 import ContactPage, { ContactPageView } from '../../src/app/lien-he/page.tsx';
 import HomePage, { HomePageView } from '../../src/app/page.tsx';
-import AboutPage from '../../src/app/gioi-thieu/page.tsx';
-import SolutionsPage from '../../src/app/giai-phap/page.tsx';
 import ProductsPage from '../../src/app/san-pham-dau-ra/page.tsx';
 import NewsPage from '../../src/app/tin-tuc/page.tsx';
-import ProjectsPage from '../../src/app/du-an-thu-vien/page.tsx';
 import CareersPage from '../../src/app/tuyen-dung/page.tsx';
-import FaqPage from '../../src/app/faq/page.tsx';
-import PrivacyPage from '../../src/app/chinh-sach-bao-mat/page.tsx';
 import { AboutPageView } from '../../src/components/pages/AboutPageView.tsx';
 import { CareersPageView } from '../../src/components/pages/CareersPageView.tsx';
 import { FaqPageView } from '../../src/components/pages/FaqPageView.tsx';

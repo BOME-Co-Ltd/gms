@@ -3,7 +3,7 @@
 // Ca nào Worker chưa đạt thì để ĐỎ (không nới); xem bug-report ở 04-build/.
 import { expect, test } from '@playwright/test';
 import { control } from '../support/control';
-import { VALID, postContact } from '../support/ui';
+import { postContact, VALID } from '../support/ui';
 
 const TO = 'lienhe@vi-du.test';
 const HOUR0 = '2026-10-31T03:00:00Z'; // 10:00 giờ VN
@@ -18,7 +18,9 @@ test.beforeEach(async () => {
 });
 
 // ---- Định dạng: 415 / 422 -------------------------------------------------------------------------------------------
-test('CC-01 Content-Type sai hoặc thiếu ⇒ 415 UNSUPPORTED_MEDIA_TYPE, không ghi D1 (@S21 api.ts §5b)', async ({ request }) => {
+test('CC-01 Content-Type sai hoặc thiếu ⇒ 415 UNSUPPORTED_MEDIA_TYPE, không ghi D1 (@S21 api.ts §5b)', async ({
+  request,
+}) => {
   for (const headers of [
     { 'content-type': 'text/plain' },
     { 'content-type': 'application/x-www-form-urlencoded' },
@@ -36,8 +38,14 @@ test('CC-02 JSON có charset được nhận; 422 chỉ dành cho VALIDATION (@S
   const ok = await request.post('/api/contact', {
     headers: { 'content-type': 'application/json; charset=utf-8' },
     data: JSON.stringify({
-      locale: 'vi', fullName: VALID.name, email: VALID.email, message: VALID.message, consent: true,
-      policyVersion: '1.0', turnstileToken: 'XXXX.DUMMY.TOKEN.XXXX', pagePath: '/lien-he',
+      locale: 'vi',
+      fullName: VALID.name,
+      email: VALID.email,
+      message: VALID.message,
+      consent: true,
+      policyVersion: '1.0',
+      turnstileToken: 'XXXX.DUMMY.TOKEN.XXXX',
+      pagePath: '/lien-he',
     }),
   });
   expect(ok.status()).toBe(200);
@@ -58,7 +66,9 @@ const MODES: Array<[Parameters<typeof control.humanCheck>[0], number, string | n
   ['bad-body', 503, 'HUMAN_CHECK_UNAVAILABLE'],
 ];
 for (const [mode, status, code] of MODES) {
-  test(`CC-03 M31 human-check "${mode}" ⇒ ${status}${code ? ` ${code}` : ''} (@S21 api.ts §12)`, async ({ request }) => {
+  test(`CC-03 M31 human-check "${mode}" ⇒ ${status}${code ? ` ${code}` : ''} (@S21 api.ts §12)`, async ({
+    request,
+  }) => {
     await control.humanCheck(mode);
     const r = await postContact(request, VALID, { ip: '198.51.100.31' });
     expect(r.status).toBe(status);
@@ -72,7 +82,9 @@ for (const [mode, status, code] of MODES) {
 }
 
 for (const secret of ['', '1x0000000000000000000000000000000AA']) {
-  test(`CC-04 M31 TURNSTILE_SECRET "${secret || '(rỗng)'}" ⇒ 503 FORM_DISABLED (@S19 api.ts §12)`, async ({ request }) => {
+  test(`CC-04 M31 TURNSTILE_SECRET "${secret || '(rỗng)'}" ⇒ 503 FORM_DISABLED (@S19 api.ts §12)`, async ({
+    request,
+  }) => {
     await control.turnstileSecret(secret);
     const r = await postContact(request, VALID);
     expect(r.status).toBe(503);
@@ -98,16 +110,22 @@ test('CC-05 50 lần chưa qua Turnstile không tốn hạn mức; lần hợp l
 // lần qua kiểm rồi bị từ chối). Seed 'ok' ghi cả bộ đếm thành công lẫn lần thử (test-control.ts) ⇒ vượt trần (2) ngay ở lần
 // 6; để kiểm riêng biên 20/21 của trần (3) phải seed lần qua Turnstile nhưng KHÔNG thành công ('trap'). Biên 5/6 của trần
 // (2): FORM-23 (5 lần thật rồi lần 6 ⇒ 429) và CC-06b dưới đây (seed 4 'ok' ⇒ lần 5 nhận, lần 6 ⇒ 429).
-test('CC-06 Biên 20/21 (trần 3): 19 lần qua Turnstile nhưng bị từ chối ⇒ lần 20 nhận, lần 21 ⇒ 429 RATE_LIMITED (@S21)', async ({ request }) => {
+test('CC-06 Biên 20/21 (trần 3): 19 lần qua Turnstile nhưng bị từ chối ⇒ lần 20 nhận, lần 21 ⇒ 429 RATE_LIMITED (@S21)', async ({
+  request,
+}) => {
   const ip = '198.51.100.42';
   await control.seedAttempts(ip, 19, 'trap');
-  expect((await postContact(request, { ...VALID, message: 'lần 20' }, { ip })).status, 'lần 20 còn trong trần').toBe(200);
+  expect((await postContact(request, { ...VALID, message: 'lần 20' }, { ip })).status, 'lần 20 còn trong trần').toBe(
+    200,
+  );
   const r = await postContact(request, { ...VALID, message: 'lần 21' }, { ip });
   expect(r.status).toBe(429);
   expect(r.json?.code).toBe('RATE_LIMITED');
 });
 
-test('CC-06b Biên 5/6 (trần 2): 4 lần thành công ⇒ lần 5 nhận, lần 6 ⇒ 429 RATE_LIMITED dù mới 6 lần thử (@S21)', async ({ request }) => {
+test('CC-06b Biên 5/6 (trần 2): 4 lần thành công ⇒ lần 5 nhận, lần 6 ⇒ 429 RATE_LIMITED dù mới 6 lần thử (@S21)', async ({
+  request,
+}) => {
   const ip = '198.51.100.43';
   await control.seedAttempts(ip, 4, 'ok');
   expect((await postContact(request, { ...VALID, message: 'lần 5' }, { ip })).status, 'lần 5 còn trong trần').toBe(200);
@@ -117,7 +135,9 @@ test('CC-06b Biên 5/6 (trần 2): 4 lần thành công ⇒ lần 5 nhận, lầ
 });
 
 // ---- Giữ liên hệ chưa gửi tối đa 7 ngày, cảnh báo chỉ nêu số lượng (S19) ---------------------------------------------
-test('CC-07 Liên hệ chưa gửi được: ngày 6 còn, sau 7 ngày xoá + cảnh báo chỉ có số lượng, không PII (@S19)', async ({ request }) => {
+test('CC-07 Liên hệ chưa gửi được: ngày 6 còn, sau 7 ngày xoá + cảnh báo chỉ có số lượng, không PII (@S19)', async ({
+  request,
+}) => {
   await control.setNow(HOUR0);
   await control.failMail(true, 'permanent');
   expect((await postContact(request, { ...VALID, message: `giữ ${MARK}` })).status).toBe(200);
@@ -133,7 +153,9 @@ test('CC-07 Liên hệ chưa gửi được: ngày 6 còn, sau 7 ngày xoá + c�
 });
 
 // ---- Q10-1: 250 liên hệ trong 1 giờ ⇒ 3 phần, 3 hàng mail_log, đúng 1 SUMMARY_SPLIT ---------------------------------------
-test('CC-08 Q10-1: 250 liên hệ trong một giờ ⇒ 3 phần qua 3 lượt Cron, 3 hàng mail_log summary, 1 SUMMARY_SPLIT, phần 2 không bị summaryMaxPerHour chặn (@S19 XQ-35)', async ({ request }) => {
+test('CC-08 Q10-1: 250 liên hệ trong một giờ ⇒ 3 phần qua 3 lượt Cron, 3 hàng mail_log summary, 1 SUMMARY_SPLIT, phần 2 không bị summaryMaxPerHour chặn (@S19 XQ-35)', async ({
+  request,
+}) => {
   test.setTimeout(240_000);
   await control.setNow(at(1));
   await control.seedNotifyCount(30, HOUR0); // vượt trần thư riêng ⇒ sang đường tóm tắt
@@ -182,7 +204,10 @@ const maxContact = (k: number) => ({
 });
 
 function analyze(mail: { raw: string; text: string }) {
-  const rawBody = mail.raw.split(/\r?\n\r?\n/).slice(1).join('\n\n');
+  const rawBody = mail.raw
+    .split(/\r?\n\r?\n/)
+    .slice(1)
+    .join('\n\n');
   const marks = [...mail.text.matchAll(/\[#(\d+)\]/g)].map((m) => ({ k: Number(m[1]), at: m.index ?? 0 }));
   const blocks = marks.map((m, i) => {
     const end = i + 1 < marks.length ? (marks[i + 1]?.at ?? mail.text.length) : mail.text.length;
@@ -198,14 +223,19 @@ async function postMax(request: Parameters<typeof postContact>[0], n: number) {
   }
 }
 
-test('CC-09 CRON_LIMITS (byte): ~400 KiB liên hệ cỡ tối đa (<100 liên hệ) ⇒ tách phần theo BYTE; mỗi khối ≤ 46 KiB, mỗi phần ≤ 384 KiB, mỗi phần có hàng mail_log summary + summary_hour, phần k gửi ở lượt Cron k (@S19 XQ-32)', async ({ request }) => {
+test('CC-09 CRON_LIMITS (byte): ~400 KiB liên hệ cỡ tối đa (<100 liên hệ) ⇒ tách phần theo BYTE; mỗi khối ≤ 46 KiB, mỗi phần ≤ 384 KiB, mỗi phần có hàng mail_log summary + summary_hour, phần k gửi ở lượt Cron k (@S19 XQ-32)', async ({
+  request,
+}) => {
   test.setTimeout(240_000);
   const N = 18; // 18 × ~23 KiB base64 ≈ 400+ KiB; 18 < maxSummaryContacts ⇒ tách chỉ có thể do byte
   expect(N).toBeLessThan(MAX_CONTACTS_PER_PART);
   await control.setNow(at(1));
   await control.seedNotifyCount(30, HOUR0); // vượt trần thư riêng ⇒ sang đường tóm tắt
   await postMax(request, N);
-  expect((await control.mailbox(TO)).filter((m) => m.kind === 'summary'), 'chưa tới giờ Cron ⇒ chưa có thư tóm tắt').toHaveLength(0);
+  expect(
+    (await control.mailbox(TO)).filter((m) => m.kind === 'summary'),
+    'chưa tới giờ Cron ⇒ chưa có thư tóm tắt',
+  ).toHaveLength(0);
 
   // Phần k gửi ở lượt Cron thứ k: mỗi lượt đúng 1 phần, cho tới khi hết hàng đợi (không khoảng trống).
   const increments: number[] = [];
@@ -228,7 +258,10 @@ test('CC-09 CRON_LIMITS (byte): ~400 KiB liên hệ cỡ tối đa (<100 liên h
       expect(size, `phần ${p + 1}, khối thứ ${i + 1} (liên hệ ${part.ids[i]})`).toBeLessThanOrEqual(CAP_BLOCK);
   // (ii) mỗi phần ≤ 384 KiB (maxSummaryPartB64Bytes): tổng các khối và thân thô
   for (const [p, part] of parts.entries()) {
-    expect(part.blocks.reduce((a, b) => a + b, 0), `phần ${p + 1}: tổng khối`).toBeLessThanOrEqual(CAP_PART);
+    expect(
+      part.blocks.reduce((a, b) => a + b, 0),
+      `phần ${p + 1}: tổng khối`,
+    ).toBeLessThanOrEqual(CAP_PART);
     expect(part.rawBodyBytes, `phần ${p + 1}: thân thô (+ dòng đầu)`).toBeLessThanOrEqual(CAP_PART + INTRO_SLACK);
   }
   // (iii) tách do BYTE, không do số: tổng > 384 KiB trong khi < 100 liên hệ, và phần 1 đã "đầy" (thêm khối kế sẽ vượt trần)
@@ -238,7 +271,10 @@ test('CC-09 CRON_LIMITS (byte): ~400 KiB liên hệ cỡ tối đa (<100 liên h
   const second = parts[1];
   expect(first?.ids.length ?? 0, 'phần 1 không phải một liên hệ lẻ').toBeGreaterThan(1);
   expect(first?.ids.length ?? 0, 'phần 1 dừng vì byte, không vì số').toBeLessThan(MAX_CONTACTS_PER_PART);
-  expect((first?.blocks.reduce((a, b) => a + b, 0) ?? 0) + (second?.blocks[0] ?? 0), 'thêm khối kế vào phần 1 sẽ vượt 384 KiB').toBeGreaterThan(CAP_PART);
+  expect(
+    (first?.blocks.reduce((a, b) => a + b, 0) ?? 0) + (second?.blocks[0] ?? 0),
+    'thêm khối kế vào phần 1 sẽ vượt 384 KiB',
+  ).toBeGreaterThan(CAP_PART);
   // không mất, không trùng liên hệ nào qua các phần
   expect(parts.flatMap((p) => p.ids).sort((a, b) => a - b)).toEqual(Array.from({ length: N }, (_, k) => k));
 
@@ -252,12 +288,17 @@ test('CC-09 CRON_LIMITS (byte): ~400 KiB liên hệ cỡ tối đa (<100 liên h
   expect(split, 'đúng 1 cảnh báo SUMMARY_SPLIT').toHaveLength(1);
 });
 
-test('CC-09b contact-form.feature:265–270 với liên hệ cỡ tối đa: 12 liên hệ ⇒ đúng 1 thư tóm tắt, một phần ≤ 384 KiB, đủ họ tên + cách liên hệ + nội dung của cả 12 (@S21 api.ts:152–156)', async ({ request }) => {
+test('CC-09b contact-form.feature:265–270 với liên hệ cỡ tối đa: 12 liên hệ ⇒ đúng 1 thư tóm tắt, một phần ≤ 384 KiB, đủ họ tên + cách liên hệ + nội dung của cả 12 (@S21 api.ts:152–156)', async ({
+  request,
+}) => {
   test.setTimeout(240_000);
   await control.setNow(at(1));
   await control.seedNotifyCount(30, HOUR0);
   await postMax(request, 12);
-  expect((await control.mailbox(TO)).filter((m) => m.kind === 'notify'), 'không có thư báo riêng nào').toHaveLength(0);
+  expect(
+    (await control.mailbox(TO)).filter((m) => m.kind === 'notify'),
+    'không có thư báo riêng nào',
+  ).toHaveLength(0);
   for (const k of [61, 62, 63]) await control.runCron(at(k));
   const sums = (await control.mailbox(TO)).filter((m) => m.kind === 'summary');
   expect(sums, 'đúng 1 thư tóm tắt').toHaveLength(1);
@@ -266,7 +307,10 @@ test('CC-09b contact-form.feature:265–270 với liên hệ cỡ tối đa: 12 
   const part = analyze(mail);
   expect(part.ids.sort((a, b) => a - b)).toEqual(Array.from({ length: 12 }, (_, k) => k));
   for (const size of part.blocks) expect(size).toBeLessThanOrEqual(CAP_BLOCK);
-  expect(part.blocks.reduce((a, b) => a + b, 0), '12 khối cỡ tối đa vẫn nằm trong một phần').toBeLessThanOrEqual(CAP_PART);
+  expect(
+    part.blocks.reduce((a, b) => a + b, 0),
+    '12 khối cỡ tối đa vẫn nằm trong một phần',
+  ).toBeLessThanOrEqual(CAP_PART);
   expect(mail.text, 'dòng đầu ghi 12 liên hệ').toMatch(/\b12\b/);
   for (let k = 0; k < 12; k++) {
     const c = maxContact(k);
@@ -276,15 +320,30 @@ test('CC-09b contact-form.feature:265–270 với liên hệ cỡ tối đa: 12 
   }
   const rows = ((await control.storeDump()).tables.mail_log ?? []).filter((r) => r.kind === 'summary');
   expect(rows, 'một hàng mail_log summary').toHaveLength(1);
-  expect((await control.alerts()).filter((a) => /SUMMARY_SPLIT/.test(a.subject + a.body)), 'không tách ⇒ không SUMMARY_SPLIT').toHaveLength(0);
+  expect(
+    (await control.alerts()).filter((a) => /SUMMARY_SPLIT/.test(a.subject + a.body)),
+    'không tách ⇒ không SUMMARY_SPLIT',
+  ).toHaveLength(0);
 });
 
 // ---- Q10-3: marker không lọt log; last_error chỉ là mã --------------------------------------------------------------
 for (const [name, setup] of [
-  ['fail-mail permanent', async () => { await control.failMail(true, 'permanent'); }],
-  ['fail-store', async () => { await control.failStore(true); }],
+  [
+    'fail-mail permanent',
+    async () => {
+      await control.failMail(true, 'permanent');
+    },
+  ],
+  [
+    'fail-store',
+    async () => {
+      await control.failStore(true);
+    },
+  ],
 ] as Array<[string, () => Promise<void>]>) {
-  test(`CC-10 Q10-3: marker trong thân không có trong app-logs khi ${name}; outbox.last_error chỉ là mã (@S19 XQ-35)`, async ({ request }) => {
+  test(`CC-10 Q10-3: marker trong thân không có trong app-logs khi ${name}; outbox.last_error chỉ là mã (@S19 XQ-35)`, async ({
+    request,
+  }) => {
     await control.setNow(HOUR0);
     await setup();
     await postContact(request, { ...VALID, message: `gửi ${MARK}` });
@@ -301,7 +360,8 @@ for (const [name, setup] of [
 test('CC-11 Q10-4: hai run-cron chạy chồng ⇒ mỗi liên hệ nằm đúng 1 thư (@S19 XQ-35)', async ({ request }) => {
   await control.setNow(HOUR0);
   await control.failMail(true);
-  for (let i = 0; i < 5; i++) await postContact(request, { ...VALID, message: `chồng ${i}` }, { ip: `203.0.113.${i + 1}` });
+  for (let i = 0; i < 5; i++)
+    await postContact(request, { ...VALID, message: `chồng ${i}` }, { ip: `203.0.113.${i + 1}` });
   await control.failMail(false);
   await Promise.all([control.runCron(at(5)), control.runCron(at(5))]);
   const body = (await control.mailbox(TO)).map((m) => m.body).join('\n');
@@ -313,8 +373,20 @@ test('CC-11 Q10-4: hai run-cron chạy chồng ⇒ mỗi liên hệ nằm đúng
 // (gồm U+0085), U+2028/2029 ⇒ 422, code `VALIDATION`, `fields.<trường>` = `INVALID_CHARS` (INVALID_CHARS là mã TRƯỜNG,
 // không phải mã lỗi cấp trên). Chuỗi "Reply-To:" KHÔNG có ký tự điều khiển thì không bị bộ cấm bắt ⇒ 200 (CC-12b): chỉ
 // CR/LF mới chèn được header.
-test('CC-12 M30-b: tên/công ty có ký tự điều khiển (CR/LF, NEL, NUL, U+2028…) ⇒ 422 VALIDATION + fields.<trường> = INVALID_CHARS (@S21)', async ({ request }) => {
-  for (const name of ['A\r\nReply-To: x@evil', 'An\nB', 'An\rB', 'An\tB', 'An\u007fB', 'An B','An B', 'An\u0085B', 'An\u0000B']) {
+test('CC-12 M30-b: tên/công ty có ký tự điều khiển (CR/LF, NEL, NUL, U+2028…) ⇒ 422 VALIDATION + fields.<trường> = INVALID_CHARS (@S21)', async ({
+  request,
+}) => {
+  for (const name of [
+    'A\r\nReply-To: x@evil',
+    'An\nB',
+    'An\rB',
+    'An\tB',
+    'An\u007fB',
+    'An B',
+    'An B',
+    'An\u0085B',
+    'An\u0000B',
+  ]) {
     const r = await postContact(request, { ...VALID, name });
     expect(r.status, JSON.stringify(name)).toBe(422);
     expect(r.json?.code, JSON.stringify(name)).toBe('VALIDATION');
@@ -327,7 +399,9 @@ test('CC-12 M30-b: tên/công ty có ký tự điều khiển (CR/LF, NEL, NUL, 
   expect((await control.storeDump()).tables.outbox ?? [], 'bị từ chối thì không ghi D1').toHaveLength(0);
 });
 
-test('CC-12b M30-b: tên có chữ "Reply-To:" nhưng KHÔNG có ký tự điều khiển ⇒ 200, không bị coi là chèn header (@S21)', async ({ request }) => {
+test('CC-12b M30-b: tên có chữ "Reply-To:" nhưng KHÔNG có ký tự điều khiển ⇒ 200, không bị coi là chèn header (@S21)', async ({
+  request,
+}) => {
   const r = await postContact(request, { ...VALID, name: 'A Reply-To: x@evil' });
   expect(r.status).toBe(200);
   expect(r.json?.ok).toBe(true);

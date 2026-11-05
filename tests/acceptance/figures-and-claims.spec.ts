@@ -135,7 +135,9 @@ const PARTNER = {
   permissionBasis: 'raw 02/11 N22',
   allowedAssets: ['sơ đồ quy trình', 'bảng so sánh', 'bản vẽ 3D'],
 };
-const partnersFile = (over: Record<string, unknown> = {}) => ({ 'partners.yaml': yamlItem({ ...PARTNER, ...over }) + '\n' });
+const partnersFile = (over: Record<string, unknown> = {}) => ({
+  'partners.yaml': yamlItem({ ...PARTNER, ...over }) + '\n',
+});
 
 test('FIG-16 Tư liệu đối tác loại "logo" thì build đỏ, nêu tên ảnh + loại + đối tác (@S33 @kiem-luc-build)', () => {
   const r = buildSite({

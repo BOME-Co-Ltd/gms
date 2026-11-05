@@ -63,7 +63,8 @@ export const control = {
   policyVersion: (v: string) => call('policy-version', { v }),
   // contract: `recipient` nhận { to } (không có "rỗng ⇒ FORM_DISABLED" nữa: dùng turnstileSecret/CONTACT_MAIL_READY).
   recipient: (email: string) => call('recipient', { to: email }),
-  mailbox: async (to?: string): Promise<Mail[]> => (await call<{ messages: Raw[] }>('mailbox', { to })).messages.map(toMail),
+  mailbox: async (to?: string): Promise<Mail[]> =>
+    (await call<{ messages: Raw[] }>('mailbox', { to })).messages.map(toMail),
   alerts: async (): Promise<Alert[]> => (await call<{ messages: Raw[] }>('alerts')).messages.map(toMail),
   failMail: (on: boolean, mode: 'temporary' | 'permanent' | 'slow' = 'temporary') => call('fail-mail', { on, mode }),
   failStore: (on: boolean) => call('fail-store', { on }),

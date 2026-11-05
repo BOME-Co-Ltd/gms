@@ -21,7 +21,8 @@ try {
   cpSync(join(ROOT, 'content'), contentDir, { recursive: true });
   const companyPath = join(contentDir, 'company.yaml');
   const company = readFileSync(companyPath, 'utf8');
-  if (/^taxId:/m.test(company)) throw new Error('content/company.yaml đã có taxId — bỏ phần phủ MST giả trong build-e2e-site.ts');
+  if (/^taxId:/m.test(company))
+    throw new Error('content/company.yaml đã có taxId — bỏ phần phủ MST giả trong build-e2e-site.ts');
   writeFileSync(companyPath, `${company.replace(/\n*$/, '\n')}taxId: "${TEST_TAX_ID}"\n`);
 
   process.env.CONTACT_MAIL_READY = 'true';
