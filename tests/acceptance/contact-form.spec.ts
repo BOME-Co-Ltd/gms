@@ -253,7 +253,41 @@ test('FORM-35 Liên hệ chờ gửi thư quá 15 phút: đúng 1 cảnh báo ch
   expect(await inbox(), 'dịch vụ thư còn lỗi: chưa có thư báo nào').toHaveLength(0);
 });
 
-test('FORM-10 Nơi giữ tạm lỗi thì KHÔNG báo đã nhận, giữ chữ đã nhập, gợi cách liên hệ khác (@S19 @risk:mail-failure)', async ({
+// Biên 15 phút (900 s) của hạn gửi thư — khớp pendingStats (worker/adapters/cloudflare.ts) với chữ spec. Hạn gửi = created_at (design.md:151,
+// api.ts:211 overdueAlertSeconds=900). Liên hệ gửi lỗi lúc 09:00; đo health + cảnh báo tại T0+899 / +900 / +901 s.
+// Mâu thuẫn tài liệu: feature "từ 09:20" (gồm biên) ≠ design.md:151 "> 900" (loại biên) ⇒ tại đúng 900 s KHÔNG khẳng định có/không cảnh báo
+// (chỉ khẳng định oldestOverdueSec = 900 đúng chữ; xem test-plan, câu hỏi PM).
+const at = (sec: number) => new Date(Date.parse(ISO(9, 0)) + sec * 1000).toISOString().replace('.000Z', 'Z');
+const healthAt = async (request: Parameters<typeof postContact>[0], sec: number) => {
+  await control.setNow(at(sec));
+  await control.runCron(at(sec));
+  const res = await request.get('/api/contact/health');
+  expect(res.status()).toBe(200);
+  return (await res.json()) as { ok: boolean; lastCronAgeSec: number; pending: number; oldestOverdueSec: number };
+};
+for (const sec of [899, 900, 901]) {
+  test(`FORM-36 Biên 15 phút: liên hệ chờ ${sec} giây ⇒ oldestOverdueSec đúng ${sec}${sec === 901 ? ', health không ok, đúng 1 cảnh báo' : sec === 899 ? ', health ok, chưa cảnh báo' : ''} (@S19 @risk:mail-failure)`, async ({
+    request,
+  }) => {
+    await control.failMail(true);
+    await control.setNow(ISO(9, 0));
+    const r = await postContact(request, VALID);
+    expect(r.status).toBe(200);
+    const h = await healthAt(request, sec);
+    expect(h.pending, 'liên hệ vẫn chờ').toBe(1);
+    expect(h.oldestOverdueSec, `tuổi liên hệ cũ nhất = ${sec} s (không lệch +2 phút)`).toBe(sec);
+    if (sec === 899) {
+      expect(h.ok, 'chưa quá hạn ⇒ ok').toBe(true);
+      expect(await alertCodes(), 'chưa quá 15 phút ⇒ chưa cảnh báo').toEqual([]);
+    }
+    if (sec === 901) {
+      expect(h.ok, 'quá hạn ⇒ không ok').toBe(false);
+      expect(await alertCodes(), 'quá 15 phút ⇒ đúng 1 cảnh báo').toEqual([CODE_15M]);
+    }
+  });
+}
+
+test('FORM-10Nơi giữ tạm lỗi thì KHÔNG báo đã nhận, giữ chữ đã nhập, gợi cách liên hệ khác (@S19 @risk:mail-failure)', async ({
   page,
   request,
 }) => {

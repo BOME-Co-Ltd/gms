@@ -75,3 +75,52 @@ test('INFO-05 Số điện thoại công khai sai dạng thì build đỏ (@S24 
   expect(r.log).toMatch(/không phải số điện thoại Việt Nam hợp lệ/);
   // "web đang chạy vẫn hiện số của bản deploy trước": bản đang chạy không bị build đỏ này động tới — kiểm ở deploy (check-approval/CI), không ở đây.
 });
+
+// contact-info.feature dòng 26–32 (spec v0.5, N27). Email nhận yêu cầu dữ liệu có, CONTACT_MAIL_READY=true ⇒ lý do DUY NHẤT
+// khiến form đóng là thiếu MST (contracts/build.ts §9 FormStatus; content-model.ts Company.taxId).
+test('INFO-06 Thiếu mã số thuế thì build xanh, chân trang chỉ hiện tên pháp lý, form tạm đóng (@S24 @kiem-luc-build @cho-khach:N27)', () => {
+  const r = buildSite(companyFile({ legalName: 'Công ty Mẫu GMS', taxId: null }), { CONTACT_MAIL_READY: 'true' });
+  expect(r.ok, r.log).toBe(true);
+  for (const locale of ['vi', 'en'] as Locale[]) {
+    const html = htmlOf(r, path('contact', locale))!;
+    const footer = /<footer[\s\S]*?<\/footer>/i.exec(html)?.[0];
+    expect(footer, `${locale}: có chân trang`).toBeDefined();
+    const ft = text(footer!);
+    expect(ft, `${locale}: chân trang hiện tên pháp lý`).toContain('Công ty Mẫu GMS');
+    expect(footer, `${locale}: không phần tử mã số thuế`).not.toContain('data-testid="tax-id"');
+    expect(ft, `${locale}: không dòng mã số thuế`).not.toMatch(/mã số thuế|\bMST\b|tax (id|code|number)|\bVAT\b/i);
+    expect(html, `${locale}: form tạm đóng`).not.toContain('data-testid="contact-form"');
+  }
+  const status = JSON.parse(r.read('form-status.json') ?? '{}');
+  expect(status.open).toBe(false);
+  expect(status.reasons, 'chỉ một lý do: thiếu mã số thuế').toEqual(['no-tax-id']);
+});
+
+// contact-info.feature dòng 40–44: điểm bản đồ "20.930031, 106.065651" (nhà máy). Phần cứng: bản đang chạy dùng nội dung thật
+// (không đổi được từ test) ⇒ kiểm hai tầng: (1) build với đúng điểm này có tọa độ trong trang; (2) bản đang chạy: chọn xem
+// ⇒ khối bản đồ hiện tại cùng điểm (data-point, hoặc nguồn khung bản đồ nếu không có thuộc tính).
+const FACTORY_POINT = { lat: 20.930031, lng: 106.065651 };
+test('INFO-07 Chọn xem bản đồ thì bản đồ hiện đúng điểm nhà máy (@S24 @cho-khach:N28)', async ({ page }) => {
+  const r = buildSite(companyFile({ mapPoint: '20.930031, 106.065651' }));
+  expect(r.ok, r.log).toBe(true);
+  const built = htmlOf(r, path('contact', 'vi'))!;
+  expect(built, 'trang build có tọa độ vĩ độ').toContain('20.930031');
+  expect(built, 'trang build có tọa độ kinh độ').toContain('106.065651');
+
+  await open(page, 'contact', 'vi');
+  await tid(page, 'map-open').click();
+  const view = tid(page, 'map-view');
+  await expect(view).toBeVisible();
+  const point =
+    (await view.getAttribute('data-point')) ?? (await view.locator('iframe').first().getAttribute('src')) ?? '';
+  const nums = (point.match(/-?\d+\.\d+/g) ?? []).map(Number);
+  expect(nums.length, `không thấy tọa độ trong "${point}"`).toBeGreaterThanOrEqual(2);
+  expect(
+    nums.some((n) => Math.abs(n - FACTORY_POINT.lat) < 1e-6),
+    `vĩ độ trong "${point}"`,
+  ).toBe(true);
+  expect(
+    nums.some((n) => Math.abs(n - FACTORY_POINT.lng) < 1e-6),
+    `kinh độ trong "${point}"`,
+  ).toBe(true);
+});
