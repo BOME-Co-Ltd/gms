@@ -3,6 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { parse as parseYaml } from 'yaml';
+import { loadDenylist, scanOutputForForbiddenNames } from '../../src/content/rules/names.ts';
 import { formStatusOf } from '../../contracts/build.ts';
 import { PAGE_SIZE, ROUTES } from '../../contracts/routes.ts';
 import { buildFooterHtml, FOOTER_CSS, type FooterLink, parseSocial } from '../../src/components/ui/static-footer.ts';
@@ -531,7 +532,7 @@ main { padding: 0 0 48px; }
 .flow-svg .dot { fill: var(--lime); }
 
 /* ux-spec §12a: khung ảnh dây chuyền sàng tuyển (contain, 3:2, nền --mist) */
-.gms-sorting-line { aspect-ratio: 3 / 2; background: var(--mist); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.gms-sorting-line { position: relative; aspect-ratio: 3 / 2; background: var(--mist); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
 .gms-sorting-line img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
 /* VPD 8-step interactive stepper */
@@ -1075,15 +1076,24 @@ function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): strin
     : 'Overview diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil. The outputs return to a cycle of use.';
 
   const customBody = content.pagesBody.technology?.[locale]?.bodyHtml ?? '';
-  // V39/V42(2)/§12a: khung `gms-sorting-line` — ảnh/bản vẽ của GMS, contain, 3:2; chưa có tệp ⇒ ẩn cả khung.
-  const drawingImg = content.images.get('images/gms-sorting-line.jpg');
+  // V39/V42(2)/§12a: khung `gms-sorting-line` — ảnh/bản vẽ của GMS, contain, 3:2; ô null ⇒ ẩn cả khung.
+  // Ô đã được loader giải + kiểm theo luật "Ô ảnh cố định" (jpg/jpeg/png/webp); src lấy cùng nguồn với
+  // processAndWriteImage (img/<relPath bỏ "images/">), không dò lại đuôi.
+  const drawingImg = content.imageSlots['gms-sorting-line'];
+  const drawingSrc = drawingImg ? `/img/${drawingImg.relPath.replace(/^images\//, '')}` : '';
+  // Ảnh chụp thật ⇒ không nhãn; bản vẽ/phối cảnh (anh-dung-ai) ⇒ nhãn C29 (ux-spec V39).
+  const drawingLabel =
+    drawingImg && drawingImg.kind === 'anh-dung-ai'
+      ? `<figcaption class="photo-label" data-testid="photo-label">${isVi ? 'Phối cảnh dự kiến' : "Artist's impression"}</figcaption>`
+      : '';
   const drawingHtml =
-    drawingImg && drawingImg.allowedInBuild
+    drawingImg
       ? `<section class="section-block section-alt" data-testid="tech-drawing">
           <h2>${isVi ? 'Dây chuyền sàng tuyển của GMS' : 'The GMS sorting line'}</h2>
           <figure class="card">
             <div class="gms-sorting-line" data-testid="gms-sorting-line">
-              <img src="/img/gms-sorting-line.jpg" alt="${escHtml(drawingImg.alt[locale])}" width="1500" height="1000" loading="lazy" />
+              <img src="${escHtml(drawingSrc)}" alt="${escHtml(drawingImg.alt[locale])}" width="1500" height="1000" loading="lazy" />
+              ${drawingLabel}
             </div>
             <figcaption>${isVi ? 'Dây chuyền sàng tuyển của GMS.' : 'The GMS sorting line.'}</figcaption>
           </figure>
@@ -2052,9 +2062,8 @@ function renderContactPage(
   // Điểm bản đồ chỉ lấy từ Thông tin công ty (loader đã kiểm dạng MAP_POINT; vắng/sai ⇒ null).
   const mapPoint = company.mapPoint ?? null;
   const mapQuery = mapPoint ? encodeURIComponent(mapPoint.replace(/\s+/g, '')) : '';
-  const mapLinkUrl =
-    (company.mapUrl && company.mapUrl.trim()) || (mapQuery ? `https://maps.google.com/?q=${mapQuery}` : '');
-  const hasMap = Boolean(mapPoint || mapLinkUrl || (company.mapImage && company.mapImage.trim()));
+  const mapLinkUrl = mapQuery ? `https://maps.google.com/?q=${mapQuery}` : '';
+  const hasMap = Boolean(mapPoint);
   const mapTitle = isVi ? 'Bản đồ vị trí nhà máy' : 'Plant Location Map';
   const mapLinkHtml = mapLinkUrl
     ? `<a href="${escHtml(mapLinkUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="min-height: 36px; padding: 6px 14px; font-size: 0.85rem;">${isVi ? 'Mở trên Google Maps' : 'Open in Google Maps'}<span class="sr-only"> ${isVi ? '(mở tab mới)' : '(opens in a new tab)'}</span>${icon('external-link', { size: 18 })}</a>`
@@ -2572,6 +2581,20 @@ ${uniqueUrls.map((u) => `  <url><loc>${escHtml(u)}</loc></url>`).join('\n')}
   if (brokenImgs.length > 0) {
     for (const m of brokenImgs) console.error(m);
     return { ok: false, errors: brokenImgs };
+  }
+
+  // Quét đầu ra theo content/denylist.yaml (build.ts §8 luật 6): có tên cấm ⇒ build đỏ.
+  const denylist = loadDenylist(contentDir);
+  if ('error' in denylist) {
+    const m = `[${denylist.error.code}] ${denylist.error.message}`;
+    console.error(m);
+    return { ok: false, errors: [m] };
+  }
+  const nameErrs = scanOutputForForbiddenNames(outDir, denylist.names);
+  if (nameErrs.length > 0) {
+    const msgs = nameErrs.map((e) => `[${e.code}] ${e.message}`);
+    for (const m of msgs) console.error(m);
+    return { ok: false, errors: msgs };
   }
 
   return { ok: true, errors: [], hash };

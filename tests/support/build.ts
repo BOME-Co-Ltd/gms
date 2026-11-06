@@ -36,7 +36,13 @@ function walk(dir: string, base = dir): string[] {
   });
 }
 
-export function buildSite(extra: Files = {}, env: Record<string, string> = {}): BuildResult {
+// `overlay`: tệp chèn vào BẢN CHÉP của thư mục nền (đường dẫn tương đối gốc bản chép, vd 'public/qa-fixture.svg'), ngoài content/.
+// Bản chép nằm ở thư mục tạm; không ghi gì vào public/, src/, content/ thật (admin quyết 07/11, XQ-QA-M40-1).
+export function buildSite(
+  extra: Files = {},
+  env: Record<string, string> = {},
+  overlay: Record<string, string | Buffer> = {},
+): BuildResult {
   if (!BUILD_CMD || !FIXTURE_ROOT)
     throw new Error('Chưa có lệnh build/thư mục fixture (SITE_BUILD_CMD, SITE_FIXTURE_ROOT) — XQ-21');
   const work = mkdtempSync(join(tmpdir(), 'gms-build-'));
@@ -48,6 +54,11 @@ export function buildSite(extra: Files = {}, env: Record<string, string> = {}): 
       rmSync(to, { force: true });
       continue;
     }
+    mkdirSync(join(to, '..'), { recursive: true });
+    writeFileSync(to, data);
+  }
+  for (const [rel, data] of Object.entries(overlay)) {
+    const to = join(work, rel);
     mkdirSync(join(to, '..'), { recursive: true });
     writeFileSync(to, data);
   }

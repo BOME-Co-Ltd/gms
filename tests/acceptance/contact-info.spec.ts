@@ -29,7 +29,7 @@ for (const [locale, shown] of SHOWN) {
 }
 
 test('INFO-02 Ô trống thì phần tương ứng ẩn hẳn, số thật không lộ (@S24 @cho-khach:P30 @cho-khach:N28 @kiem-luc-build)', () => {
-  const r = buildSite(companyFile({ phone: null, zalo: null, mapUrl: null, mapImage: null, taxId: null }));
+  const r = buildSite(companyFile({ phone: null, zalo: null, mapPoint: null, taxId: null }));
   expect(r.ok, r.log).toBe(true);
   for (const locale of ['vi', 'en'] as Locale[])
     for (const key of ['contact', 'home'] as const) {

@@ -110,6 +110,12 @@ export const jpegWithExif = (): Buffer => {
 };
 export const bytesOfSize = (n: number, head: number[]) =>
   Buffer.concat([Buffer.from(head), Buffer.alloc(Math.max(0, n - head.length), 1)]);
+// Ảnh 1x1 HỢP LỆ (giải mã được) cho ca cần bản build xử lý ảnh thật (XQ-44). bytesOfSize chỉ có đầu tệp, không giải mã được.
+export const PNG_1X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+export const WEBP_1X1 = Buffer.from('UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA', 'base64');
 export const JPEG_HEAD = [0xff, 0xd8, 0xff, 0xe0];
 export const GIF_HEAD = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61];
 export const IMAGE_MAX_BYTES = 5 * 1024 * 1024;

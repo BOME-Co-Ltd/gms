@@ -1,6 +1,7 @@
 import { CONTENT_RULE_MESSAGES } from '../../../contracts/build.ts';
 import {
   ALL_IMAGE_SLOTS,
+  ComparisonTable,
   HOME_IMAGE_SLOT_KIND,
   HOME_IMAGE_SLOTS,
   IMAGE_LIMITS,
@@ -217,6 +218,88 @@ export function validateJourneyStepsRaw(steps: unknown[]): ContentError[] {
     errors.push({
       code: 'JOURNEY_STATUS_INVALID',
       message: CONTENT_RULE_MESSAGES.JOURNEY_STATUS_INVALID({ step: order, status }),
+    });
+  });
+  return errors;
+}
+
+/**
+ * content/comparison-tables.yaml = ComparisonTable[] (content-model.ts; tuỳ chọn — thiếu tệp thì không gọi hàm này).
+ * Mã theo contract build.ts §8: COMPARISON_SHAPE (số ô ≠ số cột), COMPARISON_NUMBER_NOT_FIGURE (chữ số trong ô chữ),
+ * COMPARISON_ROW_SOURCE_MISSING (ô figure trỏ Số liệu thiếu key/source). Gom hết lỗi, không dừng ở lỗi đầu.
+ * Lỗi schema chung (khoá lạ `.strict()`, ô sai dạng, chuỗi rỗng, thiếu trường, gốc không phải mảng, key trùng) ⇒
+ * COMPARISON_SCHEMA_INVALID (contract build.ts §8, lượt 18); số ô ≠ số cột CHỈ ra COMPARISON_SHAPE.
+ */
+export function validateComparisonTablesRaw(
+  raw: unknown,
+  figuresByKey: Map<string, Record<string, unknown>>,
+): ContentError[] {
+  const errors: ContentError[] = [];
+  const shape = (table: string, row: string) =>
+    errors.push({ code: 'COMPARISON_SHAPE', message: CONTENT_RULE_MESSAGES.COMPARISON_SHAPE({ table, row }) });
+  const schemaInvalid = (table: string, row: string, detail: string) =>
+    errors.push({
+      code: 'COMPARISON_SCHEMA_INVALID',
+      message: CONTENT_RULE_MESSAGES.COMPARISON_SCHEMA_INVALID({ table, row, detail }),
+    });
+  if (raw === null || raw === undefined) return errors; // tệp rỗng = không bảng
+  if (!Array.isArray(raw)) {
+    schemaInvalid('(gốc tệp)', '-', 'phải là danh sách bảng');
+    return errors;
+  }
+  const seenKeys = new Set<string>();
+  raw.forEach((rt, ti) => {
+    const t = (rt && typeof rt === 'object' ? rt : {}) as Record<string, unknown>;
+    const titleObj = t.title as Record<string, unknown> | undefined;
+    const table =
+      typeof titleObj?.vi === 'string' && titleObj.vi.trim() ? titleObj.vi : String(t.key ?? `#${ti + 1}`);
+    // Schema: parse cả bảng, mỗi vấn đề → một lỗi (trừ số ô ≠ số cột, xử lý riêng bên dưới để ra đúng thông báo contract).
+    const parsed = ComparisonTable.safeParse(rt);
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        const rowIdx = issue.path[0] === 'rows' && typeof issue.path[1] === 'number' ? issue.path[1] : null;
+        const rowLabel =
+          rowIdx === null
+            ? '-'
+            : String(((t.rows as Array<{ label?: { vi?: unknown } }>)?.[rowIdx]?.label?.vi as string) ?? `#${rowIdx + 1}`);
+        schemaInvalid(table, rowLabel, `${issue.path.join('.') || '(bảng)'}: ${issue.message}`);
+      }
+    }
+    const key = typeof t.key === 'string' ? t.key : null;
+    if (key !== null) {
+      if (seenKeys.has(key)) schemaInvalid(table, '-', `key "${key}" trùng`);
+      seenKeys.add(key);
+    }
+    const columns = Array.isArray(t.columns) ? t.columns : null;
+    const rows = Array.isArray(t.rows) ? t.rows : [];
+    rows.forEach((rr, ri) => {
+      const r = (rr && typeof rr === 'object' ? rr : {}) as Record<string, unknown>;
+      const labelObj = r.label as Record<string, unknown> | undefined;
+      const row = typeof labelObj?.vi === 'string' && labelObj.vi.trim() ? labelObj.vi : `#${ri + 1}`;
+      const cells = Array.isArray(r.cells) ? r.cells : null;
+      if (columns && cells && cells.length !== columns.length) shape(table, row);
+      let sourceMissing = false;
+      for (const rc of cells ?? []) {
+        const c = (rc && typeof rc === 'object' ? rc : {}) as Record<string, unknown>;
+        if (typeof c.figure === 'string') {
+          const fig = figuresByKey.get(c.figure);
+          if (!fig || typeof fig.source !== 'string' || fig.source.trim() === '') sourceMissing = true;
+        } else if (c.text && typeof c.text === 'object') {
+          const tx = c.text as Record<string, unknown>;
+          if ([tx.vi, tx.en].some((v) => typeof v === 'string' && /\d/.test(v))) {
+            errors.push({
+              code: 'COMPARISON_NUMBER_NOT_FIGURE',
+              message: CONTENT_RULE_MESSAGES.COMPARISON_NUMBER_NOT_FIGURE({ table, row }),
+            });
+          }
+        }
+      }
+      if (sourceMissing) {
+        errors.push({
+          code: 'COMPARISON_ROW_SOURCE_MISSING',
+          message: CONTENT_RULE_MESSAGES.COMPARISON_ROW_SOURCE_MISSING({ table, row }),
+        });
+      }
     });
   });
   return errors;

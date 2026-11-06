@@ -153,6 +153,15 @@ export const CONTENT_RULE_MESSAGES = {
     `bảng so sánh "${p.table}", dòng "${p.row}" có chữ số trong ô chữ — số phải là Số liệu có nguồn`,
   COMPARISON_SHAPE: (p: { table: string; row: string }) =>
     `bảng so sánh "${p.table}", dòng "${p.row}" có số ô khác số cột`,
+  // lượt 18 (backend XQ-1, admin chuyển): content/comparison-tables.yaml sai content-model.ts ComparisonTable ⇒ build đỏ,
+  // MỖI vấn đề một lỗi: khoá lạ (`.strict()`, gồm khoá đã bỏ partner/techSource), ô không phải {figure} hay {text},
+  // chuỗi rỗng, thiếu trường, gốc tệp không phải danh sách (`table` "(gốc tệp)", `row` "-"), hai bảng trùng `key`.
+  // `table` = title.vi, thiếu thì `key`, thiếu nữa thì "#<thứ tự>"; `row` = label.vi của dòng có vấn đề, "#<thứ tự>"
+  // khi thiếu nhãn, "-" khi vấn đề không thuộc dòng nào; `detail` = "<đường khoá nối ".">: <lý do>" hoặc lý do ngắn.
+  // Số ô ≠ số cột CHỈ ra COMPARISON_SHAPE (ComparisonTable không tự kiểm số ô ⇒ không trùng hai mã cho một nguyên nhân).
+  // Lý do chọn mã riêng thay vì dùng chung COMPARISON_SHAPE: contracts/README.md "Lượt 18".
+  COMPARISON_SCHEMA_INVALID: (p: { table: string; row: string; detail: string }) =>
+    `bảng so sánh "${p.table}", dòng "${p.row}" sai schema: ${p.detail}`,
   // news-and-journey.feature dòng 23–26
   JOURNEY_STATUS_INVALID: (p: { step: number; status: string }) =>
     `bước ${p.step} có trạng thái "${p.status}" không thuộc "chưa tới", "đang làm", "đã xong"`,
@@ -173,6 +182,12 @@ export const CONTENT_RULE_MESSAGES = {
   // content-pages.feature:46–51: nêu ảnh (`file`, tương đối CONTENT_DIR, vd "images/gms-after.jpg"), vị trí (`slot`) và lý do.
   IMAGE_SLOT_KIND_INVALID: (p: { slot: string; file: string; kind: string }) =>
     `ô ảnh "${p.slot}" (tệp "${p.file}") chỉ nhận ảnh chụp thật ("anh-that"), tệp khai loại "${p.kind}"`,
+  // lượt 18 (khớp code e515138, src/content/rules/index.ts validateImageMetaRaw, không đổi hành vi): meta ảnh content/images/<tên>.yaml có
+  // khoá không thuộc content-model.ts ImageMeta (`.strict()`; gồm khoá đã bỏ partnerAsset, techSourceAsset, keepTitleBlock)
+  // ⇒ build đỏ, MỖI khoá lạ một lỗi, không lặng lẽ bỏ qua. `image` = basename của ảnh, không đuôi, không thư mục (vd
+  // "gms-sorting-line"); `key` = tên khoá lạ nguyên văn. Ảnh có lỗi này không được nạp (như mọi lỗi meta ảnh).
+  IMAGE_META_KEY_UNKNOWN: (p: { image: string; key: string }) =>
+    `${p.image}: metadata ảnh có khoá "${p.key}" không thuộc mô hình ảnh (content-model.ts ImageMeta)`,
   // ---- Tên không được nêu (lượt 14; content-model.ts ForbiddenNames/findForbiddenNames; design.md §6f) ----
   // appsec M40 (1): thiếu tệp, sai schema hoặc `names` rỗng ⇒ đỏ ở MỌI SITE_ENV (content-check, trước next build).
   DENYLIST_MISSING: () =>
@@ -195,7 +210,7 @@ export type ContentRuleCode = keyof typeof CONTENT_RULE_MESSAGES;
 // Luật ảnh/bảng (đọc kèm content-model.ts ImageMeta, ALL_IMAGE_SLOTS, ComparisonTable; lượt 13 V38/V39, lượt 14 V41):
 // (1) Không có thực thể, khối, tiêu đề, mục dải liên kết hay chú thích nào nêu nguồn tư liệu bên ngoài. Chú thích ảnh
 //     chỉ là chữ cố định theo locale (src/i18n/**), không dựng từ ImageMeta.source. ImageMeta có khoá lạ (gồm khoá cũ
-//     partnerAsset/techSourceAsset/keepTitleBlock) ⇒ build đỏ (`.strict()`, lỗi schema ảnh hiện có).
+//     partnerAsset/techSourceAsset/keepTitleBlock) ⇒ build đỏ IMAGE_META_KEY_UNKNOWN (`.strict()`, nêu khoá; lượt 18).
 // (2) Ô ảnh cố định (gms-sorting-line, gms-before, gms-after): luật chung ở content-model.ts "Ô ảnh cố định" — ô không có
 //     ảnh dùng được (thiếu tệp, hoặc hasPeople thiếu consentDate) ⇒ không render; trùng basename ⇒ IMAGE_SLOT_DUPLICATE;
 //     cặp Trước/Sau chỉ render khi CẢ HAI ô có ảnh dùng được, kind phải "anh-that" (IMAGE_SLOT_KIND_INVALID).
@@ -205,7 +220,8 @@ export type ContentRuleCode = keyof typeof CONTENT_RULE_MESSAGES;
 // (4) Lượt 14 (V41 (e), appsec M40 (4)(5)): BỎ keepTitleBlock. Mọi ảnh ra public/img/ qua sharp, không metadata; không
 //     đường nào chép tệp gốc content/images/** sang public/ hay OUT_DIR. Khung tên/chữ/logo bên khác trong ảnh: cắt/che
 //     trước khi đăng + người soát ảnh cỡ gốc (design.md §6f) — máy không đọc chữ trong ảnh.
-// (5) Bảng so sánh: luật COMPARISON_* trên; không có trường nguồn bên ngoài (khoá cũ ⇒ lỗi schema, `.strict()`).
+// (5) Bảng so sánh: luật COMPARISON_* trên; không có trường nguồn bên ngoài (khoá cũ ⇒ COMPARISON_SCHEMA_INVALID,
+//     `.strict()`; lượt 18).
 // (6) Tên không được nêu (lượt 14, design.md §6f), hai lượt quét, cùng content-model.ts findForbiddenNames:
 //   (a) content-check: mọi tệp dưới CONTENT_DIR TRỪ DENYLIST_PATH và approvals/** — nội dung tệp văn bản (md frontmatter +
 //       thân, yaml/yml, slugs.lock) theo từng giá trị chuỗi, và đường dẫn tương đối của MỌI tệp (gồm ảnh) ⇒

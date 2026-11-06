@@ -278,7 +278,7 @@
   "projects": {
     "eyebrow": "Projects / Gallery",
     "title": "GMS Hung Yen Plant Project & Photo Gallery",
-    "lead": "Eco-industrial plant master plan, 3D technology layouts, and high-tech facility imagery.",
+    "lead": "Eco-industrial plant master plan, artist's impressions of the technology line, and high-tech facility imagery.",
     "items": [
       {
         "title": "Panoramic view of GMS Hung Yen Eco-Industrial Plant",
@@ -286,9 +286,9 @@
         "caption": "Master planning: Solar rooftop array, landscape retention ponds, and isolation greenery belts in My Hao, Hung Yen."
       },
       {
-        "title": "VPD Vacuum Pyrolysis System 3D Model",
+        "title": "VPD Vacuum Pyrolysis System",
         "img": "/img/vpd-system-render.jpg",
-        "caption": "3D simulation of the airtight zero-smoke thermal decomposition system recovering syngas and biochar."
+        "caption": "Artist's impression of the airtight zero-smoke thermal decomposition system recovering syngas and biochar."
       },
       {
         "title": "Vision & Green Eco-Park Planning",
