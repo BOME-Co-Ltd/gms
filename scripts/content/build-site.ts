@@ -171,7 +171,8 @@ export function stripExifFromJpegBuffer(buf: Buffer): Buffer {
       if (i + 3 < buf.length) {
         const segLen = (buf[i + 2] << 8) | buf[i + 3];
         if (segLen >= 2 && i + 2 + segLen <= buf.length) {
-          if (marker !== 0xe1) {
+          // Bỏ APP1..APP15 (Exif/XMP/IPTC/Photoshop 8BIM...); giữ APP0 (JFIF) và segment ảnh.
+          if (marker < 0xe1 || marker > 0xef) {
             chunks.push(buf.subarray(i, i + 2 + segLen));
           }
           i += 2 + segLen;
