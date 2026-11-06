@@ -21,10 +21,10 @@ type Route = { vi: string; en: string; render: z.infer<typeof RenderMode>; tags:
 // locale; ":n" = số trang ≥ 2 (mỗi trang sinh sẵn một tệp HTML). `tags`: nội dung trang phụ thuộc (để loader biết
 // trang nào cần build lại khi kiểm), không phải cơ chế làm mới.
 export const ROUTES: Record<PageKey, Route> = {
-  home: { vi: "/", en: "/en", render: "static", tags: ["news", "figures", "company", "page:home"] },
-  about: { vi: "/gioi-thieu", en: "/en/about", render: "static", tags: ["page:about", "partners", "company"] },
+  home: { vi: "/", en: "/en", render: "static", tags: ["news", "figures", "company", "page:home", "images"] }, // lượt 14 (V41 b): ô ảnh HOME_IMAGE_SLOTS
+  about: { vi: "/gioi-thieu", en: "/en/about", render: "static", tags: ["page:about", "company"] },
   solutions: { vi: "/giai-phap", en: "/en/solutions", render: "static", tags: ["page:solutions"] },
-  technology: { vi: "/cong-nghe", en: "/en/technology", render: "static", tags: ["page:technology", "figures"] },
+  technology: { vi: "/cong-nghe", en: "/en/technology", render: "static", tags: ["page:technology", "figures", "images", "comparisonTables"] }, // lượt 13 (V38/V39): ô ảnh TECHNOLOGY_IMAGE_SLOTS
   products: { vi: "/san-pham-dau-ra", en: "/en/products", render: "static", tags: ["page:products", "outputLines"] },
   news: { vi: "/tin-tuc", en: "/en/news", render: "static", tags: ["news"] },
   newsPage: { vi: "/tin-tuc/trang/:n", en: "/en/news/page/:n", render: "static", tags: ["news"] },

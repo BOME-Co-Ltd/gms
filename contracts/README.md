@@ -1,5 +1,155 @@
 # contracts/ — gms-hungyen-web
 
+## Lượt 16 (07/11/2026): XQ-42 — giải mã lặp tới bất động (M40-b), xoá ký tự định dạng vô hình (M40-c)
+
+Theo lời giao việc task `architect-20261106170355-57a8` (`--fixes appsec:M40`) và appsec threat-model.md §000000000.3–.4 (lượt soát 13, XQ-42). `design_approved` chưa qua ⇒ sửa trong chặng design. Mirror `contracts/` trong repo code tiếp tục lệch (D7 (a)).
+
+| File | Đổi | Vì sao |
+|---|---|---|
+| `content-model.ts` | `normalizeForNameScan` `:201–209`: xoá `\p{Cf}` ĐẦU TIÊN (trước NFC và trước gộp khoảng trắng). Comment giải mã `:211–218`. Hằng mới `NAME_SCAN_DECODE_PASSES_MAX = 3` (export) `:219`. `NAMED_REFS` `:220–224` đổi từ object literal sang `ReadonlyMap`, thêm `shy` ⇒ U+00AD; `nbsp`, `shy` viết bằng `String.fromCharCode(0xa0/0xad)`. Thân giải mã cũ đổi tên thành `decodeOnceForNameScan` `:256–266` (không export, không đổi bước nào ngoài `NAMED_REFS.get`). `decodeForNameScan` `:267–279` lặp `decodeOnceForNameScan` tới khi chuỗi không đổi, tối đa `NAME_SCAN_DECODE_PASSES_MAX` lượt. `utf8SeqLength`, `decodePercentRun`, `forbiddenNamePattern` (lớp nối `[\s_./+-]*`), `findForbiddenNames` **không đổi** | XQ-42 (1)(2); M40-b, M40-c |
+| `build.ts` | Chỉ comment: luật (6) `:218–222` (giới hạn mới: trần 3 lớp, Cf; trỏ XQ-43); `:173` (`content-pages.feature:46–51`), `:180` và `:212` (`figures-and-claims.feature:119–124`) trỏ số dòng `.feature` hiện hành | XQ-42 (3) |
+| `content-model.md` | Dòng "Tên không được nêu" | khớp `.ts` |
+
+Lựa chọn khi có ≥ 2 phương án (để appsec soát):
+- **Xoá Cf ở `normalizeForNameScan`, bước đầu tiên (chọn)**, thay vì ở `decodeForNameScan` (loại: `normalizeForNameScan` còn chạy trên chính tên trong danh sách ở `forbiddenNamePattern`, hai phía phải qua cùng một phép) hay sau NFC (loại: Cf đứng giữa chữ gốc và dấu kết hợp chặn NFC ghép; xoá trước thì không phải nghĩ tới). Hệ quả: Cf giữa hai chữ của tên làm hai chữ dính nhau ("xanhasian") — lớp nối `*` vốn đã bắt dạng viết liền, không cần thêm Cf vào lớp nối. U+FEFF thuộc `\s` của JS và thuộc Cf: trước lượt 16 thành dấu cách, nay bị xoá — cả hai đều bị bắt.
+- **Lặp có trần 3 lượt, dừng sớm khi không đổi (chọn, đúng XQ-42 (1))**, thay vì lặp không trần (loại: không chứng minh được dừng trên mọi đầu vào nếu sau này thêm bước giải) hay giải đệ quy từng dạng (loại: phải tự viết thứ tự ưu tiên giữa HTML/JS/`%`). Trần là hằng export để ca qa dùng cùng giá trị.
+- **`NAMED_REFS` thành `Map` (chọn, ngoài yêu cầu, sửa cùng chỗ)**: object literal trả `Object.prototype` cho `&constructor;`, `&toString;`… (giá trị là hàm, `replace` đổi thành chữ mã nguồn của hàm). Không làm lọt tên nào; chỉ là đầu ra sai. Đổi hành vi duy nhất: các thực thể lạ đó nay giữ nguyên.
+
+Ca giá trị (hàm thuần; admin/qa chạy bằng một tệp thử nhập `content-model.ts`; **architect chưa chạy ca nào**, mọi ô "Ra" là dò tay theo mã). Cột "Vào" là **biểu thức JS** chép thẳng vào script được; ký tự vô hình viết bằng `String.fromCharCode(…)` để không có ký tự vô hình nằm trong tệp này. `F(x)` = `findForbiddenNames(x, ["Xanh Asian"])`, `D(x)` = `decodeForNameScan(x)`.
+
+| # | Vào (biểu thức JS) | Gọi | Ra mong đợi | Dò tay: các lượt giải |
+|---|---|---|---|---|
+| 1 | `"xanh%2520asian"` | `F` | `["Xanh Asian"]` (lượt 15: `[]`) | `%20` ⇒ ` ` ⇒ dừng |
+| 2 | `"xanh%26nbsp%3Basian"` | `F` | `["Xanh Asian"]` | `&nbsp;` ⇒ U+00A0 |
+| 3 | `"xanh%5Cu0020asian"` | `F` | `["Xanh Asian"]` | lượt 1: `%5C` ⇒ gạch chéo ngược, còn chữ "gạch chéo + u0020"; lượt 2: bước JS ⇒ dấu cách |
+| 4 | `"Xanh&amp;nbsp;Asian"` | `F` | `["Xanh Asian"]` | `&nbsp;` ⇒ U+00A0 |
+| 5 | `"Xanh&amp;#x20;Asian"` | `F` | `["Xanh Asian"]` | `&#x20;` ⇒ ` ` |
+| 6 | `"xanh%252520asian"` (3 lớp) | `F` | `["Xanh Asian"]` | `%2520` ⇒ `%20` ⇒ ` ` (đủ 3 lượt) |
+| 7 | `"xanh%25252520asian"` (4 lớp) | `F` | `[]` — **giới hạn** trần 3 lượt | sau 3 lượt còn `xanh%20asian` |
+| 8 | `"Xanh&amp;amp;amp;nbsp;Asian"` (4 lớp HTML) | `F` | `[]` — **giới hạn** trần 3 lượt | sau 3 lượt còn `&nbsp;` |
+| 9 | `"Xanh" + String.fromCharCode(0x200b) + "Asian"` | `F` | `["Xanh Asian"]` | không giải gì; chuẩn hoá xoá Cf ⇒ `xanhasian` |
+| 10 | `"Xa" + String.fromCharCode(0xad) + "nh Asian"` | `F` | `["Xanh Asian"]` | chuẩn hoá ⇒ `xanh asian` |
+| 11 | `"Xa&shy;nh Asian"` | `F` | `["Xanh Asian"]` | `&shy;` ⇒ U+00AD ⇒ xoá |
+| 12 | `"Xanh&#x200B;Asian"` | `F` | `["Xanh Asian"]` | ⇒ U+200B ⇒ xoá |
+| 13 | `"xanh%E2%80%8Basian"` | `F` | `["Xanh Asian"]` | `%E2%80%8B` ⇒ U+200B ⇒ xoá |
+| 14 | `"Xanh" + String.fromCharCode(0x2060) + " Asian"` | `F` | `["Xanh Asian"]` | U+2060 xoá, dấu cách giữ |
+| 15 | `"Xanh, Asian"` | `F` | `[]` (cố ý, như lượt 14) | — |
+| 16 | `"C++ +84"` | `F` | `[]` | — |
+| 17 | `"/?q=Xanh+Asian"` | `F` | `["Xanh Asian"]` (giữ lượt 15) | `+` không giải |
+| 18 | `"xanh%2Basian"` | `F` | `["Xanh Asian"]` (giữ lượt 15) | ⇒ `xanh+asian` ⇒ dừng |
+| 19 | `"%20%FF%20"` | `D` | `" %FF "` (giữ lượt 15) | lượt 2 giữ `%FF` ⇒ không đổi ⇒ dừng |
+| 20 | `"%C3%C3%A1"` | `D` | `"%C3á"` (giữ lượt 15) | lượt 2: `%C3` một mình hỏng ⇒ giữ |
+| 21 | `"&constructor;"` | `D` | `"&constructor;"` (lượt 15: chữ mã nguồn của hàm `Object`) | `Map` không có khoá |
+
+Bảng ca "Lượt 15" bên dưới vẫn đúng **trừ** dòng `xanh%2520asian` ⇒ `[]`: nay là ca 1 ở trên (`["Xanh Asian"]`).
+
+Hệ quả tự lộ ra (gửi appsec lượt soát 14; không tự vá, không mở vòng mới — ghi ở design.md "Câu hỏi liên vai (lượt 16)"): (1) **Thực thể không có dấu `;`.** Regex giải chỉ nhận `&name;`, `&#NN;`, `&#xHH;`. Trình duyệt vẫn hiểu `&nbsp` (một số tên cũ) và `&#32`, `&#x20` khi thiếu `;` trong HTML thô ⇒ `Xanh&nbspAsian` viết tay trong một tệp HTML/SVG của `public/` hiện ra "Xanh Asian" mà luật không bắt [dò tay; hành vi trình duyệt: trí nhớ model, chưa kiểm]. React và Markdown (CommonMark đòi `;`) không sinh dạng này từ i18n/`content/` — chỉ có từ tệp viết tay. Cùng họ M40-b. (2) **Ký tự trống không thuộc Cf và không thuộc `\s`**: U+3164, U+FFA0, U+115F/U+1160 (thuộc `\p{L}`), U+2800 (chữ nổi trống, `\p{So}`). Trình duyệt vẽ thành khoảng trống ⇒ `"Xanh" + String.fromCharCode(0x2800) + "Asian"` lọt [dò tay]. Không có trong Word/PDF/web thường gặp ⇒ thuộc nhóm "phải cố ý né" như chữ đồng hình (threat-model §000000000.3 cuối); kể cả U+202E (đảo chiều) + chữ viết ngược: Cf bị xoá nhưng chữ còn ngược ⇒ lọt. (3) Cf nằm GIỮA một thực thể hay một `%XX` (`&nb` + U+200B + `sp;`) không được giải vì giải chạy trước chuẩn hoá — trình duyệt cũng không giải dạng đó nhưng hiện nguyên chữ "Xanh&nbsp;Asian" (U+200B không được vẽ), nên đây **là** đường lọt kiểu dấu câu hiện ra giữa hai chữ, cùng loại "Xanh, Asian" (ca 15), chỉ có khi cố ý chèn ⇒ chấp nhận là giới hạn (appsec lượt soát 14, M40-f; architect lượt 17 sửa lý do, bản lượt 16 ghi sai là "không phải đường lọt"). appsec lượt soát 14 chấp nhận cả ba hệ quả là giới hạn mức Thấp (M40-d, M40-e, M40-f; threat-model §0000000000.2).
+
+**Chưa kiểm:** `tsc --strict` (target es2022) chưa chạy trên bản lượt 16; chưa ca nào ở bảng trên chạy (vai architect không có `tsc`, `node`). Điểm dễ lỗi khi tsc: `new Map<string, string>([...])` gán vào `ReadonlyMap<string, string>`; `NAMED_REFS.get(...) ?? m` (kiểu `string | undefined` ⇒ `string`); `NAME_SCAN_DECODE_PASSES_MAX` kiểu chữ `3` trong `pass < …`; regex `/\p{Cf}+/gu` cần cờ `u` (ES2018+). `catch {}` không biến ở `decodePercentRun` giữ từ lượt 15 (đã qua tsc es2022 ngày 06/11). Lưu ý cho người viết script: **công cụ ghi tệp của phiên architect đổi chuỗi thoát `\u` + 4 số hex thành chính ký tự đó** (07/11: lần ghi đầu `NAMED_REFS` ra ký tự U+00A0/U+00AD thật trong nguồn, đã sửa sang `String.fromCharCode`); vì vậy bảng dùng `String.fromCharCode`, không dùng chuỗi thoát.
+
+## Lượt 15 (06/11/2026): vá hệ quả (i)(ii) của lượt 14, giữ (iii) là giới hạn
+
+Theo ux-spec §12 V42 (4) (admin chốt 06/11, được khách uỷ quyền) và lời giao việc task `architect-20261106164831-df83`. Ba hệ quả là của architect lượt 14 (design.md "Câu hỏi liên vai lượt 14", đoạn "Hệ quả tự lộ ra"). `design_approved` chưa qua ⇒ sửa trong chặng design. Mirror `contracts/` trong repo code tiếp tục lệch (D7 (a)).
+
+| File | Đổi | Vì sao |
+|---|---|---|
+| `content-model.ts` | Comment giải mã `:208–213` (byte hỏng giữ nguyên, chuỗi hợp lệ vẫn giải; một lượt; `+` không giải). Thêm `utf8SeqLength` `:217–225` và `decodePercentRun` `:226–245` (không export). `decodeForNameScan` gọi `decodePercentRun` cho mỗi cụm `%XX` `:253`. Lớp nối `[\s_./-]*` ⇒ `[\s_./+-]*` `:263`, comment `:256–259` thêm "xanh+asian", "xanh%2Basian" | hệ quả (i), (ii) lượt 14 |
+| `build.ts` | Chỉ comment `:218–220`: thêm hai giới hạn (chữ dựng lúc chạy, mã hoá lồng nhau), trỏ design.md §6f | hệ quả (iii) |
+| `content-model.md` | Dòng "Tên không được nêu": thêm dấu `+`, cụm `%XX` hỏng | khớp `.ts` |
+
+Lựa chọn khi có ≥ 2 phương án (để appsec soát):
+- **(i) Đi từng chuỗi UTF-8, mỗi chuỗi n byte hỏi `decodeURIComponent` (chọn).** Byte đầu cho n theo RFC 3629 (`utf8SeqLength`); tính hợp lệ của n byte (byte nối, dạng dài thừa, nửa cặp thay thế, > U+10FFFF) do `decodeURIComponent` quyết. Hỏng ⇒ giữ `%XX` của byte đầu, đồng bộ lại ở byte kế. Cả cụm hợp lệ thì vẫn một lần gọi như lượt 14 (đường thường không đổi). Loại: `TextDecoder` (thay byte hỏng bằng U+FFFD — trái "byte hỏng giữ nguyên", và không thuộc ECMAScript: kiểu nằm ở `lib dom`); tự viết bảng kiểm UTF-8 đủ luật (lặp lại logic có sẵn, thêm chỗ sai); giải từng `%XX` riêng lẻ (chữ nhiều byte như `%C3%A1` "á" không bao giờ giải được).
+- **(ii) Thêm `+` vào lớp nối (chọn), KHÔNG giải `+` thành dấu cách trong `decodeForNameScan` (loại).** Hai cách bắt cùng các dạng của một tên trong danh sách ("xanh+asian", "xanh++asian", "xanh%2Basian" vì `%2B` ⇒ `+` rồi tới lớp nối). Lớp nối chỉ tác động giữa hai chữ của một tên; giải `+` toàn cục đổi mọi `+` trong mọi tệp (`C++`, `+84`, toán tử JS) — rộng hơn mà không bắt thêm gì. Loại cả cách giải `+` chỉ trong query string: phải nhận diện URL trong văn bản tuỳ ý. Đánh đổi: không có đỏ oan mới — với `*` thì dạng viết liền "XanhAsian" vốn đã bị bắt, chuỗi có `+` giữa hai chữ của tên cũng là nêu tên.
+- **(iii) Giữ là giới hạn, không thêm cơ chế máy (chọn).** Không có ca: site tĩnh, CSP `connect-src 'self'`, chữ hiển thị đến từ `content/` + i18n (đều bị quét nguyên chuỗi). Quét DOM sau khi chạy JS (loại) là cơ chế mới cần trình duyệt trong build. Người giữ phần dư: design.md §6f "Giới hạn (lượt 15)".
+
+Ca giá trị (hàm thuần; qa/admin chạy được bằng một tệp thử nhập `content-model.ts`; architect chưa chạy — xem "Chưa kiểm"):
+
+| Vào | Hàm | Ra mong đợi |
+|---|---|---|
+| `%20%FF%20` | `decodeForNameScan` | `" %FF "` |
+| `%E1%BA%20` | `decodeForNameScan` | `"%E1%BA "` |
+| `%C3%C3%A1` | `decodeForNameScan` | `"%C3á"` |
+| `%ED%A0%80%20` | `decodeForNameScan` | `"%ED%A0%80 "` (nửa cặp thay thế giữ nguyên) |
+| `%F0%9F%98%80%FF` | `decodeForNameScan` | `"😀%FF"` |
+| `xanh%20asian%FF` | `findForbiddenNames(_, ["Xanh Asian"])` | `["Xanh Asian"]` (lượt 14: `[]`) |
+| `/?q=Xanh+Asian` | `findForbiddenNames(_, ["Xanh Asian"])` | `["Xanh Asian"]` (lượt 14: `[]`) |
+| `xanh%2Basian` | `findForbiddenNames(_, ["Xanh Asian"])` | `["Xanh Asian"]` |
+| `Xanh, Asian` | `findForbiddenNames(_, ["Xanh Asian"])` | `[]` (cố ý, như lượt 14) |
+| `xanh%2520asian` | `findForbiddenNames(_, ["Xanh Asian"])` | `[]` — **giới hạn** mã hoá lồng nhau, hệ quả mới (1) |
+
+Hệ quả tự lộ ra (design.md "Câu hỏi liên vai lượt 15", XQ-APPSEC-L15; không tự vá): (1) giải mã **một lượt** theo thứ tự cố định ⇒ mã hoá lồng nhau mà lớp ngoài là `%` (`%2520` ⇒ `%20`, `%26nbsp%3B` ⇒ `&nbsp;`, `%5Cu0020` ⇒ ` `; cả `&#37;2520`) chỉ bóc một lớp, tên lọt. Lớp ngoài là HTML/JS bọc `%` (`&#37;20`, `%20`) thì vẫn bắt vì bước `%` chạy sau cùng. Có từ lượt 14, lượt 15 mới thấy khi viết ca giá trị. Nếu appsec muốn vá: lặp `decodeForNameScan` tới khi chuỗi không đổi, trần 3 lượt (một hằng). (2) Chữ hằng ghép trực tiếp trong chunk JS (`"Xanh"+" Asian"`) chỉ bị bắt nếu trình nén gộp hằng **[suy luận, chưa kiểm]**; dấu nháy không thuộc lớp nối và không nên thêm (câu thường có nháy giữa hai chữ sẽ đỏ oan). (3) ux-spec §12 V42 (4) ghi (i)–(iii) là "appsec tự nêu ở threat-model lượt soát 12" — threat-model.md không có các ý này (không có `decodeForNameScan`, `+`); nguồn là design.md lượt 14. Lệch chữ ở tệp của ux_ui/admin, không đổi việc.
+
+**Chưa kiểm:** `tsc --strict` (target es2022) chưa chạy trên bản lượt 15; các hàm mới chưa chạy lần nào (vai architect bị hook chặn `node -e`, 06/11). Admin chạy như lượt 12–14 và chạy bảng ca giá trị trên.
+
+## Lượt 14 (06/11/2026): V41 — cặp ảnh Trước ↔ Sau, luật tên không được nêu, bỏ `keepTitleBlock`
+
+Theo ux-spec §12 V41 (b)(c)(d)(e) (admin chốt 06/11, được khách uỷ quyền), appsec threat-model M40/XQ-40 và pm XQ-2 (admin chuyển, muốn cả hai CÓ). Đối chiếu prd v0.7.1, `content-pages.feature:6–44`, `figures-and-claims.feature:103–146`. `design_approved` chưa qua ⇒ sửa trong chặng design. Bản sao `contracts/` trong repo code tiếp tục lệch (D7 (a)).
+
+| File | Đổi | Vì sao |
+|---|---|---|
+| `content-model.ts` | `ImageMeta`: bỏ `keepTitleBlock` (khoá cũ ⇒ `.strict()` đỏ), `:20–34`. Khối "Ô ảnh cố định" `:36–58`: luật chung cho mọi ô (đúng 1 tệp + meta hợp lệ + qua mọi luật ảnh; `hasPeople` thiếu `consentDate` = không có ảnh; trùng basename ⇒ `IMAGE_SLOT_DUPLICATE`; không ảnh ⇒ không render, build xanh). Thêm `HOME_IMAGE_SLOTS = { before: "gms-before", after: "gms-after" }`, `HOME_IMAGE_SLOT_KIND = "anh-that"`, `ALL_IMAGE_SLOTS`, `type ImageSlot`. Cuối tệp `:187–239`: `DENYLIST_PATH`, `ForbiddenNames`, `normalizeForNameScan`, `decodeForNameScan`, `forbiddenNamePattern`, `findForbiddenNames` (hàm thuần, loader/output-check/ca qa dùng chung) | V41 (b)(c)(d)(e); M40 (1)(3)(4)(6); pm XQ-2 |
+| `build.ts` | `import type { Locale } from "./api"`. §2 `BUILD_SCRIPTS`: build = content-check → next build → **output-check** (`:68`). §8 thêm `IMAGE_SLOT_KIND_INVALID {slot, file, kind}` (`:174`), `DENYLIST_MISSING` (`:178`), `FORBIDDEN_NAME_IN_CONTENT {file, locale?, field?, name}` (`:183`), `FORBIDDEN_NAME_IN_OUTPUT {file, name, inPath}` (`:188`), `DENYLIST_IN_OUTPUT {file}` (`:191`). Khối luật ảnh/bảng viết lại (1)–(6) `:195–218`; `OUTPUT_SCAN_BINARY_EXTENSIONS` (`:220`) | V41 (b)(d)(e); M40 (1)–(4) |
+| `routes.ts` | `home.tags` thêm `images` (`:24`) | V41 (b) |
+| `content-model.md` | hàng bảng cặp ảnh Trước ↔ Sau và `denylist.yaml`; luật ô ảnh, bỏ `keepTitleBlock`, tên không được nêu | — |
+
+Lựa chọn khi có ≥ 2 phương án (để appsec soát):
+- **`DENYLIST_MISSING` đỏ ở mọi `SITE_ENV` (chọn) thay vì chỉ production (M40 (1) nguyên văn) hay cảnh báo ở preview (đề xuất lượt 13, loại):** tệp nằm trong repo, không phụ thuộc môi trường; một nhánh "chỉ cảnh báo" là một đường để preview xanh với danh sách rỗng rồi lên production bằng cùng commit. Tập trội so với M40 (1); ca qa chạy được với `SITE_ENV=test`. Đánh đổi: không có.
+- **Quét hai lượt `content/` + `out/` (chọn) thay vì chỉ `out/` (loại):** `figures-and-claims.feature:114–118` đòi thông báo nêu ảnh + locale — `out/` chỉ cho biết tệp đầu ra. Lượt `out/` vẫn cần cho chữ không qua contract (i18n, mã khối, chunk JS, tên tệp ảnh — `:121–133`). Đánh đổi: hai chỗ gọi cùng hàm thuần `findForbiddenNames`, không hai bản logic.
+- **`out/`: danh sách LOẠI TRỪ đuôi nhị phân (chọn) thay vì danh sách đuôi văn bản cần quét (loại):** loại tệp mới (vd `.webmanifest`, `.map`, tệp không đuôi `_headers`) mặc định bị quét (M40 (2)). Đánh đổi: thêm một đuôi nhị phân mới (vd `.avif` đã có) mà quên liệt kê thì tệp đó bị đọc UTF-8 — chậm hơn và có thể khớp nhầm trên byte rác, tức là đỏ ồn, không lọt.
+- **Đuôi nhị phân vẫn so đường dẫn (chọn):** pm XQ-2 (2) và `:133` "tên một tệp ảnh XanhAsian".
+- **`IMAGE_SLOT_KIND_INVALID` làm build đỏ (chọn) thay vì ẩn khối (loại):** ẩn là mất ý định im lặng — người sửa nội dung thả ảnh vào, khối không hiện mà không ai biết vì sao; priorities ưu tiên 1 (không dẫn sai người đọc) và `content-pages.feature:40–44` đòi đỏ. Ngược lại thiếu ảnh ⇒ ẩn (không lỗi) vì đó là trạng thái hợp lệ "GMS chưa gửi".
+- **`denylist.yaml` nằm trong `contentHash` (chọn) thay vì loại khỏi băm như `approvals/` (loại):** danh sách là một phần của nội dung đã duyệt; bỏ một tên khỏi danh sách cũng là thay đổi cần GMS xác nhận lại. Đánh đổi: sửa danh sách ⇒ phải xác nhận lại trước deploy prod.
+- **Bỏ `keepTitleBlock` (chọn, V41 (e)):** cắt/che trên tệp nguồn + người soát ảnh cỡ gốc (design.md §6f). Hệ quả: bản vẽ hiện như mọi ảnh, cách giữ trọn bản vẽ chuyển sang CSS (XQ-UX-V41).
+- **Ô ảnh Trước/Sau bằng tên tệp cố định (giữ cách lượt 13, admin chỉ định tên):** kịch bản S6 dùng tên ảnh tự do "gắn vào vị trí" ⇒ XQ-PM-V41 (1) xin pm đổi chữ, không đổi contract.
+
+Hệ quả tự lộ ra (design.md "Câu hỏi liên vai lượt 14", gửi appsec soát): (i) cụm `%XX` có byte UTF-8 hỏng giữ nguyên cả cụm (`content-model.ts:221–223`); (ii) `+` không thuộc lớp nối `[\s_./-]*` (`:232`) ⇒ "Xanh+Asian" trong query string lọt; (iii) tên dựng lúc chạy trong JS trình duyệt không quét được. (iv) `figures-and-claims.feature:116` nói "chú thích bản en" — `ImageMeta` chỉ có `alt` ⇒ XQ-PM-V41 (2).
+
+**Đã kiểm:** tsc strict trên bản lượt 13 xanh (admin chạy 06/11, theo lời giao việc).
+**Chưa kiểm:** `tsc` chưa chạy trên bản lượt 14 (regex cờ `u` với `\p{L}`/`\p{M}`, `catch {}` không biến, `import type { Locale }` mới trong `build.ts`). Admin chạy như lượt 12–13.
+
+## Lượt 13 (06/11/2026): V38/V39/V40 — bỏ thực thể nguồn tư liệu bên ngoài, tư liệu M4 chỉ của GMS, lộ trình cả 5 bước đã xong
+
+Theo ux-spec §12 V38, V39, V40 (admin chốt 06/11, thay V30). `design_approved` chưa qua ⇒ sửa trong chặng design. Bản sao `contracts/` trong repo code tiếp tục lệch (D7 (a)) tới khi frontend_web chép lại nguyên byte.
+
+| File | Đổi | Vì sao |
+|---|---|---|
+| `content-model.ts` | Bỏ `TechSource`, `TECH_SOURCE_ASSET_TYPES`, `TechSourceAssetType`, `ImageMeta.techSourceAsset`, `ComparisonTable.techSource` (khoá cũ ⇒ build đỏ nhờ `.strict()`). Thêm `TECHNOLOGY_IMAGE_SLOTS = { sortingLine: "gms-sorting-line" }` (ô ảnh tuỳ chọn; không tệp ⇒ ẩn khung). Comment `ImageMeta.kind`: `anh-dung-ai` = mọi ảnh không phải ảnh chụp thật (bản vẽ, phối cảnh, render) ⇒ C29; `source` nội bộ. Comment `JOURNEY_STATUSES`: nội dung v1 cả 5 "đã xong" | V38, V39, V40 |
+| `build.ts` §8 | Bỏ `TECH_SOURCE_PERMISSION_MISSING` / `TECH_SOURCE_ASSET_NOT_ALLOWED` / `TECH_SOURCE_UNKNOWN`. Thêm `IMAGE_SLOT_DUPLICATE`. Viết lại khối luật S33 (1)–(5) thành luật ảnh/bảng trang Công nghệ | V38, V39 |
+| `routes.ts` | `technology.tags`: bỏ `techSources`, thêm `images` | V38 |
+| `content-model.md` | bỏ dòng bảng + luật nguồn tư liệu; thêm ô ảnh dây chuyền, ghi chú V39/V40 | — |
+
+Lựa chọn khi có ≥ 2 phương án (để appsec soát):
+- **Ô ảnh dây chuyền bằng tên tệp cố định (chọn) thay vì trường frontmatter của `content/pages/technology.<locale>.md` (loại):** trường frontmatter phải lặp ở hai tệp vi/en và cần thêm luật "hai bản trỏ cùng ảnh"; tên cố định khớp cách code đang đọc ảnh M4 (`build-site.ts:1089` đọc `images/sorting-line-3d.png` cố định). Đánh đổi: thêm một mã `IMAGE_SLOT_DUPLICATE` để không tự chọn khi có hai đuôi.
+- **Giữ enum `kind` hai giá trị (chọn) thay vì thêm `"ban-ve"` (loại):** V39 chỉ đòi hai cách hiện (không nhãn / C29); giá trị thứ ba không đổi hiển thị mà buộc sửa loader, ca qa, user-guide. Đổi lại: ghi rõ nghĩa `anh-dung-ai` trong comment.
+- **Không đưa luật quét tên cấm vào contract ở lượt này:** danh sách tên là quyết định nội dung của admin, cần kịch bản pm để qa có ca; đề xuất ở design.md §6f "Đề xuất V38" (XQ-ADMIN-V38a).
+
+Hệ quả tự lộ ra (design.md §6f, "Câu hỏi liên vai lượt 13"): (i) `keepTitleBlock` giữ nguyên khung tên bản vẽ ⇒ nếu khung tên bản vẽ GMS gửi ghi tên đơn vị thiết kế/thi công khác, chữ trong ảnh vẫn nêu tên công ty khác (trái V38) và không máy nào quét được chữ trong ảnh; (ii) `Figure.source` hiện trên trang (`build-site.ts:836`) ⇒ nguồn số ghi tên bên ngoài sẽ lên web.
+
+**Chưa kiểm:** `tsc` chưa chạy trên bản lượt 13 (lệnh ngoài allowlist vai architect, thư mục không có `tsconfig.json`). — Lượt 14: admin đã chạy, xanh.
+
+## Lượt 12 (06/11/2026): V30 "Nguồn công nghệ" + chốt bản đồ (XQ-37 appsec) — **phần V30 hết hiệu lực từ lượt 13** (bảng và lựa chọn về `TechSource` dưới đây chỉ còn là lịch sử; phần bản đồ còn hiệu lực)
+
+`design_approved` chưa qua (project.yaml `gates_passed`) ⇒ sửa contract là việc của chặng design, không cần `change_api_contract`. Bản sao `contracts/` trong repo code **lệch** từ lượt này: frontend_web chép lại nguyên byte rồi sửa code theo (design.md §6f, §6d).
+
+| File | Đổi | Vì sao |
+|---|---|---|
+| `content-model.ts` | `Partner` ⇒ `TechSource` = {name, legalName, description {vi,en} bắt buộc, permissionBasis, allowedAssets}, **bỏ `role`**, `.strict()`; `PARTNER_ASSET_TYPES` ⇒ `TECH_SOURCE_ASSET_TYPES`; `ImageMeta.partnerAsset` ⇒ `techSourceAsset {techSource, type}`; `ComparisonTable.partner` ⇒ `techSource`; `Company` bỏ `mapImage`, `mapUrl`; thêm `MAP_EMBED`, `parseMapPoint`, `mapEmbedSrc`, `mapOpenHref`; import `Locale` từ `./api` | V30 (ux-spec, technology.html khối 5); XQ-37 (b)(c) |
+| `build.ts` §8 | `PARTNER_*` ⇒ `TECH_SOURCE_PERMISSION_MISSING` / `TECH_SOURCE_ASSET_NOT_ALLOWED` / `TECH_SOURCE_UNKNOWN`; chữ ngoài nháy đổi "đối tác" ⇒ "nguồn công nghệ", cụm trong nháy giữ; comment luật S33 (1)–(4) viết lại (không chip vai trò, không chữ "đối tác"/"partner" cho nguồn) | V30; ca qa so cụm trong nháy |
+| `routes.ts` | tag `partners` bỏ khỏi `about`; `technology` thêm `techSources` | khối ở M4 |
+| `safe-url.ts` | chỉ comment (bỏ `mapUrl`) | URL bản đồ dựng từ `mapPoint` |
+| `content-model.md` | bảng + luật theo trên | — |
+
+Lựa chọn khi có ≥ 2 phương án (để appsec soát):
+- **Đổi tên kỹ thuật (B) thay vì giữ `Partner` (A):** giữ tên thì người viết nội dung/code tiếp tục thấy chữ "partner" ở tên tệp, mã lỗi, khoá ảnh và dễ lọt ra chữ hiển thị (đã lọt: tiêu đề `build-site.ts:1076`), trái ưu tiên 1 "không dẫn sai người đọc". `content/partners.yaml` chưa tồn tại ⇒ đổi tên tệp không phải di trú dữ liệu. Loại tên `source` trần vì trùng `ImageMeta.source`, `Figure.source`.
+- **`legalName` là một chuỗi, `description` bắt buộc:** tên pháp lý không dịch (hiện giống nhau VI/EN); câu mô tả là câu duy nhất nói quan hệ ("áp dụng công nghệ tương tự") — để tuỳ chọn thì khối chỉ còn tên + tên pháp lý, người đọc tự đoán quan hệ.
+- **`referrerpolicy="no-referrer"` (loại `strict-origin-when-cross-origin`):** dạng nhúng không khoá không dùng Referer **[suy luận]**; bỏ cả origin khỏi dữ liệu gửi Google. Lui về `strict-origin` chỉ khi qa đo khung hỏng (XQ-39).
+- **`sandbox` 4 cờ (loại không sandbox):** thiếu `allow-top-navigation` ⇒ khung không điều hướng được trang GMS (M39 (5)). Lui khi qa đo kéo/phóng hoặc "Xem bản đồ lớn hơn" hỏng.
+- **z=15 (loại z=16):** toạ độ chưa kiểm có đúng cổng nhà máy; khung rộng hơn còn mốc QL39/Phố Nối. Không phải việc bảo mật; đổi một hằng.
+
+Hệ quả tự lộ ra (design.md "Câu hỏi liên vai lượt 12"): `allow-popups-to-escape-sandbox` ⇒ tab Google mở từ khung chạy không sandbox (chấp nhận, trang Google ở tab riêng); chữ "đối tác"/"Technology Partners" còn ở `vi.json:267`, `en.json:267`, `build-site.ts:1076` của repo code — việc frontend_web/qa, không phải finding bảo mật.
+
+**Chưa kiểm:** `bun x tsc` trên `contracts/` chưa chạy (lệnh ngoài allowlist vai architect) — thư mục này không có `tsconfig.json`; cách kiểm là chép sang `contracts/` của repo code rồi chạy lệnh typecheck khai trong `project.yaml → code.commands`, trước `design_approved`.
+
 ## Lượt 11 (05/11/2026): change_api_contract người dùng duyệt 05/11 (phương án A), biên 900 s, MAP_POINT_INVALID
 
 | File | Đổi | Vì sao |

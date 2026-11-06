@@ -2,9 +2,13 @@
 // Lượt 8 (04/11): DATE_OVERRIDE chỉ ngày; build do Deploy Hook kích không chắc có WORKERS_CI_BRANCH (§1).
 // Lượt 9 (04/11): §1 nhánh (2) giữ theo appsec XQ-31.1 (CÓ có điều kiện, design.md §5b); thêm §7 luật import Worker.
 // Lượt 10 (04/11): §8 mã + thông báo luật nội dung (S33, S12, S31, S24); §9 FormStatus (form tạm đóng khi thiếu V3/V14/N27).
+// Lượt 14 (06/11): §2 thêm output-check; §8 luật tên không được nêu (ux-spec V41 (c)(d), appsec M40), ô ảnh trang chủ
+// (V41 (b)), bỏ keepTitleBlock (V41 (e)).
 // Máy validate: `bun x tsc --noEmit` (design.md "Đã kiểm").
-// Người hiện thực: frontend_web (build, loader nội dung, content-check) · devops (deploy-prod, CI, _redirects, _headers).
+// Người hiện thực: frontend_web (build, loader nội dung, content-check, output-check) · devops (deploy-prod, CI,
+// _redirects, _headers).
 import { z } from "zod";
+import type { Locale } from "./api";
 
 // ---- 1. Biến build (Next `output: "export"`) ----
 // Đích thư liên hệ KHÔNG phải biến build: production = `send_email[].destination_address` của binding MAIL trong
@@ -59,8 +63,9 @@ export const BuildEnv = z.object({
 
 // ---- 2. Script (tên không có ":" — luật L-014) ----
 export const BUILD_SCRIPTS = {
-  build: "build",                  // content-check rồi next build ⇒ OUT_DIR
-  contentCheck: "content-check",   // chỉ kiểm content/** (schema, safe-url, slugs.lock, ảnh); exit ≠ 0 khi lỗi
+  build: "build",                  // content-check → next build ⇒ OUT_DIR → output-check (lượt 14); bước nào đỏ thì dừng
+  contentCheck: "content-check",   // chỉ kiểm content/** (schema, safe-url, slugs.lock, ảnh, tên không được nêu); exit ≠ 0 khi lỗi
+  outputCheck: "output-check",     // lượt 14: chỉ đọc OUT_DIR sau next build (FORBIDDEN_NAME_IN_OUTPUT, DENYLIST_IN_OUTPUT, §8)
   deployProd: "deploy-prod",       // nhận cờ --dry-run: in hash, kiểm approval, không gọi wrangler
 } as const;
 
@@ -140,15 +145,8 @@ export const TRUSTED_DEPENDENCIES = ["sharp"] as const;
 // (các cụm trong nháy ở feature), không so cả dòng. Thêm luật = sửa contract (D7).
 export type ContentRuleIssue = { code: ContentRuleCode; message: string };
 export const CONTENT_RULE_MESSAGES = {
-  // figures-and-claims.feature dòng 96–101
-  PARTNER_PERMISSION_MISSING: (p: { partner: string }) =>
-    `Đối tác "${p.partner}" thiếu trường "căn cứ cho phép"`,
-  // dòng 110–115; cũng bắt type rỗng của enum lẫn đối tác không có trong partners.yaml
-  PARTNER_ASSET_NOT_ALLOWED: (p: { image: string; type: string; partner: string }) =>
-    `"${p.image}" loại "${p.type}" không thuộc tư liệu được phép của "${p.partner}"`,
-  PARTNER_UNKNOWN: (p: { ref: string; partner: string }) =>
-    `"${p.ref}" khai là tư liệu của Đối tác "${p.partner}" nhưng không có Đối tác này trong partners.yaml`,
-  // dòng 130–135
+  // Lượt 13 (V38/V39): bỏ ba mã luật nguồn tư liệu bên ngoài (lượt 10 PARTNER_*, lượt 12 đổi tên) — thực thể đã bỏ.
+  // figures-and-claims.feature S33 phần bảng so sánh (pm sửa theo V38/V39 song song)
   COMPARISON_ROW_SOURCE_MISSING: (p: { table: string; row: string }) =>
     `bảng so sánh "${p.table}", dòng "${p.row}" thiếu nguồn`,
   COMPARISON_NUMBER_NOT_FIGURE: (p: { table: string; row: string }) =>
@@ -167,19 +165,64 @@ export const CONTENT_RULE_MESSAGES = {
   // content-model.ts MAP_POINT ⇒ lỗi này, build đỏ; thiếu/null ⇒ không lỗi, không có khối bản đồ (contact-info.feature:21–23).
   MAP_POINT_INVALID: () =>
     `company.yaml: điểm bản đồ (mapPoint) phải có dạng "vĩ độ, kinh độ", ví dụ "20.930031, 106.065651"`,
+  // lượt 13 (V39): ô ảnh cố định của M4 (content-model.ts TECHNOLOGY_IMAGE_SLOTS) có hơn một tệp cùng basename khác đuôi
+  // (vd gms-sorting-line.jpg và gms-sorting-line.png) ⇒ build đỏ, nêu basename + các tệp, không tự chọn một tệp.
+  IMAGE_SLOT_DUPLICATE: (p: { slot: string; files: string[] }) =>
+    `ô ảnh "${p.slot}" có nhiều tệp: ${p.files.map((f) => `"${f}"`).join(", ")} — giữ đúng một tệp`,
+  // lượt 14 (V41 (b)): ô trang chủ gms-before/gms-after (content-model.ts HOME_IMAGE_SLOTS) có tệp mà kind ≠ "anh-that".
+  // content-pages.feature:46–51: nêu ảnh (`file`, tương đối CONTENT_DIR, vd "images/gms-after.jpg"), vị trí (`slot`) và lý do.
+  IMAGE_SLOT_KIND_INVALID: (p: { slot: string; file: string; kind: string }) =>
+    `ô ảnh "${p.slot}" (tệp "${p.file}") chỉ nhận ảnh chụp thật ("anh-that"), tệp khai loại "${p.kind}"`,
+  // ---- Tên không được nêu (lượt 14; content-model.ts ForbiddenNames/findForbiddenNames; design.md §6f) ----
+  // appsec M40 (1): thiếu tệp, sai schema hoặc `names` rỗng ⇒ đỏ ở MỌI SITE_ENV (content-check, trước next build).
+  DENYLIST_MISSING: () =>
+    `thiếu "content/denylist.yaml", sai dạng, hoặc danh sách "names" rỗng — luật tên không được nêu không chạy được`,
+  // figures-and-claims.feature:119–124 (content-check, trước next build). `file` tương đối CONTENT_DIR (vd
+  // "images/so-do-sang-tuyen.yaml"); `locale` theo hậu tố tệp `.vi.`/`.en.` hoặc khoá cuối `vi`/`en` của đường khoá YAML;
+  // `field` = đường khoá YAML nối "." (vd "alt.en"), "thân bài" cho thân Markdown, "tên tệp" khi trúng đường dẫn.
+  FORBIDDEN_NAME_IN_CONTENT: (p: { file: string; locale?: Locale; field?: string; name: string }) =>
+    `tệp "${p.file}"${p.locale ? `, locale "${p.locale}"` : ""}${p.field ? `, trường "${p.field}"` : ""}` +
+    ` nêu tên không được nêu "${p.name}"`,
+  // V41 (d), appsec M40 (2): output-check, sau next build. `file` tương đối OUT_DIR (vd "en/technology.html");
+  // inPath = trúng ở đường dẫn/tên tệp chứ không ở nội dung tệp.
+  FORBIDDEN_NAME_IN_OUTPUT: (p: { file: string; name: string; inPath: boolean }) =>
+    `bản build "${p.file}" ${p.inPath ? "có tên tệp/đường dẫn chứa" : "chứa"} tên không được nêu "${p.name}"`,
+  // appsec M40 (3): OUT_DIR có tệp tên DENYLIST_PATH (ở bất kỳ thư mục con nào).
+  DENYLIST_IN_OUTPUT: (p: { file: string }) =>
+    `bản build có "${p.file}" — danh sách tên không được nêu không được phục vụ công khai`,
 } as const;
 export type ContentRuleCode = keyof typeof CONTENT_RULE_MESSAGES;
-// Luật S33 (đọc kèm content-model.ts Partner, ImageMeta, ComparisonTable):
-// (1) Partner.permissionBasis.trim() === "" ⇒ PARTNER_PERMISSION_MISSING. Đối tác đó không ra trang dù build đỏ.
-// (2) Ảnh có partnerAsset: partner không có ⇒ PARTNER_UNKNOWN; type ∉ partner.allowedAssets (kể cả "logo", vì
-//     PARTNER_ASSET_TYPES không có "logo") ⇒ PARTNER_ASSET_NOT_ALLOWED. ComparisonTable.partner: cùng luật với type
-//     "bảng so sánh", tên ảnh thay bằng key bảng.
-// (3) Không có trường logo ở Partner (strict). Frontend KHÔNG render ảnh nào trong khối Đối tác — chỉ tên + vai trò
-//     (+ mô tả); tư liệu đối tác hiện ở vị trí nội dung của nó trên trang Công nghệ, ảnh "anh-dung-ai" có nhãn S17.
-// (4) partners.yaml thiếu hoặc [] ⇒ không render khối Đối tác (không tiêu đề).
-// (5) keepTitleBlock: true ⇒ ảnh ra không cắt (content-model.ts ImageMeta). Bản vẽ 3D là ảnh dựng ⇒ nội dung nguồn
-//     khai kind "anh-dung-ai" để có nhãn S17 (dòng 117–122). Máy không biết ảnh nào "thật sự" là ảnh dựng; khai sai
-//     kind là rủi ro S17 hiện có, chặn bằng xác nhận văn bản của GMS (XQ-3), không bằng luật mới.
+// Luật ảnh/bảng (đọc kèm content-model.ts ImageMeta, ALL_IMAGE_SLOTS, ComparisonTable; lượt 13 V38/V39, lượt 14 V41):
+// (1) Không có thực thể, khối, tiêu đề, mục dải liên kết hay chú thích nào nêu nguồn tư liệu bên ngoài. Chú thích ảnh
+//     chỉ là chữ cố định theo locale (src/i18n/**), không dựng từ ImageMeta.source. ImageMeta có khoá lạ (gồm khoá cũ
+//     partnerAsset/techSourceAsset/keepTitleBlock) ⇒ build đỏ (`.strict()`, lỗi schema ảnh hiện có).
+// (2) Ô ảnh cố định (gms-sorting-line, gms-before, gms-after): luật chung ở content-model.ts "Ô ảnh cố định" — ô không có
+//     ảnh dùng được (thiếu tệp, hoặc hasPeople thiếu consentDate) ⇒ không render; trùng basename ⇒ IMAGE_SLOT_DUPLICATE;
+//     cặp Trước/Sau chỉ render khi CẢ HAI ô có ảnh dùng được, kind phải "anh-that" (IMAGE_SLOT_KIND_INVALID).
+// (3) Nhãn ảnh theo kind (S17, ux-spec V24/V39): "anh-that" không nhãn; "anh-dung-ai" (gồm bản vẽ, phối cảnh, render)
+//     ⇒ C29. Máy không biết ảnh nào "thật sự" là ảnh dựng; khai sai kind là rủi ro S17 hiện có, chặn bằng xác nhận
+//     văn bản của GMS (XQ-3), không bằng luật mới.
+// (4) Lượt 14 (V41 (e), appsec M40 (4)(5)): BỎ keepTitleBlock. Mọi ảnh ra public/img/ qua sharp, không metadata; không
+//     đường nào chép tệp gốc content/images/** sang public/ hay OUT_DIR. Khung tên/chữ/logo bên khác trong ảnh: cắt/che
+//     trước khi đăng + người soát ảnh cỡ gốc (design.md §6f) — máy không đọc chữ trong ảnh.
+// (5) Bảng so sánh: luật COMPARISON_* trên; không có trường nguồn bên ngoài (khoá cũ ⇒ lỗi schema, `.strict()`).
+// (6) Tên không được nêu (lượt 14, design.md §6f), hai lượt quét, cùng content-model.ts findForbiddenNames:
+//   (a) content-check: mọi tệp dưới CONTENT_DIR TRỪ DENYLIST_PATH và approvals/** — nội dung tệp văn bản (md frontmatter +
+//       thân, yaml/yml, slugs.lock) theo từng giá trị chuỗi, và đường dẫn tương đối của MỌI tệp (gồm ảnh) ⇒
+//       FORBIDDEN_NAME_IN_CONTENT. Lượt này có vì kịch bản cần nêu ảnh + locale (figures-and-claims.feature:119–124), out/ không cho biết.
+//   (b) output-check: MỌI tệp dưới OUT_DIR. Đuôi thuộc OUTPUT_SCAN_BINARY_EXTENSIONS ⇒ chỉ so đường dẫn; mọi tệp khác
+//       (html, xml, json, txt, js, mjs, css, svg, webmanifest, map, _headers, _redirects, không đuôi…) đọc UTF-8 (byte
+//       hỏng thay U+FFFD, không bỏ tệp) và so cả nội dung lẫn đường dẫn ⇒ FORBIDDEN_NAME_IN_OUTPUT. Liệt kê đuôi NHỊ PHÂN
+//       được bỏ qua, không liệt kê đuôi văn bản được quét: loại tệp mới mặc định bị quét (M40 (2)).
+//   (c) output-check: tệp nào dưới OUT_DIR có tên = DENYLIST_PATH ⇒ DENYLIST_IN_OUTPUT (M40 (3)).
+//   Gom mọi lỗi của một bước rồi mới dừng (như §8). Giới hạn ghi để không ai tin quá: chữ nằm TRONG ảnh/phông không
+//   quét; tên viết tắt hoặc biến thể không có trong danh sách không bắt. Lượt 15: chữ dựng lúc chạy ở trình duyệt (ghép
+//   chuỗi từ biến trong JS client) không bắt — người giữ phần dư ở design.md §6f, ca đo XQ-43 (qa). Lượt 16 (M40-b/c):
+//   mã hoá lồng nhau giải tới NAME_SCAN_DECODE_PASSES_MAX = 3 lớp, lớp thứ 4 trở lên lọt; ký tự định dạng vô hình
+//   (\p{Cf}, gồm gạch nối mềm, rộng-không) bị xoá trước khi so — content-model.ts, contracts/README.md "Lượt 16".
+export const OUTPUT_SCAN_BINARY_EXTENSIONS = [
+  "jpg", "jpeg", "png", "webp", "gif", "avif", "ico", "woff", "woff2", "ttf", "otf", "pdf",
+] as const;
 
 // ---- 9. Trạng thái form lúc build (lượt 10; contact-form.feature dòng 128–173, contact-info dòng 26–32,
 //      privacy-policy dòng 73–78) ----

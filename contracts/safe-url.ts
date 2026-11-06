@@ -1,6 +1,6 @@
 // Luật URL trong nội dung file content/** của site tĩnh (trả lời appsec XQ-17, threat-model T3 (a)).
-// Lượt 8 (04/11): phần CMS đã bỏ (raw 31/10, ADR-004). File GIỮ vì còn dùng: content-model.ts (`mapUrl`, `social[].url`;
-// lượt 10: `zalo` URL thay bằng `zaloPhone`, URL Zalo sinh từ số) và mọi liên kết trong thân Markdown. MỘT nguồn cho cả hai phía:
+// Lượt 8 (04/11): phần CMS đã bỏ (raw 31/10, ADR-004). File GIỮ vì còn dùng: content-model.ts (`social[].url`;
+// lượt 10: `zalo` URL thay bằng `zaloPhone`, URL Zalo sinh từ số; lượt 12: bỏ `mapUrl`, URL bản đồ sinh từ `mapPoint`) và mọi liên kết trong thân Markdown. MỘT nguồn cho cả hai phía:
 //   backend  — loader src/content/** + luật build (design.md §6f): URL sai ⇒ build đỏ
 //   frontend_web — renderer markdown-it → JSX và mọi chỗ render chuỗi từ content/** thành href
 // Cả hai import file này từ src/contracts/ (bản chép), không viết lại luật.
