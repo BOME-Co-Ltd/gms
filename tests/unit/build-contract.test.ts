@@ -103,22 +103,8 @@ describe('build.ts BuildEnv — luật M36 (build đỏ)', () => {
 
 describe('build.ts §8 — thông báo luật nội dung trích nguyên văn tên/giá trị trong nháy kép', () => {
   const M = CONTENT_RULE_MESSAGES;
-  it('PARTNER_PERMISSION_MISSING nêu tên đối tác và trường "căn cứ cho phép" (figures-and-claims.feature 96–101)', () => {
-    expect(M.PARTNER_PERMISSION_MISSING({ partner: 'Công ty Đối Tác' })).toBe(
-      'Đối tác "Công ty Đối Tác" thiếu trường "căn cứ cho phép"',
-    );
-  });
-  it('PARTNER_ASSET_NOT_ALLOWED nêu ảnh, loại, đối tác (dòng 110–115)', () => {
-    const t = M.PARTNER_ASSET_NOT_ALLOWED({ image: 'a.jpg', type: 'logo', partner: 'P' });
-    expect(t).toContain('"a.jpg"');
-    expect(t).toContain('loại "logo"');
-    expect(t).toContain('"P"');
-  });
-  it('PARTNER_UNKNOWN nêu tham chiếu và đối tác không có trong partners.yaml', () => {
-    const t = M.PARTNER_UNKNOWN({ ref: 'anh-1', partner: 'Lạ' });
-    expect(t).toContain('"anh-1"');
-    expect(t).toContain('"Lạ"');
-    expect(t).toContain('partners.yaml');
+  it('contract lượt 13: không còn mã luật nguồn tư liệu bên ngoài (0k A)', () => {
+    expect(Object.keys(M).filter((k) => k.startsWith('PARTNER_'))).toEqual([]);
   });
   it('ba luật bảng so sánh nêu đúng bảng và dòng, mỗi luật một nội dung khác nhau (dòng 130–135)', () => {
     const p = { table: 'Bảng 1', row: 'Dòng 2' };

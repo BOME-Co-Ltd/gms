@@ -1,0 +1,25 @@
+- order: 1
+  name:
+    vi: "Đánh giá hiện trạng"
+    en: "Current-state assessment"
+  status: "đã xong"
+- order: 2
+  name:
+    vi: "Tổ chức mặt bằng"
+    en: "Site organisation"
+  status: "đã xong"
+- order: 3
+  name:
+    vi: "Cải tạo hạ tầng"
+    en: "Infrastructure upgrade"
+  status: "đã xong"
+- order: 4
+  name:
+    vi: "Triển khai công nghệ"
+    en: "Technology deployment"
+  status: "đã xong"
+- order: 5
+  name:
+    vi: "Hoàn thiện hệ thống vận hành"
+    en: "Operating-system completion"
+  status: "đã xong"

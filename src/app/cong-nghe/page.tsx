@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import type React from 'react';
 import { ROUTES } from '../../../contracts/routes.ts';
 import { Footer } from '../../components/ui/Footer.tsx';
@@ -6,10 +8,14 @@ import { TechFlowSvg } from '../../components/ui/TechFlowSvg.tsx';
 import { VpdStepper } from '../../components/ui/VpdStepper.tsx';
 import { getDictionary, type Locale } from '../../i18n/index.ts';
 
+const SORTING_LINE_SRC = '/img/gms-sorting-line.jpg';
+
 export function TechnologyPageView({ locale }: { locale: Locale }): React.ReactElement {
   const dict = getDictionary(locale);
   const t = dict.technology;
   const isVi = locale === 'vi';
+  // §12a: chưa có tệp của GMS ⇒ ẩn cả khung (không ô "đang cập nhật").
+  const hasSortingLine = existsSync(join(process.cwd(), 'public', SORTING_LINE_SRC));
   const navItems = [
     { key: 'home', label: dict.nav.home, href: ROUTES.home[locale] },
     { key: 'about', label: dict.nav.about, href: ROUTES.about[locale] },
@@ -56,16 +62,17 @@ export function TechnologyPageView({ locale }: { locale: Locale }): React.ReactE
           </p>
         </section>
 
-        <section className="section-block section-alt" data-testid="tech-drawing">
-          <p className="eyebrow">{t.drawingBadge}</p>
-          <h2>{t.drawingTitle}</h2>
-          <figure className="card">
-            <img src="/img/sorting-line-3d.png" alt={t.drawingAlt} width={1600} height={900} loading="lazy" />
-            <figcaption>
-              <span className="badge">{t.drawingBadge}</span> · {t.drawingCaption}
-            </figcaption>
-          </figure>
-        </section>
+        {hasSortingLine ? (
+          <section className="section-block section-alt" data-testid="tech-drawing">
+            <h2>{t.drawingTitle}</h2>
+            <figure className="card">
+              <div className="gms-sorting-line" data-testid="gms-sorting-line">
+                <img src={SORTING_LINE_SRC} alt={t.drawingAlt} width={1500} height={1000} loading="lazy" />
+              </div>
+              <figcaption>{t.drawingCaption}</figcaption>
+            </figure>
+          </section>
+        ) : null}
 
         <section className="section-block">
           <p className="eyebrow">{isVi ? 'Kiểm chuẩn & Giám sát' : 'Quality Assurance & SCADA'}</p>

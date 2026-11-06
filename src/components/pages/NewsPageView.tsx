@@ -4,8 +4,16 @@ import { getDictionary, type Locale } from '../../i18n/index.ts';
 import { Footer } from '../ui/Footer.tsx';
 import { Header } from '../ui/Header.tsx';
 
-export function NewsPageView({ locale }: { locale: Locale }): React.ReactElement {
+export function NewsPageView({
+  locale,
+  stepNames,
+}: {
+  locale: Locale;
+  /** Tên bước từ content/journey-steps.yaml; thiếu/lỗi ⇒ dùng dict. */
+  stepNames?: string[] | null;
+}): React.ReactElement {
   const dict = getDictionary(locale);
+  const steps = stepNames && stepNames.length > 0 ? stepNames : dict.home.journeySteps;
   const t = dict.news;
   const isVi = locale === 'vi';
 
@@ -48,7 +56,7 @@ export function NewsPageView({ locale }: { locale: Locale }): React.ReactElement
           <p className="eyebrow">{isVi ? 'Lộ trình' : 'Roadmap'}</p>
           <h2>{t.roadmapTitle}</h2>
           <div className="grid-cards">
-            {dict.home.journeySteps.map((step, i) => (
+            {steps.map((step, i) => (
               <div key={step} className="card">
                 <span className="card-num" aria-hidden="true">
                   0{i + 1}
