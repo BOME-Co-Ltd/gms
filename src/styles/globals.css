@@ -12,6 +12,7 @@
   --tint: rgb(15 88 56 / 0.05);
   --tint-2: rgb(15 88 56 / 0.1);
   --line: rgb(15 88 56 / 0.16);
+  --mist: #f2f6f1;
   --tint-b: rgb(36 73 153 / 0.06);
   --grad: linear-gradient(135deg, #0f5838 0%, #244999 100%);
   --leaf: linear-gradient(90deg, #a4b93a 0%, #648f40 50%, #0f5838 100%);
@@ -888,12 +889,26 @@ input[type="checkbox"] {
   line-height: 1.5;
 }
 
+/* ux-spec §12a: khung ảnh dây chuyền sàng tuyển (contain, 3:2, nền --mist) */
+.gms-sorting-line {
+  aspect-ratio: 3 / 2;
+  background: var(--mist);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.gms-sorting-line img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 /* Cards & Components Hover Micro-interactions */
 .card,
 .output-card,
 .pillar-card,
-.figure-card,
-.partner-logo-item {
+.figure-card {
   transition:
     transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
@@ -1042,7 +1057,6 @@ input[type="checkbox"] {
   .output-card,
   .pillar-card,
   .figure-card,
-  .partner-logo-item,
   .btn,
   .btn-light,
   .btn-ghost,

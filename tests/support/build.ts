@@ -2,12 +2,13 @@
 // Lệnh build + biến môi trường CHƯA có contract (test-plan.md XQ-21): BUILD_CMD/FIXTURE_ROOT đọc từ env; thiếu ⇒ ném lỗi ⇒ ĐỎ.
 // Tiến trình con chạy QUA sandbox_run.rb khi qa chạy tay; CI gọi trực tiếp.
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BUILD_CMD, FIXTURE_ROOT } from './env';
 
-export type Files = Record<string, string | Buffer>; // đường dẫn tương đối content/ ⇒ nội dung
+// đường dẫn tương đối content/ ⇒ nội dung; `null` = XOÁ tệp khỏi bộ nội dung (vd BASE_CONTENT 'denylist.yaml' để thử "thiếu tệp")
+export type Files = Record<string, string | Buffer | null>;
 export type BuildResult = {
   ok: boolean;
   code: number | null;
@@ -24,6 +25,8 @@ export const BASE_CONTENT: Files = {
     'legalName: "Công ty Mẫu GMS"\naddress:\n  vi: "Hưng Yên"\n  en: "Hung Yen"\nphone: "+84900000000"\nprivacyRequestEmail: "quyen@vi-du.test"\n',
   'policy/1.0.vi.md': '---\nversion: "1.0"\neffectiveFrom: "2026-01-01"\n---\nChính sách mẫu.\n',
   'policy/1.0.en.md': '---\nversion: "1.0"\neffectiveFrom: "2026-01-01"\n---\nSample policy.\n',
+  // Lượt 14 (M40): thiếu/rỗng denylist ⇒ build đỏ DENYLIST_MISSING ở mọi SITE_ENV ⇒ bộ nền phải có. "Xanh Asian" là DỮ LIỆU của danh sách cấm.
+  'denylist.yaml': 'names:\n  - "Xanh Asian"\n',
 };
 
 function walk(dir: string, base = dir): string[] {
@@ -41,6 +44,10 @@ export function buildSite(extra: Files = {}, env: Record<string, string> = {}): 
   const content = join(work, 'content');
   for (const [rel, data] of Object.entries({ ...BASE_CONTENT, ...extra })) {
     const to = join(content, rel);
+    if (data === null) {
+      rmSync(to, { force: true });
+      continue;
+    }
     mkdirSync(join(to, '..'), { recursive: true });
     writeFileSync(to, data);
   }

@@ -34,7 +34,6 @@ import {
   JobFront,
   NewsFront,
   OutputLine,
-  Partner,
   PolicyFront,
   ProjectFront,
 } from '../../contracts/content-model.ts';
@@ -111,7 +110,6 @@ import {
   validateLinksInBody,
   validateOutputLinesRaw,
   validatePageClaimsAndFigures,
-  validatePartnersRaw,
 } from '../../src/content/rules/index.ts';
 import { getDictionary } from '../../src/i18n/index.ts';
 import { formatPublicPhone, isValidPublicVNPhone, normalizeVNPhone } from '../../src/shared/contact/schema.ts';
@@ -444,14 +442,6 @@ describe('Contracts & Safe URL', () => {
       }).success,
     ).toBe(true);
     expect(
-      Partner.safeParse({
-        name: 'P',
-        role: { vi: 'Đối tác chuyển giao công nghệ', en: 'Technology transfer partner' },
-        permissionBasis: 'raw 02/11 N22',
-        allowedAssets: [],
-      }).success,
-    ).toBe(true);
-    expect(
       Company.safeParse({
         legalName: 'GMS',
         address: { vi: 'HY', en: 'HY' },
@@ -486,7 +476,7 @@ describe('Shared Contact Schema & Helpers', () => {
 });
 
 describe('Content Rules & Loader', () => {
-  it('validates figures, claims, images, partners, outputs, comparison table, and slug locks', () => {
+  it('validates figures, claims, images, outputs, comparison table, and slug locks', () => {
     expect(validateFigureRaw({ key: 'k', value: '5', label: { vi: 'L', en: 'L' }, source: '' })).toHaveLength(2);
     expect(
       validateFigureRaw({
@@ -527,12 +517,6 @@ describe('Content Rules & Loader', () => {
     bigJpeg[1] = 0xd8;
     bigJpeg[2] = 0xff;
     expect(validateImageBinary('big.jpg', bigJpeg)).toHaveLength(1);
-
-    const partnerRole = { vi: 'Đối tác chuyển giao công nghệ', en: 'Technology transfer partner' };
-    expect(validatePartnersRaw([{ name: 'Xanh Asian', role: partnerRole, permissionBasis: '' }])).toHaveLength(1);
-    expect(
-      validatePartnersRaw([{ name: 'Xanh Asian', role: partnerRole, permissionBasis: 'raw 02/11 N22' }]),
-    ).toHaveLength(0);
 
     expect(validateOutputLinesRaw([{ key: 'o', name: { vi: 'Dầu', en: 'Oil' }, state: null }])).toHaveLength(1);
 
@@ -994,10 +978,13 @@ describe('Next.js App Router Pages, Sections, UI Components & i18n', () => {
 
     const techViHtml = renderToStaticMarkup(React.createElement(TechnologyPage));
     expect(techViHtml).toContain('data-testid="tech-diagram"');
-    expect(techViHtml).toContain('sorting-line-3d.png');
+    // 0k A: tệp ảnh cũ không còn được đọc (figures-and-claims.feature:185–187; M40-09)
+    expect(techViHtml).not.toContain('sorting-line-3d.png');
 
     const techEnHtml = renderToStaticMarkup(React.createElement(EnglishTechnologyPage));
-    expect(techEnHtml).toContain('Engineering drawing');
+    // 0k A: chú thích "Engineering drawing" gắn với ảnh sorting-line-3d (đã bỏ, V39); ô gms-sorting-line không tệp ⇒ không render.
+    expect(techEnHtml).not.toContain('sorting-line-3d');
+    expect(techEnHtml).not.toContain('Engineering drawing');
 
     const contactViHtml = renderToStaticMarkup(React.createElement(ContactPage));
     expect(contactViHtml).toContain('data-testid="contact-form"');

@@ -289,6 +289,7 @@ const INLINE_STYLES = `
   --tint: rgb(15 88 56 / 0.05);
   --tint-2: rgb(15 88 56 / 0.1);
   --line: rgb(15 88 56 / 0.16);
+  --mist: #F2F6F1;
   --tint-b: rgb(36 73 153 / 0.06);
   --grad: linear-gradient(135deg, #0F5838 0%, #244999 100%);
   --leaf: linear-gradient(90deg, #A4B93A 0%, #648F40 50%, #0F5838 100%);
@@ -529,6 +530,10 @@ main { padding: 0 0 48px; }
 .flow-svg .node.out text { font-size: 15px; font-weight: 600; }
 .flow-svg .dot { fill: var(--lime); }
 
+/* ux-spec §12a: khung ảnh dây chuyền sàng tuyển (contain, 3:2, nền --mist) */
+.gms-sorting-line { aspect-ratio: 3 / 2; background: var(--mist); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.gms-sorting-line img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
 /* VPD 8-step interactive stepper */
 .step-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
 .steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
@@ -654,7 +659,7 @@ ${FOOTER_CSS}
   *, *::before, *::after,
   html *, body *,
   a, button, input, select, textarea, summary,
-  .card, .output-card, .pillar-card, .figure-card, .partner-logo-item,
+  .card, .output-card, .pillar-card, .figure-card,
   .btn, .btn-light, .btn-ghost, .btn-secondary, .btn-outline,
   .floating-circle-btn,
   nav a, .lang-switcher a, .site-header, .site-footer {
@@ -984,7 +989,7 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
     <section class="section-block section-alt" data-testid="home-journey">
       <p class="eyebrow">${isVi ? 'Hành trình chuyển đổi' : 'Transformation journey'}</p>
       <h2>${isVi ? 'Từ hiện trạng hôm nay, kiến tạo giá trị cho ngày mai' : "From today's reality to tomorrow's value"}</h2>
-      <p>${isVi ? 'Nhà máy đang thực hiện lộ trình chuẩn hoá mặt bằng, cải tạo hạ tầng và lắp đặt đồng bộ dây chuyền công nghệ.' : 'The facility is executing a structured roadmap of site preparation, infrastructure upgrade and technology deployment.'}</p>
+      <p>${isVi ? 'Nhà máy đang thực hiện lộ trình chuẩn hoá mặt bằng, hạ tầng đã đi vào hoạt động và lắp đặt đồng bộ dây chuyền công nghệ.' : 'The facility is executing a structured roadmap of site preparation, infrastructure that is now in operation and technology deployment.'}</p>
       <p><a href="${ROUTES.news[locale]}" class="btn btn-outline">${isVi ? 'Xem lộ trình 5 bước' : 'View the 5-step roadmap'}</a></p>
     </section>
     ${newsSection}
@@ -1013,8 +1018,8 @@ function renderAboutPage(content: LoadedSiteContent, locale: Locale): string {
       <h2>${isVi ? 'Hành trình chuyển đổi' : 'Transformation Journey'}</h2>
       <p>${
         isVi
-          ? 'Từ đánh giá hiện trạng, tổ chức lại mặt bằng đến cải tạo hạ tầng và triển khai dây chuyền sàng tuyển kết hợp nhiệt phân VPD.'
-          : 'From current-state assessment and site organisation to infrastructure upgrade and deployment of sorting and VPD pyrolysis lines.'
+          ? 'Từ đánh giá hiện trạng, tổ chức lại mặt bằng, hạ tầng đã đi vào hoạt động đến triển khai dây chuyền sàng tuyển kết hợp nhiệt phân VPD.'
+          : 'From current-state assessment and site organisation and infrastructure that is now in operation to deployment of sorting and VPD pyrolysis lines.'
       }</p>
     </section>
     <section class="section-block" data-testid="about-values">
@@ -1070,38 +1075,17 @@ function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): strin
     : 'Overview diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil. The outputs return to a cycle of use.';
 
   const customBody = content.pagesBody.technology?.[locale]?.bodyHtml ?? '';
-  const partnersSection =
-    content.partners.length > 0
-      ? `<section class="section-block" data-testid="partners-block">
-          <h2>${isVi ? 'Đối tác công nghệ' : 'Technology Partners'}</h2>
-          <ul>
-            ${content.partners
-              .map((p) => {
-                const role = p.role?.[locale]?.trim();
-                const desc = p.description?.[locale]?.trim();
-                return `<li>${escHtml(p.name)}${role ? ` — ${escHtml(role)}` : ''}${desc ? `. ${escHtml(desc)}` : ''}</li>`;
-              })
-              .join('')}
-          </ul>
-        </section>`
-      : '';
-
-  const drawingImg = content.images.get('images/sorting-line-3d.png');
+  // V39/V42(2)/§12a: khung `gms-sorting-line` — ảnh/bản vẽ của GMS, contain, 3:2; chưa có tệp ⇒ ẩn cả khung.
+  const drawingImg = content.images.get('images/gms-sorting-line.jpg');
   const drawingHtml =
     drawingImg && drawingImg.allowedInBuild
       ? `<section class="section-block section-alt" data-testid="tech-drawing">
-          <p class="eyebrow">${isVi ? 'Bản vẽ kỹ thuật' : 'Engineering drawing'}</p>
-          <h2>${isVi ? 'Bản vẽ 3D dây chuyền phân loại rác sinh hoạt' : '3D layout of the municipal solid waste sorting line'}</h2>
+          <h2>${isVi ? 'Dây chuyền sàng tuyển của GMS' : 'The GMS sorting line'}</h2>
           <figure class="card">
-            <img src="/img/sorting-line-3d.png" alt="${escHtml(drawingImg.alt[locale])}" width="1600" height="900" loading="lazy" />
-            <figcaption>
-              <span class="badge">${isVi ? 'Bản vẽ kỹ thuật' : 'Engineering drawing'}</span> ·
-              ${
-                isVi
-                  ? 'Bản vẽ 3D dây chuyền phân loại rác sinh hoạt (hiển thị nguyên bản có khung tên kỹ thuật theo yêu cầu GMS).'
-                  : '3D engineering layout of the municipal solid waste sorting line (displayed with original title block as requested by GMS).'
-              }
-            </figcaption>
+            <div class="gms-sorting-line" data-testid="gms-sorting-line">
+              <img src="/img/gms-sorting-line.jpg" alt="${escHtml(drawingImg.alt[locale])}" width="1500" height="1000" loading="lazy" />
+            </div>
+            <figcaption>${isVi ? 'Dây chuyền sàng tuyển của GMS.' : 'The GMS sorting line.'}</figcaption>
           </figure>
         </section>`
       : '';
@@ -1358,8 +1342,6 @@ function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): strin
       <h2>${isVi ? 'Trao đổi về công nghệ & hợp tác với GMS' : 'Discuss technology & partnership with GMS'}</h2>
       <p><a href="${ROUTES.contact[locale]}?from=technology" class="btn" data-testid="cta-contact">${isVi ? 'Liên hệ với GMS' : 'Contact GMS'}</a></p>
     </section>
-
-    ${partnersSection}
 
     <script>
     (function() {

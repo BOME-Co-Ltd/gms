@@ -68,7 +68,7 @@
     "stateAvailable": "Đã có",
     "journeyEyebrow": "Hành trình chuyển đổi",
     "journeyHeading": "Từ hiện trạng hôm nay, kiến tạo giá trị cho ngày mai",
-    "journeyDesc": "Nhà máy đang thực hiện lộ trình chuẩn hoá mặt bằng, cải tạo hạ tầng và lắp đặt đồng bộ dây chuyền công nghệ.",
+    "journeyDesc": "Nhà máy đang thực hiện lộ trình chuẩn hoá mặt bằng, hạ tầng đã đi vào hoạt động và lắp đặt đồng bộ dây chuyền công nghệ.",
     "journeySteps": [
       "Đánh giá hiện trạng",
       "Tổ chức mặt bằng",
@@ -85,9 +85,9 @@
     "overviewTitle": "Một dòng vào, sáu dòng tài nguyên ra",
     "diagramAria": "Sơ đồ tổng quan: chất thải đầu vào chia hai nhánh. Sàng tuyển ra nilon, mùn hữu cơ, RDF. Công nghệ VPD ra syngas, than hoạt tính, dầu tái chế. Các dòng đầu ra quay lại chu trình sử dụng.",
     "drawingBadge": "Bản vẽ kỹ thuật",
-    "drawingTitle": "Bản vẽ 3D dây chuyền phân loại rác sinh hoạt",
-    "drawingAlt": "Bản vẽ 3D dây chuyền phân loại rác sinh hoạt (kèm khung tên kỹ thuật)",
-    "drawingCaption": "Bản vẽ 3D dây chuyền phân loại rác sinh hoạt (hiển thị nguyên bản có khung tên kỹ thuật theo yêu cầu GMS).",
+    "drawingTitle": "Dây chuyền sàng tuyển của GMS",
+    "drawingAlt": "Ảnh dây chuyền sàng tuyển rác sinh hoạt của GMS",
+    "drawingCaption": "Dây chuyền sàng tuyển của GMS.",
     "vpdEyebrow": "Công nghệ VPD",
     "vpdTitle": "Quy trình chuyển hoá, từng bước",
     "vpdLead": "Bấm từng bước hoặc chọn “Tự chạy” để xem dòng nguyên liệu đi qua dây chuyền.",
@@ -264,7 +264,7 @@
         "summary": "GMS Hưng Yên chính thức triển khai kế hoạch đầu tư đồng bộ dây chuyền sàng tuyển cơ học và công nghệ nhiệt phân chân không VPD."
       },
       {
-        "title": "Khảo sát và ký kết thoả thuận hợp tác kỹ thuật chuyển giao công nghệ VPD",
+        "title": "Hoàn tất khảo sát thực địa mặt bằng phục vụ thiết kế dây chuyền công nghệ",
         "date": "20/10/2026",
         "summary": "Đoàn chuyên gia kỹ thuật hoàn tất đánh giá thực địa mặt bằng 5 ha tại Mỹ Hào và chốt thông số thiết kế buồng nhiệt phân."
       },
@@ -284,11 +284,6 @@
         "title": "Toàn cảnh khuôn viên Nhà máy Sinh thái GMS Hưng Yên",
         "img": "/img/hero-plant-render.jpg",
         "caption": "Quy hoạch tổng thể: Mái pin mặt trời, hồ sinh học cảnh quan và dải cây xanh cách ly tại Mỹ Hào, Hưng Yên."
-      },
-      {
-        "title": "Mô hình 3D dây chuyền sàng tuyển phân loại rác",
-        "img": "/img/sorting-line-3d.png",
-        "caption": "Bản vẽ 3D nguyên bản dây chuyền phân loại cơ học rác thải sinh hoạt công suất cao."
       },
       {
         "title": "Hệ thống buồng nhiệt phân chân không VPD",

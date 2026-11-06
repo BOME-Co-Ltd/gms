@@ -68,7 +68,7 @@
     "stateAvailable": "Available",
     "journeyEyebrow": "Transformation journey",
     "journeyHeading": "From today's reality to tomorrow's value",
-    "journeyDesc": "The facility is executing a structured roadmap of site preparation, infrastructure upgrade and technology deployment.",
+    "journeyDesc": "The facility is executing a structured roadmap of site preparation, infrastructure that is now in operation and technology deployment.",
     "journeySteps": [
       "Current-state assessment",
       "Site organisation",
@@ -85,9 +85,9 @@
     "overviewTitle": "One stream in, six resource streams out",
     "diagramAria": "Overview diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil. The outputs return to a cycle of use.",
     "drawingBadge": "Engineering drawing",
-    "drawingTitle": "3D layout of the municipal solid waste sorting line",
-    "drawingAlt": "3D engineering drawing of the municipal solid waste sorting line (with title block)",
-    "drawingCaption": "3D engineering layout of the municipal solid waste sorting line (displayed with original title block as requested by GMS).",
+    "drawingTitle": "The GMS sorting line",
+    "drawingAlt": "Photo of the GMS municipal waste sorting line",
+    "drawingCaption": "The GMS sorting line.",
     "vpdEyebrow": "VPD technology",
     "vpdTitle": "The conversion process, step by step",
     "vpdLead": "Tap a step or choose “Auto play” to follow the feedstock through the line.",
@@ -264,7 +264,7 @@
         "summary": "GMS Hung Yen officially initiates synchronous investment in mechanical sorting and VPD vacuum pyrolysis systems."
       },
       {
-        "title": "Site survey completed and VPD technology partnership agreement signed",
+        "title": "Site survey completed to support technology line design",
         "date": "20/10/2026",
         "summary": "Engineering team concludes field assessment on the 5-hectare My Hao site and finalizes thermal decomposition chamber specs."
       },
@@ -284,11 +284,6 @@
         "title": "Panoramic view of GMS Hung Yen Eco-Industrial Plant",
         "img": "/img/hero-plant-render.jpg",
         "caption": "Master planning: Solar rooftop array, landscape retention ponds, and isolation greenery belts in My Hao, Hung Yen."
-      },
-      {
-        "title": "3D engineering layout of the municipal waste sorting line",
-        "img": "/img/sorting-line-3d.png",
-        "caption": "Original 3D engineering layout of the high-capacity mechanical sorting line with title block."
       },
       {
         "title": "VPD Vacuum Pyrolysis System 3D Model",

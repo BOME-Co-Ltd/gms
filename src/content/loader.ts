@@ -2,27 +2,31 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import MarkdownIt from 'markdown-it';
 import { parse as parseYaml } from 'yaml';
-import { MAP_POINT } from '../../contracts/content-model.ts';
+import {
+  ALL_IMAGE_SLOTS,
+  HOME_IMAGE_SLOT_KIND,
+  HOME_IMAGE_SLOTS,
+  type ImageSlot,
+  MAP_POINT,
+} from '../../contracts/content-model.ts';
 import { ROUTES } from '../../contracts/routes.ts';
 import {
   buildBaseInternalPaths,
   type ContentError,
   isImageAllowedForOg,
   isImageAllowedInBuild,
-  type PartnerAssetRef,
   parseSlugsLock,
-  readPartnerAsset,
   validateCompanyRaw,
   validateFigureRaw,
   validateImageBinary,
   validateImageMetaRaw,
+  validateImageSlots,
   validateJourneyStepsRaw,
   validateLinksInBody,
   validateOutputLinesRaw,
   validatePageClaimsAndFigures,
-  validatePartnerAssetRefs,
-  validatePartnersRaw,
 } from './rules/index.ts';
+import { loadDenylist, scanContentForForbiddenNames } from './rules/names.ts';
 
 const md = new MarkdownIt({ html: false, linkify: false });
 
@@ -54,7 +58,6 @@ export type LoadedImage = {
   source: string;
   allowedInBuild: boolean;
   allowedForOg: boolean;
-  partnerAsset: { partner: string; type: string } | null;
 };
 
 export type LoadedFigure = {
@@ -74,14 +77,6 @@ export type LoadedOutputLine = {
   state: 'dinh-huong' | 'da-co';
   name: { vi: string; en: string };
   desc: { vi: string; en: string };
-};
-
-export type LoadedPartner = {
-  name: string;
-  role?: { vi: string; en: string };
-  description?: { vi: string; en: string };
-  permissionBasis: string;
-  allowedAssets: string[];
 };
 
 export type LoadedNews = {
@@ -166,9 +161,14 @@ export type LoadedSiteContent = {
   /** null khi không có journey-steps.yaml (trang dùng lộ trình mặc định, không nhãn). Đã sắp theo `order`. */
   journeySteps: LoadedJourneyStep[] | null;
   images: Map<string, LoadedImage>;
+  /**
+   * Ô ảnh cố định (content-model.ts ALL_IMAGE_SLOTS): ảnh dùng được hoặc null (⇒ không render ô). Dùng được = đúng một tệp
+   * + meta hợp lệ + qua luật ảnh (hasPeople thiếu consentDate ⇒ null); ô trang chủ còn đòi kind "anh-that".
+   * Cặp Trước/Sau chỉ render khi `imageSlots['gms-before']` VÀ `imageSlots['gms-after']` đều khác null.
+   */
+  imageSlots: Record<ImageSlot, LoadedImage | null>;
   figures: LoadedFigure[];
   outputLines: LoadedOutputLine[];
-  partners: LoadedPartner[];
   news: Record<Locale, LoadedNews[]>;
   projects: Record<Locale, LoadedProject[]>;
   jobs: Record<Locale, LoadedJob[]>;
@@ -344,6 +344,30 @@ function renderMarkdownSafe(bodyMd: string, images: Map<string, LoadedImage>, lo
   return html;
 }
 
+/**
+ * content/journey-steps.yaml (content-model.ts JourneyStep[]) ⇒ bước đã sắp theo `order`, hoặc `steps: null` khi không có
+ * tệp (trang dùng lộ trình mặc định, không nhãn — trái V40, nên tệp v1 bắt buộc có). `errors` = JOURNEY_STATUS_INVALID.
+ * Cùng giá trị với `loadSiteContent(...).journeySteps`.
+ */
+export function loadJourneySteps(contentDir: string): { steps: LoadedJourneyStep[] | null; errors: ContentError[] } {
+  const journeyPath = join(contentDir, 'journey-steps.yaml');
+  if (!existsSync(journeyPath)) return { steps: null, errors: [] };
+  const rawSteps = parseYaml(readFileSync(journeyPath, 'utf8')) as unknown;
+  if (!Array.isArray(rawSteps)) return { steps: null, errors: [] };
+  const steps = rawSteps
+    .map((rs, idx) => {
+      const o = (rs && typeof rs === 'object' ? rs : {}) as Record<string, unknown>;
+      const nameObj = o.name as { vi?: unknown; en?: unknown } | undefined;
+      return {
+        order: typeof o.order === 'number' ? o.order : idx + 1,
+        name: { vi: String(nameObj?.vi ?? ''), en: String(nameObj?.en ?? '') },
+        status: o.status === undefined || o.status === null ? null : String(o.status),
+      };
+    })
+    .sort((a, b) => a.order - b.order);
+  return { steps, errors: validateJourneyStepsRaw(rawSteps) };
+}
+
 export function loadSiteContent(contentDir: string, dateOverride?: string): LoadedSiteContent {
   const errors: ContentError[] = [];
   const todayVn = getBuildDateVn(dateOverride);
@@ -379,8 +403,9 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
 
   // 2. images/*
   const images = new Map<string, LoadedImage>();
-  const partnerAssetRefs: PartnerAssetRef[] = [];
   const imagesDir = join(contentDir, 'images');
+  const slotFiles: string[] = [];
+  const slotMetas = new Map<string, Record<string, unknown> | null>();
   if (existsSync(imagesDir)) {
     const entries = readdirSync(imagesDir);
     const metaFiles = entries.filter((f) => f.endsWith('.yaml') || f.endsWith('.yml'));
@@ -400,8 +425,8 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
       }
       const metaErrs = validateImageMetaRaw(baseName, metaRaw);
       errors.push(...metaErrs);
-      const partnerAsset = readPartnerAsset(metaRaw);
-      if (partnerAsset) partnerAssetRefs.push({ image: baseName, ...partnerAsset });
+      slotFiles.push(bf);
+      slotMetas.set(baseName, metaRaw);
       if (metaRaw && metaErrs.length === 0) {
         const altObj = metaRaw.alt as { vi: string; en: string };
         const relPath = `images/${bf}`;
@@ -417,7 +442,6 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
           source: typeof metaRaw.source === 'string' ? metaRaw.source : 'GMS',
           allowedInBuild: isImageAllowedInBuild(metaRaw),
           allowedForOg: isImageAllowedForOg(metaRaw),
-          partnerAsset,
         });
       }
     }
@@ -429,11 +453,29 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
       if (!hasBin) {
         const metaRaw = (parseYaml(readFileSync(join(imagesDir, mf), 'utf8')) as Record<string, unknown> | null) ?? {};
         errors.push(...validateImageMetaRaw(baseName, metaRaw));
-        const partnerAsset = readPartnerAsset(metaRaw);
-        if (partnerAsset) partnerAssetRefs.push({ image: baseName, ...partnerAsset });
       }
     }
   }
+
+  // Ô ảnh cố định (gms-sorting-line, gms-before, gms-after): trùng basename, kind của ô trang chủ
+  errors.push(...validateImageSlots(slotFiles, slotMetas));
+  const slotUsable = (slot: ImageSlot): LoadedImage | null => {
+    const found = [...images.values()].filter((im) => im.name === slot);
+    const only = found.length === 1 && slotFiles.filter((f) => f.replace(/\.[a-z0-9]+$/i, '') === slot).length === 1;
+    const img = only ? (found[0] ?? null) : null;
+    if (!img || !img.allowedInBuild) return null;
+    const isHome = slot === HOME_IMAGE_SLOTS.before || slot === HOME_IMAGE_SLOTS.after;
+    return isHome && img.kind !== HOME_IMAGE_SLOT_KIND ? null : img;
+  };
+  const imageSlots = Object.fromEntries(ALL_IMAGE_SLOTS.map((s) => [s, slotUsable(s)])) as Record<
+    ImageSlot,
+    LoadedImage | null
+  >;
+
+  // Luật tên không được nêu: content/denylist.yaml (thiếu/sai ⇒ DENYLIST_MISSING ở mọi SITE_ENV), rồi quét content/
+  const denylist = loadDenylist(contentDir);
+  if ('error' in denylist) errors.push(denylist.error);
+  else errors.push(...scanContentForForbiddenNames(contentDir, denylist.names));
 
   // 3. figures.yaml
   const figures: LoadedFigure[] = [];
@@ -463,33 +505,6 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
       }
     }
   }
-
-  // 4. partners.yaml
-  const partners: LoadedPartner[] = [];
-  const partnersPath = join(contentDir, 'partners.yaml');
-  let rawPartnerList: Array<Record<string, unknown>> = [];
-  if (existsSync(partnersPath)) {
-    const rawPartners = (parseYaml(readFileSync(partnersPath, 'utf8')) as Array<Record<string, unknown>> | null) ?? [];
-    if (Array.isArray(rawPartners)) {
-      rawPartnerList = rawPartners;
-      const pErrs = validatePartnersRaw(rawPartners);
-      errors.push(...pErrs);
-      if (pErrs.length === 0) {
-        for (const rp of rawPartners) {
-          partners.push({
-            name: String(rp.name),
-            role: rp.role as LoadedPartner['role'],
-            description: rp.description as LoadedPartner['description'],
-            permissionBasis: String(rp.permissionBasis).trim(),
-            allowedAssets: Array.isArray(rp.allowedAssets) ? rp.allowedAssets.map(String) : [],
-          });
-        }
-      }
-    }
-  }
-
-  // S33: tư liệu đối tác của ảnh đối chiếu partners.yaml (đủ cả khi không có partners.yaml)
-  errors.push(...validatePartnerAssetRefs(partnerAssetRefs, rawPartnerList));
 
   // 5. output-lines.yaml
   let outputLines: LoadedOutputLine[] = DEFAULT_OUTPUT_LINES;
@@ -856,25 +871,9 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
   }
 
   // 12b. journey-steps.yaml (S12): lộ trình 5 bước, trạng thái kiểm theo JOURNEY_STATUSES
-  let journeySteps: LoadedJourneyStep[] | null = null;
-  const journeyPath = join(contentDir, 'journey-steps.yaml');
-  if (existsSync(journeyPath)) {
-    const rawSteps = parseYaml(readFileSync(journeyPath, 'utf8')) as unknown;
-    if (Array.isArray(rawSteps)) {
-      errors.push(...validateJourneyStepsRaw(rawSteps));
-      journeySteps = rawSteps
-        .map((rs, idx) => {
-          const o = (rs && typeof rs === 'object' ? rs : {}) as Record<string, unknown>;
-          const nameObj = o.name as { vi?: unknown; en?: unknown } | undefined;
-          return {
-            order: typeof o.order === 'number' ? o.order : idx + 1,
-            name: { vi: String(nameObj?.vi ?? ''), en: String(nameObj?.en ?? '') },
-            status: o.status === undefined || o.status === null ? null : String(o.status),
-          };
-        })
-        .sort((a, b) => a.order - b.order);
-    }
-  }
+  const journey = loadJourneySteps(contentDir);
+  errors.push(...journey.errors);
+  const journeySteps = journey.steps;
 
   // 13. Build valid internal paths set & check all markdown links (BUILD-02, NEWS-08)
   const validPaths = buildBaseInternalPaths();
@@ -924,9 +923,9 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
     company,
     journeySteps,
     images,
+    imageSlots,
     figures,
     outputLines,
-    partners,
     news,
     projects,
     jobs,

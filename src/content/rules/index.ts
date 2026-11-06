@@ -1,5 +1,13 @@
 import { CONTENT_RULE_MESSAGES } from '../../../contracts/build.ts';
-import { IMAGE_LIMITS, JOURNEY_STATUSES, MAP_POINT } from '../../../contracts/content-model.ts';
+import {
+  ALL_IMAGE_SLOTS,
+  HOME_IMAGE_SLOT_KIND,
+  HOME_IMAGE_SLOTS,
+  IMAGE_LIMITS,
+  ImageMeta,
+  JOURNEY_STATUSES,
+  MAP_POINT,
+} from '../../../contracts/content-model.ts';
 import { ROUTES } from '../../../contracts/routes.ts';
 import { safeHref } from '../../../contracts/safe-url.ts';
 import { isValidPublicVNPhone } from '../../shared/contact/schema.ts';
@@ -68,11 +76,22 @@ export function validateImageBinary(filename: string, bytes: Uint8Array): Conten
   return errors;
 }
 
+const IMAGE_META_KEYS: readonly string[] = Object.keys(ImageMeta.shape);
+
 export function validateImageMetaRaw(name: string, meta: Record<string, unknown> | null): ContentError[] {
   const errors: ContentError[] = [];
   if (!meta) {
     errors.push({ code: 'IMAGE_META_MISSING', message: `${name}: thiếu metadata ảnh` });
     return errors;
+  }
+  // ImageMeta là `.strict()`: khoá lạ (gồm khoá cũ partnerAsset/techSourceAsset/keepTitleBlock) ⇒ build đỏ, không bỏ qua.
+  for (const key of Object.keys(meta)) {
+    if (!IMAGE_META_KEYS.includes(key)) {
+      errors.push({
+        code: 'IMAGE_META_KEY_UNKNOWN',
+        message: `${name}: metadata ảnh có khoá "${key}" không thuộc mô hình ảnh (content-model.ts ImageMeta)`,
+      });
+    }
   }
   if (meta.kind !== 'anh-that' && meta.kind !== 'anh-dung-ai') {
     errors.push({
@@ -135,61 +154,34 @@ export function validateFigureRaw(fig: Record<string, unknown>): ContentError[] 
   return errors;
 }
 
-export function validatePartnersRaw(items: Array<Record<string, unknown>>): ContentError[] {
-  const errors: ContentError[] = [];
-  for (const p of items) {
-    const name = typeof p.name === 'string' ? p.name : 'Đối tác';
-    // S33: căn cứ cho phép (permissionBasis) là chuỗi không rỗng; thiếu ⇒ đối tác không ra trang dù build đỏ.
-    if (typeof p.permissionBasis !== 'string' || p.permissionBasis.trim() === '') {
-      errors.push({
-        code: 'PARTNER_PERMISSION_MISSING',
-        message: CONTENT_RULE_MESSAGES.PARTNER_PERMISSION_MISSING({ partner: name }),
-      });
-    }
-  }
-  return errors;
-}
-
-export type PartnerAssetRef = { image: string; partner: string; type: string };
-
-/** Đọc `partnerAsset` trong meta ảnh; có khoá mà sai dạng ⇒ tên/loại rỗng để luật S33 bắt (không bỏ qua im lặng). */
-export function readPartnerAsset(meta: Record<string, unknown> | null): { partner: string; type: string } | null {
-  const pa = meta?.partnerAsset;
-  if (pa === undefined || pa === null) return null;
-  const o = typeof pa === 'object' ? (pa as Record<string, unknown>) : {};
-  return {
-    partner: typeof o.partner === 'string' ? o.partner.trim() : '',
-    type: typeof o.type === 'string' ? o.type.trim() : '',
-  };
-}
+const HOME_SLOT_SET: readonly string[] = Object.values(HOME_IMAGE_SLOTS);
 
 /**
- * S33 (build.ts §8): tư liệu đối tác của ảnh phải thuộc đối tác có trong partners.yaml và loại phải nằm trong
- * allowedAssets của đối tác đó. `partners` là bản thô (kể cả đối tác thiếu căn cứ: lỗi đó đã báo riêng).
+ * Ô ảnh cố định (content-model.ts ALL_IMAGE_SLOTS). `imageFiles` = tên tệp (không đường dẫn) trong content/images/, không
+ * kể .yaml; `metaByBase` = meta thô theo basename. Trùng basename khác đuôi ⇒ IMAGE_SLOT_DUPLICATE; ô trang chủ có tệp mà
+ * kind ≠ HOME_IMAGE_SLOT_KIND ⇒ IMAGE_SLOT_KIND_INVALID. Thiếu tệp ⇒ không lỗi (ô ẩn).
  */
-export function validatePartnerAssetRefs(
-  refs: PartnerAssetRef[],
-  partners: Array<Record<string, unknown>>,
+export function validateImageSlots(
+  imageFiles: string[],
+  metaByBase: Map<string, Record<string, unknown> | null>,
 ): ContentError[] {
   const errors: ContentError[] = [];
-  for (const ref of refs) {
-    const found = partners.find((p) => typeof p.name === 'string' && p.name.trim() === ref.partner);
-    if (!found) {
+  for (const slot of ALL_IMAGE_SLOTS) {
+    const files = imageFiles.filter((f) => f.replace(/\.[a-z0-9]+$/i, '') === slot).sort();
+    if (files.length > 1) {
       errors.push({
-        code: 'PARTNER_UNKNOWN',
-        message: CONTENT_RULE_MESSAGES.PARTNER_UNKNOWN({ ref: ref.image, partner: ref.partner }),
+        code: 'IMAGE_SLOT_DUPLICATE',
+        message: CONTENT_RULE_MESSAGES.IMAGE_SLOT_DUPLICATE({ slot, files: files.map((f) => `images/${f}`) }),
       });
       continue;
     }
-    const allowed = Array.isArray(found.allowedAssets) ? found.allowedAssets.map(String) : [];
-    if (!allowed.includes(ref.type)) {
+    const file = files[0];
+    if (file === undefined || !HOME_SLOT_SET.includes(slot)) continue;
+    const kind = metaByBase.get(slot)?.kind;
+    if ((kind === 'anh-that' || kind === 'anh-dung-ai') && kind !== HOME_IMAGE_SLOT_KIND) {
       errors.push({
-        code: 'PARTNER_ASSET_NOT_ALLOWED',
-        message: CONTENT_RULE_MESSAGES.PARTNER_ASSET_NOT_ALLOWED({
-          image: ref.image,
-          type: ref.type,
-          partner: ref.partner,
-        }),
+        code: 'IMAGE_SLOT_KIND_INVALID',
+        message: CONTENT_RULE_MESSAGES.IMAGE_SLOT_KIND_INVALID({ slot, file: `images/${file}`, kind }),
       });
     }
   }

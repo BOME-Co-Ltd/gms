@@ -1,113 +1,46 @@
-// S33 (contracts/build.ts §8): tư liệu đối tác của ảnh. Chạy: `vitest run --root src/content`
-// (vitest.config.ts của repo chỉ gom tests/unit/**).
+// V38/V39 (contracts/README.md "Lượt 13", "Lượt 14"): mô hình Partner đã bỏ. Khoá cũ trong meta ảnh ⇒ build đỏ (ImageMeta
+// `.strict()`), không lặng lẽ bỏ qua. Chạy: `vitest run --root src/content`
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { loadSiteContent } from '../loader.ts';
-import { readPartnerAsset, validatePartnerAssetRefs } from './index.ts';
+import { validateImageMetaRaw } from './index.ts';
 
-const PARTNERS = [
-  {
-    name: 'Xanh Asian',
-    permissionBasis: 'raw 02/11 N22',
-    allowedAssets: ['sơ đồ quy trình', 'bảng so sánh', 'bản vẽ 3D'],
-  },
-];
+const META = { kind: 'anh-that', hasPeople: false, alt: { vi: 'a', en: 'b' }, source: 'GMS' };
 
-describe('validatePartnerAssetRefs', () => {
-  it('loại không thuộc allowedAssets ⇒ PARTNER_ASSET_NOT_ALLOWED đúng chữ contract', () => {
-    const errs = validatePartnerAssetRefs([{ image: 'logo-xanhasian', partner: 'Xanh Asian', type: 'logo' }], PARTNERS);
-    expect(errs).toEqual([
-      {
-        code: 'PARTNER_ASSET_NOT_ALLOWED',
-        message: '"logo-xanhasian" loại "logo" không thuộc tư liệu được phép của "Xanh Asian"',
-      },
-    ]);
+describe('validateImageMetaRaw — khoá đã bỏ khỏi ImageMeta', () => {
+  it('meta đúng ⇒ không lỗi', () => {
+    expect(validateImageMetaRaw('x', META)).toEqual([]);
   });
 
-  it('đối tác không có trong partners.yaml (kể cả không có file) ⇒ PARTNER_UNKNOWN', () => {
-    const ref = { image: 'so-do', partner: 'Không Có', type: 'sơ đồ quy trình' };
-    for (const list of [PARTNERS, []]) {
-      const errs = validatePartnerAssetRefs([ref], list);
-      expect(errs).toHaveLength(1);
-      expect(errs[0].code).toBe('PARTNER_UNKNOWN');
-      expect(errs[0].message).toContain('"Không Có"');
-      expect(errs[0].message).toContain('không có Đối tác này trong partners.yaml');
+  it('partnerAsset / techSourceAsset / keepTitleBlock ⇒ IMAGE_META_KEY_UNKNOWN nêu khoá', () => {
+    for (const key of ['partnerAsset', 'techSourceAsset', 'keepTitleBlock']) {
+      const errs = validateImageMetaRaw('x', { ...META, [key]: true });
+      expect(errs.map((e) => e.code)).toEqual(['IMAGE_META_KEY_UNKNOWN']);
+      expect(errs[0]?.message).toContain(`"${key}"`);
     }
   });
-
-  it('loại hợp lệ ⇒ không lỗi; đối tác không khai allowedAssets ⇒ mọi loại bị từ chối', () => {
-    expect(validatePartnerAssetRefs([{ image: 'a', partner: 'Xanh Asian', type: 'bản vẽ 3D' }], PARTNERS)).toEqual([]);
-    const errs = validatePartnerAssetRefs([{ image: 'a', partner: 'X', type: 'bản vẽ 3D' }], [{ name: 'X' }]);
-    expect(errs.map((e) => e.code)).toEqual(['PARTNER_ASSET_NOT_ALLOWED']);
-  });
-
-  it('loại rỗng ⇒ PARTNER_ASSET_NOT_ALLOWED (contract: bắt type rỗng)', () => {
-    const errs = validatePartnerAssetRefs([{ image: 'a', partner: 'Xanh Asian', type: '' }], PARTNERS);
-    expect(errs.map((e) => e.code)).toEqual(['PARTNER_ASSET_NOT_ALLOWED']);
-  });
 });
 
-describe('readPartnerAsset', () => {
-  it('không khai ⇒ null; khai đúng ⇒ trả partner + type; sai dạng ⇒ chuỗi rỗng để luật bắt', () => {
-    expect(readPartnerAsset(null)).toBeNull();
-    expect(readPartnerAsset({ kind: 'anh-that' })).toBeNull();
-    expect(readPartnerAsset({ partnerAsset: { partner: 'Xanh Asian', type: 'logo' } })).toEqual({
-      partner: 'Xanh Asian',
-      type: 'logo',
-    });
-    expect(readPartnerAsset({ partnerAsset: 'Xanh Asian' })).toEqual({ partner: '', type: '' });
-  });
-});
-
-describe('loadSiteContent + partnerAsset', () => {
+describe('loadSiteContent — không còn partners', () => {
   const dirs: string[] = [];
   afterEach(() => {
     for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
   });
 
-  function content(partnerAsset: Record<string, string>, withPartners: boolean): string {
-    const dir = mkdtempSync(join(tmpdir(), 'gms-content-'));
+  it('ảnh mang partnerAsset ⇒ errors có IMAGE_META_KEY_UNKNOWN; kết quả không có trường partners', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gms-nopartner-'));
     dirs.push(dir);
     mkdirSync(join(dir, 'images'));
+    writeFileSync(join(dir, 'denylist.yaml'), 'names:\n  - "Xanh Asian"\n');
     writeFileSync(join(dir, 'images', 'tl.jpg'), Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0]));
     writeFileSync(
       join(dir, 'images', 'tl.yaml'),
-      [
-        'kind: anh-that',
-        'hasPeople: false',
-        'alt: { vi: "tư liệu", en: "asset" }',
-        `partnerAsset: { partner: "${partnerAsset.partner}", type: "${partnerAsset.type}" }`,
-        '',
-      ].join('\n'),
+      'kind: anh-that\nhasPeople: false\nsource: GMS\nalt: { vi: "a", en: "b" }\npartnerAsset: { partner: "P", type: "logo" }\n',
     );
-    if (withPartners) {
-      writeFileSync(
-        join(dir, 'partners.yaml'),
-        '- name: Xanh Asian\n  permissionBasis: raw 02/11 N22\n  allowedAssets: ["sơ đồ quy trình"]\n',
-      );
-    }
-    return dir;
-  }
-
-  const messages = (dir: string) => loadSiteContent(dir).errors.map((e) => `${e.code}: ${e.message}`);
-
-  it('loại ngoài allowedAssets ⇒ lỗi S33; loại đúng ⇒ không lỗi S33 và ảnh mang partnerAsset', () => {
-    const bad = messages(content({ partner: 'Xanh Asian', type: 'logo' }, true));
-    expect(bad).toContain('PARTNER_ASSET_NOT_ALLOWED: "tl" loại "logo" không thuộc tư liệu được phép của "Xanh Asian"');
-    const dir = content({ partner: 'Xanh Asian', type: 'sơ đồ quy trình' }, true);
-    const ok = loadSiteContent(dir);
-    expect(ok.errors.filter((e) => e.code.startsWith('PARTNER_'))).toEqual([]);
-    expect(ok.images.get('images/tl.jpg')?.partnerAsset).toEqual({ partner: 'Xanh Asian', type: 'sơ đồ quy trình' });
-  });
-
-  it('đối tác không có trong partners.yaml hoặc không có file ⇒ PARTNER_UNKNOWN', () => {
-    for (const withPartners of [true, false]) {
-      const msgs = messages(content({ partner: 'Không Có', type: 'sơ đồ quy trình' }, withPartners));
-      expect(
-        msgs.some((m) => m.startsWith('PARTNER_UNKNOWN:') && m.includes('không có Đối tác này trong partners.yaml')),
-      ).toBe(true);
-    }
+    const loaded = loadSiteContent(dir);
+    expect(loaded.errors.map((e) => e.code).filter((c) => c !== 'COMPANY_MISSING')).toEqual(['IMAGE_META_KEY_UNKNOWN']);
+    expect('partners' in loaded).toBe(false);
   });
 });

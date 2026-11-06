@@ -231,7 +231,7 @@ test('NEWS-11 Bài nhập giữ ảnh AI có nhãn, ảnh có alt không rỗng 
   expect(r.log).toMatch(/alt|mô tả thay thế/i);
   const ok = buildSite({
     ...imgs,
-    'images/fan-07.yaml': imgs['images/fan-07.yaml'].toString().replace('vi: ""', 'vi: "Phối cảnh"'),
+    'images/fan-07.yaml': String(imgs['images/fan-07.yaml']).replace('vi: ""', 'vi: "Phối cảnh"'),
     ...fan(7, { gmsSelected: true, heroImage: 'images/fan-07.jpg' }),
   });
   expect(ok.ok, ok.log).toBe(true);
