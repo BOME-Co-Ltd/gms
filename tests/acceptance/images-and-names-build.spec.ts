@@ -227,7 +227,10 @@ test('M40-09 Bản build thường: không tệp nào của out/ có tên chứa
 test('M40-11 (qa thêm) Tên viết liền trong TÊN TỆP ảnh nguồn thì build đỏ, log nêu đường dẫn', () => {
   const r = build({ ...imageMeta('xanhasian-so-do'), 'images/xanhasian-so-do.jpg': jpegWithExif() });
   expect(r.ok).toBe(false);
-  expect(r.log).toMatch(/FORBIDDEN_NAME_IN_(CONTENT|OUTPUT)/);
+  // XQ-QA-L18-1 (architect lượt 19, contracts/build.ts §8 luật (6)(a)): tên cấm trong TÊN TỆP ảnh nguồn
+  // ⇒ đúng một mã FORBIDDEN_NAME_IN_CONTENT, không có FORBIDDEN_NAME_IN_OUTPUT (như ND-01).
+  expect(r.log).toContain('FORBIDDEN_NAME_IN_CONTENT');
+  expect(r.log).not.toContain('FORBIDDEN_NAME_IN_OUTPUT');
   expect(r.log).toContain('xanhasian-so-do');
 });
 
