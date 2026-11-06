@@ -1,5 +1,29 @@
 # contracts/ — gms-hungyen-web
 
+## Lượt 18 (07/11/2026): khớp contract với code build V38–V42 (e515138) + XQ-1 của backend
+
+Theo lời giao việc task `architect-20261106182511-9a59` (chặng 04-build, sau đó admin `reapprove design_approved`). Mục đích: contract ghi đúng code đã cài. Kết quả xanh/đỏ của build không đổi ở ca nào; riêng XQ-1 thêm **tên mã** cho một nhóm lỗi vốn đã làm build đỏ (xem dưới).
+
+| File | Đổi | Vì sao |
+|---|---|---|
+| `build.ts` §8 | Thêm `IMAGE_META_KEY_UNKNOWN {image, key}`: meta ảnh có khoá ngoài `ImageMeta` ⇒ build đỏ, mỗi khoá một lỗi. Chữ thông báo trùng từng ký tự với code `src/content/rules/index.ts:79–95` (`image` = basename không đuôi, như `loader.ts:419`, `:426`). Comment luật (1) thay "lỗi schema ảnh hiện có" bằng tên mã | code có mã, contract chưa có (admin) |
+| `build.ts` §8 | Thêm `COMPARISON_SCHEMA_INVALID {table, row, detail}`: `comparison-tables.yaml` sai `ComparisonTable` (khoá lạ, ô sai dạng, chuỗi rỗng, thiếu trường, gốc không phải danh sách, `key` trùng) ⇒ build đỏ, mỗi vấn đề một lỗi. Luật (5) trỏ mã này | backend XQ-1 |
+| `content-model.ts` | Comment `ImageMeta` (khoá lạ ⇒ `IMAGE_META_KEY_UNKNOWN`); comment ô dây chuyền bỏ tên tệp bản vẽ cũ, ghi mô tả hiện hành; comment `ComparisonTable` (`COMPARISON_SCHEMA_INVALID`, `key` không trùng). Không đổi schema nào | khớp code |
+| `content-model.md` | Dòng "Lượt 13": khoá cũ ⇒ hai mã trên | khớp `.ts` |
+| `README.md` | Lượt 13, lựa chọn "Ô ảnh dây chuyền": câu dẫn code cũ thay bằng code hiện hành | tên tệp cũ không còn |
+
+Lựa chọn khi có ≥ 2 phương án:
+- **XQ-1: mã riêng `COMPARISON_SCHEMA_INVALID` (chọn) thay vì dùng chung `COMPARISON_SHAPE` (loại):** thông báo contract của `COMPARISON_SHAPE` nói "có số ô khác số cột" — dùng cho khoá lạ hay chuỗi rỗng thì log nói sai lý do với người sửa nội dung; qa so mã cũng không tách được hai nguyên nhân. Cách làm khớp tiền lệ lượt này cho ảnh (`IMAGE_META_KEY_UNKNOWN` riêng, không gộp vào mã ảnh khác). Chữ thông báo giữ đúng chữ backend đang in ở nhánh "sai schema" (`src/content/rules/index.ts`, cây làm việc chưa commit), backend chỉ đổi tên mã ở nhánh đó + ca test của nó. Đánh đổi: thêm một mã vào §8. Kết quả xanh/đỏ không đổi (lỗi này vốn đã đỏ); bản e515138 chưa có phần kiểm bảng so sánh (đọc `comparison-tables.yaml` chỉ có ở cây làm việc), nên không có hành vi đã commit nào đổi.
+- **`key` trùng giữa hai bảng dùng `COMPARISON_SCHEMA_INVALID` (chọn)** thay vì mã riêng: một lỗi dữ liệu cùng tệp, cùng người sửa; đúng như code backend đang làm.
+
+Hệ quả tự lộ ra khi đọc code (không sửa ở lượt này — lượt này chỉ khớp; ghi ở design.md "Câu hỏi liên vai (lượt 18)"):
+1. `build-site.ts:1080` chỉ tra `images/gms-sorting-line.jpg`; luật ô ảnh (`content-model.ts` "Ô ảnh cố định") nhận `.jpg|.jpeg|.png|.webp`. GMS gửi `.png`/`.webp` ⇒ khung ẩn im lặng, build xanh. Lệch code so với contract, việc của backend.
+2. Loader phát các mã ảnh `IMAGE_BAD_TYPE`, `IMAGE_TOO_LARGE`, `IMAGE_META_MISSING`, `IMAGE_KIND_MISSING`, `IMAGE_HAS_PEOPLE_MISSING`, `IMAGE_ALT_EMPTY` (`src/content/rules/index.ts:61–118`) và nhiều mã khác (`FIGURE_*`, `*_MISSING_EN`, `SLUG_LOCK_CHANGED`, `UNSAFE_URL`…) không có trong `CONTENT_RULE_MESSAGES`. Lượt này chỉ thêm mã admin giao; mã có từ trước lượt 10 không do lượt này sinh ra.
+3. Dòng stderr: `build.ts` §8 ghi `<CODE>: <thông báo>`, code in `[<CODE>] <thông báo>` (`scripts/content/check.ts:18`, `build-site.ts:2237`). qa so chuỗi con của thông báo nên ca không vỡ; ai so cả dòng sẽ lệch.
+4. Bản e515138 chưa nối lượt quét `out/` (`src/content/rules/names.ts:132` "Chưa nối vào script output-check"); cây làm việc có bản nối ở cuối `runBuildSite` (`build-site.ts:2577–2589`, chưa commit) — chạy trong cùng tiến trình build, không phải script `output-check` riêng như `BUILD_SCRIPTS` §2 ghi.
+
+**Đã kiểm:** đọc code ở các dòng trên. Số dòng là của **cây làm việc** repo code 07/11 (HEAD e515138 + thay đổi chưa commit của backend ở `build-site.ts`, `loader.ts`, `rules/index.ts`, `i18n/*.json`); `IMAGE_META_KEY_UNKNOWN` đã có ở HEAD (`rules/index.ts:91` của HEAD), không thuộc phần chưa commit. `names.ts`, `check.ts` không đổi so với HEAD. **Chưa kiểm:** `tsc` chưa chạy trên bản lượt 18 (hai hàm thông báo mới chỉ dùng template literal như các mã sẵn có).
+
 ## Lượt 16 (07/11/2026): XQ-42 — giải mã lặp tới bất động (M40-b), xoá ký tự định dạng vô hình (M40-c)
 
 Theo lời giao việc task `architect-20261106170355-57a8` (`--fixes appsec:M40`) và appsec threat-model.md §000000000.3–.4 (lượt soát 13, XQ-42). `design_approved` chưa qua ⇒ sửa trong chặng design. Mirror `contracts/` trong repo code tiếp tục lệch (D7 (a)).
@@ -119,7 +143,7 @@ Theo ux-spec §12 V38, V39, V40 (admin chốt 06/11, thay V30). `design_approved
 | `content-model.md` | bỏ dòng bảng + luật nguồn tư liệu; thêm ô ảnh dây chuyền, ghi chú V39/V40 | — |
 
 Lựa chọn khi có ≥ 2 phương án (để appsec soát):
-- **Ô ảnh dây chuyền bằng tên tệp cố định (chọn) thay vì trường frontmatter của `content/pages/technology.<locale>.md` (loại):** trường frontmatter phải lặp ở hai tệp vi/en và cần thêm luật "hai bản trỏ cùng ảnh"; tên cố định khớp cách code đang đọc ảnh M4 (`build-site.ts:1089` đọc `images/sorting-line-3d.png` cố định). Đánh đổi: thêm một mã `IMAGE_SLOT_DUPLICATE` để không tự chọn khi có hai đuôi.
+- **Ô ảnh dây chuyền bằng tên tệp cố định (chọn) thay vì trường frontmatter của `content/pages/technology.<locale>.md` (loại):** trường frontmatter phải lặp ở hai tệp vi/en và cần thêm luật "hai bản trỏ cùng ảnh"; tên cố định khớp cách code đọc ảnh M4 bằng một đường dẫn cố định (lượt 18 soát lại ở code e515138 + cây làm việc 07/11: `build-site.ts:1079–1087` đọc ô `gms-sorting-line`; tệp bản vẽ của lượt trước không còn được đọc ở đâu trong `src/`, `scripts/`, `content/`). Đánh đổi: thêm một mã `IMAGE_SLOT_DUPLICATE` để không tự chọn khi có hai đuôi.
 - **Giữ enum `kind` hai giá trị (chọn) thay vì thêm `"ban-ve"` (loại):** V39 chỉ đòi hai cách hiện (không nhãn / C29); giá trị thứ ba không đổi hiển thị mà buộc sửa loader, ca qa, user-guide. Đổi lại: ghi rõ nghĩa `anh-dung-ai` trong comment.
 - **Không đưa luật quét tên cấm vào contract ở lượt này:** danh sách tên là quyết định nội dung của admin, cần kịch bản pm để qa có ca; đề xuất ở design.md §6f "Đề xuất V38" (XQ-ADMIN-V38a).
 

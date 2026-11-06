@@ -278,7 +278,7 @@
   "projects": {
     "eyebrow": "Dự án / Thư viện",
     "title": "Dự án Nhà máy GMS Hưng Yên & Thư viện hình ảnh",
-    "lead": "Hình ảnh quy hoạch nhà máy sinh thái, mô hình 3D dây chuyền công nghệ và thực địa phân khu xử lý GMS Hưng Yên.",
+    "lead": "Hình ảnh quy hoạch nhà máy sinh thái, phối cảnh dây chuyền công nghệ và thực địa phân khu xử lý GMS Hưng Yên.",
     "items": [
       {
         "title": "Toàn cảnh khuôn viên Nhà máy Sinh thái GMS Hưng Yên",
@@ -288,7 +288,7 @@
       {
         "title": "Hệ thống buồng nhiệt phân chân không VPD",
         "img": "/img/vpd-system-render.jpg",
-        "caption": "Mô phỏng 3D buồng kín phân huỷ nhiệt không sinh khói thu hồi syngas và biochar."
+        "caption": "Phối cảnh dự kiến buồng kín phân huỷ nhiệt không sinh khói thu hồi syngas và biochar."
       },
       {
         "title": "Tầm nhìn & Quy hoạch xanh GMS Hưng Yên",

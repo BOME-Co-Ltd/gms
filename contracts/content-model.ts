@@ -26,7 +26,8 @@ export const ImageMeta = z.object({
   hasPeople: z.boolean(),
   consentDate: IsoDate.optional(),             // hasPeople && !consentDate ⇒ build đỏ nếu ảnh được dùng
   source: z.string().min(1),                   // nội bộ, không hiện trên trang (V38: ghi chú nguồn không lên web)
-  // Khoá cũ ⇒ build đỏ nhờ `.strict()`, không lặng lẽ bỏ qua: `partnerAsset`/`techSourceAsset` (lượt 10/12, bỏ lượt 13)
+  // Khoá lạ ⇒ build đỏ IMAGE_META_KEY_UNKNOWN (build.ts §8, lượt 18), không lặng lẽ bỏ qua. Khoá cũ thuộc nhóm này:
+  // `partnerAsset`/`techSourceAsset` (lượt 10/12, bỏ lượt 13)
   // và `keepTitleBlock` (lượt 10, BỎ lượt 14 theo ux-spec V41 (e), prd v0.7 §3b, appsec M40 (4)(5)). Không còn đường
   // "giữ tệp gốc": mọi ảnh ra `public/img/` đều qua pipeline sharp, không metadata (design.md §6f). Khung tên bản vẽ
   // ghi tên đơn vị khác ⇒ người sửa nội dung CẮT/CHE trên tệp nguồn TRƯỚC khi thả vào content/images/ (máy không đọc
@@ -42,8 +43,8 @@ export const ImageMeta = z.object({
 //  - Chú thích cố định theo locale (src/i18n/**, chữ theo ux_ui), KHÔNG dựng từ ImageMeta.source (nội bộ).
 //  - Ô không có ảnh dùng được ⇒ không render, không ô chờ, không chữ "chờ GMS gửi"/"awaiting"; build vẫn xanh.
 // Ô trang Công nghệ (M4, wireframe technology.html nhánh Sàng tuyển): khung "Dây chuyền sàng tuyển của GMS". Nhãn theo
-// `kind`: ảnh thật không nhãn, bản vẽ/phối cảnh (anh-dung-ai) ⇒ C29. Tệp lượt trước `sorting-line-3d.png` không còn
-// được đọc (V39).
+// `kind`: ảnh thật không nhãn, bản vẽ/phối cảnh (anh-dung-ai) ⇒ C29. Khung chỉ lấy ảnh từ ô `gms-sorting-line` dưới
+// đây; không tệp nào khác trong content/images/ được đọc cho khung này (V39).
 export const TECHNOLOGY_IMAGE_SLOTS = { sortingLine: "gms-sorting-line" } as const;
 // Ô trang chủ (M1 khối S6, wireframe home.html:710 `data-hide-if-missing="gms-before gms-after"`): cặp "Trước ↔ Sau"
 // bằng ẢNH CHỤP THẬT của GMS (trước cải tạo ↔ nhà máy đang hoạt động), không phối cảnh (V41 (b)). Khối (hai ảnh + mũi
@@ -97,7 +98,8 @@ export const Figure = z.object({                // S7: thiếu source/confirmedB
 // Dòng có ô tham chiếu Figure thiếu `source` (hoặc thiếu key) ⇒ build đỏ COMPARISON_ROW_SOURCE_MISSING nêu bảng + dòng.
 // Figure `public: false` ⇒ ẩn CẢ bảng (giữ luật lượt 5: bảng thiếu ô dẫn sai người đọc — ưu tiên 1).
 // Lượt 13 (V39): bảng ẩn ở v1 (không có tệp ⇒ không khối); khi bật, chỉ dùng số GMS có nguồn — đi qua Figure như trên.
-// Bỏ trường nguồn tư liệu bên ngoài của bảng (lượt 10 `partner`, lượt 12 `techSource`): khoá cũ ⇒ build đỏ (`.strict()`).
+// Bỏ trường nguồn tư liệu bên ngoài của bảng (lượt 10 `partner`, lượt 12 `techSource`): khoá cũ ⇒ build đỏ (`.strict()`,
+// COMPARISON_SCHEMA_INVALID, build.ts §8 lượt 18). `key` không trùng giữa các bảng trong tệp (trùng ⇒ cùng mã đó).
 export const ComparisonCell = z.union([
   z.object({ figure: Slug }).strict(),
   z.object({ text: z.object({ vi: z.string().min(1), en: z.string().min(1) }) }).strict(),

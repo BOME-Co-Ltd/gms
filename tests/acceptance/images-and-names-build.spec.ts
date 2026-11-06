@@ -4,7 +4,16 @@
 // CHƯA viết (XQ-QA-M40-1 còn mở — cần fixture ngoài content/): M40-02 hàng public/, M40-04, M40-05, M40-06 hàng JSON-LD/SVG/i18n-client, E43-*, R-01.
 import { expect, test } from '@playwright/test';
 import { type BuildResult, buildSite, type Files, htmlOf, newsFiles } from '../support/build';
-import { bytesOfSize, figure, figuresFile, imageMeta, jpegWithExif } from '../support/fixtures';
+import {
+  bytesOfSize,
+  figure,
+  figuresFile,
+  imageMeta,
+  jpegWithExif,
+  PNG_1X1,
+  WEBP_1X1,
+} from '../support/fixtures';
+import { type Locale, path } from '../support/routes';
 
 const ZW = String.fromCharCode(0x200b);
 const NAME = 'Xanh Asian';
@@ -173,20 +182,26 @@ test('M40-03 alt.en của ảnh so-do-sang-tuyen nêu tên thì build đỏ FORB
 
 const VARIANTS = ['Xanh Asian', 'XANH ASIAN', 'Xanhasian', 'Xạnh Ásian'];
 for (const v of VARIANTS) {
-  test(`M40-06 "${v}" trong alt của ảnh thì build đỏ (CONTENT hoặc OUTPUT), log nêu tên trong danh sách`, () => {
+  // XQ-QA-M40-2 ý 2 (architect, lượt 18): tên ở alt / Figure.source đi qua content/ ⇒ đúng mã FORBIDDEN_NAME_IN_CONTENT;
+  // build dừng ở bước nạp nội dung nên cùng lần build KHÔNG có FORBIDDEN_NAME_IN_OUTPUT (contracts/build.ts §8 luật (6)(a)).
+  test(`M40-06 "${v}" trong alt của ảnh thì build đỏ FORBIDDEN_NAME_IN_CONTENT, nêu tên trong danh sách`, () => {
     const r = build({
       ...imageMeta('minh-hoa', { alt: { vi: `Ảnh ${v}`, en: `Photo ${v}` } }),
       'images/minh-hoa.jpg': jpegWithExif(),
       ...newsFiles('mh', { vi: { heroImage: 'images/minh-hoa.jpg' }, en: { heroImage: 'images/minh-hoa.jpg' } }),
     });
     expect(r.ok).toBe(false);
-    expect(r.log).toMatch(/FORBIDDEN_NAME_IN_(CONTENT|OUTPUT)/);
+    expect(r.log).toContain('FORBIDDEN_NAME_IN_CONTENT');
+    expect(r.log).not.toContain('FORBIDDEN_NAME_IN_OUTPUT');
+    expect(r.log).toContain('alt');
     expect(r.log).toContain(NAME);
   });
-  test(`M40-06 "${v}" trong Figure.source thì build đỏ (CONTENT hoặc OUTPUT), log nêu tên trong danh sách`, () => {
+  test(`M40-06 "${v}" trong Figure.source thì build đỏ FORBIDDEN_NAME_IN_CONTENT, nêu tên trong danh sách`, () => {
     const r = build(figuresFile([figure({ key: 'dt', source: `Tài liệu ${v}` })]));
     expect(r.ok).toBe(false);
-    expect(r.log).toMatch(/FORBIDDEN_NAME_IN_(CONTENT|OUTPUT)/);
+    expect(r.log).toContain('FORBIDDEN_NAME_IN_CONTENT');
+    expect(r.log).not.toContain('FORBIDDEN_NAME_IN_OUTPUT');
+    expect(r.log).toContain('source');
     expect(r.log).toContain(NAME);
   });
 }
@@ -217,11 +232,13 @@ test('M40-11 (qa thêm) Tên viết liền trong TÊN TỆP ảnh nguồn thì b
 });
 
 // --- E. Q14-4 qua loader thật ------------------------------------------------------------------------------------------
-test('ND-01 Thân bài Tin có "Xa&shy;nh Asian" thì build đỏ FORBIDDEN_NAME_IN_CONTENT, nêu tệp và cụm', () => {
+test('ND-01 Thân bài Tin có "Xa&shy;nh Asian" thì build đỏ FORBIDDEN_NAME_IN_CONTENT, nêu tệp, trường "thân bài" và cụm', () => {
   const r = build(newsFiles('nd-01', { body: 'Hợp tác với Xa&shy;nh Asian.' }));
   expect(r.ok).toBe(false);
   expect(r.log).toContain('FORBIDDEN_NAME_IN_CONTENT');
+  expect(r.log).not.toContain('FORBIDDEN_NAME_IN_OUTPUT');
   expect(r.log).toContain('news/nd-01.');
+  expect(r.log).toContain('thân bài'); // XQ-QA-M40-2: tên trường của thân bài Markdown (architect, lượt 18)
   expect(r.log).toContain(NAME);
 });
 
@@ -237,3 +254,49 @@ test('ND-02 alt.en = "Xanh"+U+200B+"Asian" (byte thật) thì build đỏ FORBID
   expect(r.log).toContain('alt.en');
   expect(r.log).toContain(NAME);
 });
+
+// --- F. XQ-44 — khung "Dây chuyền sàng tuyển" dùng ô đã nạp, mọi đuôi contract cho phép (jpg|jpeg|png|webp) ---------------
+// Nguồn: contracts/content-model.ts "Ô ảnh cố định"; figures-and-claims.feature:189–213; design.md XQ-44 (lượt 18).
+// Ảnh PNG/WebP là ảnh 1x1 HỢP LỆ (bản build có thể giải mã/xoá metadata); khung nhận diện bằng chuỗi "tech-drawing".
+const LABEL: Record<Locale, string> = { vi: 'Phối cảnh dự kiến', en: "Artist's impression" };
+// bỏ <style>/<script> để tên lớp CSS nằm trong khai báo không làm khung "hiện" giả
+const techPage = (r: BuildResult, l: Locale) =>
+  (htmlOf(r, path('technology', l)) ?? '').replace(/<style\b[\s\S]*?<\/style>/gi, '').replace(/<script\b[\s\S]*?<\/script>/gi, '');
+const frameWindow = (html: string) => {
+  const at = html.indexOf('tech-drawing');
+  return at < 0 ? '' : html.slice(at, at + 4000);
+};
+const firstImgSrc = (html: string) => /<img\b[^>]*?\ssrc="([^"]+)"/i.exec(html)?.[1] ?? '';
+
+for (const locale of ['vi', 'en'] as Locale[]) {
+  test(`XQ-44a (${locale}) Ô gms-sorting-line.png kind "anh-dung-ai": khung tech-drawing hiện, src đuôi .png, có nhãn phối cảnh`, () => {
+    const r = build({ ...imageMeta('gms-sorting-line', { kind: 'anh-dung-ai' }), 'images/gms-sorting-line.png': PNG_1X1 });
+    expect(r.ok, r.log).toBe(true);
+    const html = techPage(r, locale);
+    expect(html.length, 'trang Công nghệ phải có trong bản build').toBeGreaterThan(0);
+    const frame = frameWindow(html);
+    expect(frame, 'khung tech-drawing phải hiện khi có ô ảnh .png').not.toBe('');
+    const src = firstImgSrc(frame);
+    expect(src.split(/[?#]/)[0], `src ảnh trong khung: "${src}"`).toMatch(/\.png$/i);
+    expect(frame, 'nhãn nhìn thấy trong khung, không chỉ trong alt').toContain(LABEL[locale]);
+  });
+
+  test(`XQ-44b (${locale}) Ô gms-sorting-line.webp kind "anh-that": khung hiện, src đuôi .webp, KHÔNG có nhãn phối cảnh`, () => {
+    const r = build({ ...imageMeta('gms-sorting-line', { kind: 'anh-that' }), 'images/gms-sorting-line.webp': WEBP_1X1 });
+    expect(r.ok, r.log).toBe(true);
+    const html = techPage(r, locale);
+    const frame = frameWindow(html);
+    expect(frame, 'khung tech-drawing phải hiện khi có ô ảnh .webp').not.toBe('');
+    expect(firstImgSrc(frame).split(/[?#]/)[0]).toMatch(/\.webp$/i);
+    expect(html, 'ảnh thật không có nhãn phối cảnh').not.toContain(LABEL[locale]);
+  });
+
+  test(`XQ-44c (${locale}) Không có ô gms-sorting-line: khung tech-drawing ẩn, không ô giữ chỗ`, () => {
+    const r = build();
+    expect(r.ok, r.log).toBe(true);
+    const html = techPage(r, locale);
+    expect(html.length, 'trang Công nghệ phải có trong bản build').toBeGreaterThan(0);
+    expect(html).not.toContain('tech-drawing');
+    expect(html).not.toMatch(PLACEHOLDER);
+  });
+}

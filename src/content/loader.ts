@@ -16,6 +16,7 @@ import {
   isImageAllowedForOg,
   isImageAllowedInBuild,
   parseSlugsLock,
+  validateComparisonTablesRaw,
   validateCompanyRaw,
   validateFigureRaw,
   validateImageBinary,
@@ -38,8 +39,6 @@ export type LoadedCompany = {
   phone: string | null;
   email: string | null;
   zalo: string | null;
-  mapImage: string | null;
-  mapUrl: string | null;
   // shortcut: tuỳ chọn để literal LoadedCompany trong tests/unit/all.test.ts (ngoài lãnh địa) còn biên dịch; bỏ `?` khi test đó được cập nhật.
   mapPoint?: string | null;
   taxId: string | null;
@@ -390,9 +389,6 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
     phone: typeof rawCompany?.phone === 'string' && rawCompany.phone.trim() ? rawCompany.phone.trim() : null,
     email: typeof rawCompany?.email === 'string' && rawCompany.email.trim() ? rawCompany.email.trim() : null,
     zalo: typeof rawCompany?.zalo === 'string' && rawCompany.zalo.trim() ? rawCompany.zalo.trim() : null,
-    mapImage:
-      typeof rawCompany?.mapImage === 'string' && rawCompany.mapImage.trim() ? rawCompany.mapImage.trim() : null,
-    mapUrl: typeof rawCompany?.mapUrl === 'string' && rawCompany.mapUrl.trim() ? rawCompany.mapUrl.trim() : null,
     // giá trị sai dạng đã báo MAP_POINT_INVALID ở validateCompanyRaw; không chuyển tiếp cho bộ dựng
     mapPoint:
       typeof rawCompany?.mapPoint === 'string' && MAP_POINT.test(rawCompany.mapPoint) ? rawCompany.mapPoint : null,
@@ -874,6 +870,14 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
   const journey = loadJourneySteps(contentDir);
   errors.push(...journey.errors);
   const journeySteps = journey.steps;
+
+  // 12c. comparison-tables.yaml: tuỳ chọn (v1 không có tệp ⇒ không khối); có tệp thì kiểm schema + luật COMPARISON_*
+  const comparisonPath = join(contentDir, 'comparison-tables.yaml');
+  if (existsSync(comparisonPath)) {
+    errors.push(
+      ...validateComparisonTablesRaw(parseYaml(readFileSync(comparisonPath, 'utf8')) as unknown, figuresByKey),
+    );
+  }
 
   // 13. Build valid internal paths set & check all markdown links (BUILD-02, NEWS-08)
   const validPaths = buildBaseInternalPaths();
