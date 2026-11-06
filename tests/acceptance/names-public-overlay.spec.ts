@@ -70,7 +70,8 @@ for (const v of ['Xanh Asian', 'XANH ASIAN', 'Xanhasian', 'Xạnh Ásian']) {
 // nên các ca đỏ ở trên đỏ vì tên chứ không vì lý do khác).
 test('M40-0x (đối chứng) Tệp tĩnh public/ không chứa tên thì build xanh và được chép sang out/', () => {
   const r = build({
-    'public/qa-clean.svg': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><text x="0" y="5">GMS</text></svg>',
+    'public/qa-clean.svg':
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><text x="0" y="5">GMS</text></svg>',
   });
   expect(r.ok, r.log).toBe(true);
   expect(r.has('qa-clean.svg'), 'public/ phải được chép nguyên sang out/').toBe(true);

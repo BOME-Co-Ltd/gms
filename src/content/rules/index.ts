@@ -251,8 +251,7 @@ export function validateComparisonTablesRaw(
   raw.forEach((rt, ti) => {
     const t = (rt && typeof rt === 'object' ? rt : {}) as Record<string, unknown>;
     const titleObj = t.title as Record<string, unknown> | undefined;
-    const table =
-      typeof titleObj?.vi === 'string' && titleObj.vi.trim() ? titleObj.vi : String(t.key ?? `#${ti + 1}`);
+    const table = typeof titleObj?.vi === 'string' && titleObj.vi.trim() ? titleObj.vi : String(t.key ?? `#${ti + 1}`);
     // Schema: parse cả bảng, mỗi vấn đề → một lỗi (trừ số ô ≠ số cột, xử lý riêng bên dưới để ra đúng thông báo contract).
     const parsed = ComparisonTable.safeParse(rt);
     if (!parsed.success) {
@@ -261,7 +260,9 @@ export function validateComparisonTablesRaw(
         const rowLabel =
           rowIdx === null
             ? '-'
-            : String(((t.rows as Array<{ label?: { vi?: unknown } }>)?.[rowIdx]?.label?.vi as string) ?? `#${rowIdx + 1}`);
+            : String(
+                ((t.rows as Array<{ label?: { vi?: unknown } }>)?.[rowIdx]?.label?.vi as string) ?? `#${rowIdx + 1}`,
+              );
         schemaInvalid(table, rowLabel, `${issue.path.join('.') || '(bảng)'}: ${issue.message}`);
       }
     }

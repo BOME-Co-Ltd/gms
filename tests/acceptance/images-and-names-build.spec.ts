@@ -4,15 +4,7 @@
 // CHƯA viết (XQ-QA-M40-1 còn mở — cần fixture ngoài content/): M40-02 hàng public/, M40-04, M40-05, M40-06 hàng JSON-LD/SVG/i18n-client, E43-*, R-01.
 import { expect, test } from '@playwright/test';
 import { type BuildResult, buildSite, type Files, htmlOf, newsFiles } from '../support/build';
-import {
-  bytesOfSize,
-  figure,
-  figuresFile,
-  imageMeta,
-  jpegWithExif,
-  PNG_1X1,
-  WEBP_1X1,
-} from '../support/fixtures';
+import { bytesOfSize, figure, figuresFile, imageMeta, jpegWithExif, PNG_1X1, WEBP_1X1 } from '../support/fixtures';
 import { type Locale, path } from '../support/routes';
 
 const ZW = String.fromCharCode(0x200b);
@@ -264,7 +256,9 @@ test('ND-02 alt.en = "Xanh"+U+200B+"Asian" (byte thật) thì build đỏ FORBID
 const LABEL: Record<Locale, string> = { vi: 'Phối cảnh dự kiến', en: "Artist's impression" };
 // bỏ <style>/<script> để tên lớp CSS nằm trong khai báo không làm khung "hiện" giả
 const techPage = (r: BuildResult, l: Locale) =>
-  (htmlOf(r, path('technology', l)) ?? '').replace(/<style\b[\s\S]*?<\/style>/gi, '').replace(/<script\b[\s\S]*?<\/script>/gi, '');
+  (htmlOf(r, path('technology', l)) ?? '')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, '')
+    .replace(/<script\b[\s\S]*?<\/script>/gi, '');
 const frameWindow = (html: string) => {
   const at = html.indexOf('tech-drawing');
   return at < 0 ? '' : html.slice(at, at + 4000);
@@ -273,7 +267,10 @@ const firstImgSrc = (html: string) => /<img\b[^>]*?\ssrc="([^"]+)"/i.exec(html)?
 
 for (const locale of ['vi', 'en'] as Locale[]) {
   test(`XQ-44a (${locale}) Ô gms-sorting-line.png kind "anh-dung-ai": khung tech-drawing hiện, src đuôi .png, có nhãn phối cảnh`, () => {
-    const r = build({ ...imageMeta('gms-sorting-line', { kind: 'anh-dung-ai' }), 'images/gms-sorting-line.png': PNG_1X1 });
+    const r = build({
+      ...imageMeta('gms-sorting-line', { kind: 'anh-dung-ai' }),
+      'images/gms-sorting-line.png': PNG_1X1,
+    });
     expect(r.ok, r.log).toBe(true);
     const html = techPage(r, locale);
     expect(html.length, 'trang Công nghệ phải có trong bản build').toBeGreaterThan(0);
@@ -285,7 +282,10 @@ for (const locale of ['vi', 'en'] as Locale[]) {
   });
 
   test(`XQ-44b (${locale}) Ô gms-sorting-line.webp kind "anh-that": khung hiện, src đuôi .webp, KHÔNG có nhãn phối cảnh`, () => {
-    const r = build({ ...imageMeta('gms-sorting-line', { kind: 'anh-that' }), 'images/gms-sorting-line.webp': WEBP_1X1 });
+    const r = build({
+      ...imageMeta('gms-sorting-line', { kind: 'anh-that' }),
+      'images/gms-sorting-line.webp': WEBP_1X1,
+    });
     expect(r.ok, r.log).toBe(true);
     const html = techPage(r, locale);
     const frame = frameWindow(html);

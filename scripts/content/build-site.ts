@@ -3,7 +3,6 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { parse as parseYaml } from 'yaml';
-import { loadDenylist, scanOutputForForbiddenNames } from '../../src/content/rules/names.ts';
 import { formStatusOf } from '../../contracts/build.ts';
 import { PAGE_SIZE, ROUTES } from '../../contracts/routes.ts';
 import { buildFooterHtml, FOOTER_CSS, type FooterLink, parseSocial } from '../../src/components/ui/static-footer.ts';
@@ -15,6 +14,7 @@ import {
   type Locale,
   loadSiteContent,
 } from '../../src/content/loader.ts';
+import { loadDenylist, scanOutputForForbiddenNames } from '../../src/content/rules/names.ts';
 import { getDictionary } from '../../src/i18n/index.ts';
 import { formatPublicPhone } from '../../src/shared/contact/schema.ts';
 import { computeContentHash } from '../deploy/deploy-prod.ts';
@@ -1086,9 +1086,8 @@ function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): strin
     drawingImg && drawingImg.kind === 'anh-dung-ai'
       ? `<figcaption class="photo-label" data-testid="photo-label">${isVi ? 'Phối cảnh dự kiến' : "Artist's impression"}</figcaption>`
       : '';
-  const drawingHtml =
-    drawingImg
-      ? `<section class="section-block section-alt" data-testid="tech-drawing">
+  const drawingHtml = drawingImg
+    ? `<section class="section-block section-alt" data-testid="tech-drawing">
           <h2>${isVi ? 'Dây chuyền sàng tuyển của GMS' : 'The GMS sorting line'}</h2>
           <figure class="card">
             <div class="gms-sorting-line" data-testid="gms-sorting-line">
@@ -1098,7 +1097,7 @@ function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): strin
             <figcaption>${isVi ? 'Dây chuyền sàng tuyển của GMS.' : 'The GMS sorting line.'}</figcaption>
           </figure>
         </section>`
-      : '';
+    : '';
 
   const vpdSteps = isVi
     ? [

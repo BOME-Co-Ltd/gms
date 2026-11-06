@@ -56,11 +56,11 @@ describe('validateComparisonTablesRaw', () => {
       { label: bi('đốt'), cells: [{ figure: 'no-src' }] },
       { label: bi('ủ'), cells: [{ text: bi('1') }, { figure: 'a' }] },
     ];
-    expect(validateComparisonTablesRaw([table(rows)], FIGS).map((e) => e.code).sort()).toEqual([
-      'COMPARISON_NUMBER_NOT_FIGURE',
-      'COMPARISON_ROW_SOURCE_MISSING',
-      'COMPARISON_SHAPE',
-    ]);
+    expect(
+      validateComparisonTablesRaw([table(rows)], FIGS)
+        .map((e) => e.code)
+        .sort(),
+    ).toEqual(['COMPARISON_NUMBER_NOT_FIGURE', 'COMPARISON_ROW_SOURCE_MISSING', 'COMPARISON_SHAPE']);
   });
 
   it('khoá cũ partner/techSource (.strict()) và gốc không phải mảng ⇒ lỗi, không bỏ qua', () => {
@@ -106,7 +106,10 @@ describe('loadSiteContent — comparison-tables.yaml', () => {
     if (yaml !== null) writeFileSync(join(dir, 'comparison-tables.yaml'), yaml);
     return dir;
   };
-  const codes = (dir: string) => loadSiteContent(dir).errors.map((e) => e.code).filter((c) => c !== 'COMPANY_MISSING');
+  const codes = (dir: string) =>
+    loadSiteContent(dir)
+      .errors.map((e) => e.code)
+      .filter((c) => c !== 'COMPANY_MISSING');
 
   it('không có tệp ⇒ xanh (tuỳ chọn)', () => {
     expect(codes(make(null))).toEqual([]);
