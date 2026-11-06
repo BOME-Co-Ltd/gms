@@ -188,6 +188,9 @@ export function stripExifFromJpegBuffer(buf: Buffer): Buffer {
   return Buffer.from(str, 'latin1');
 }
 
+const HERO_IMG_REL = 'img/hero-plant.jpg';
+const HERO_IMG_SMALL_REL = 'img/hero-plant-512.jpg';
+
 async function processAndWriteImage(img: LoadedImage, outDir: string): Promise<void> {
   if (!img.allowedInBuild) return;
   const relOut = `img/${img.relPath.replace(/^images\//, '')}`;
@@ -201,11 +204,20 @@ async function processAndWriteImage(img: LoadedImage, outDir: string): Promise<v
         ? await pipeline.png().toBuffer()
         : img.ext === 'webp'
           ? await pipeline.webp().toBuffer()
-          : await pipeline.jpeg({ quality: 85 }).toBuffer();
+          : await pipeline.jpeg({ quality: 78, mozjpeg: true }).toBuffer();
     writeFileSync(dest, outBuf);
   } catch {
     outBuf = stripExifFromJpegBuffer(img.bytes);
     writeFileSync(dest, outBuf);
+  }
+  if (relOut === HERO_IMG_REL) {
+    // PERF-01: bản 512px cho màn hẹp (srcset ở trang chủ); lỗi ⇒ trang vẫn dùng bản đầy đủ qua src.
+    try {
+      await sharp(outBuf)
+        .resize({ width: 512, withoutEnlargement: true })
+        .jpeg({ quality: 76, mozjpeg: true })
+        .toFile(join(outDir, HERO_IMG_SMALL_REL));
+    } catch {}
   }
   try {
     const publicDest = join(process.cwd(), 'public', relOut);
@@ -229,6 +241,34 @@ export function copyStaticImages(publicImgDir: string, outImgDir: string, manage
     copied.push(f);
   }
   return copied;
+}
+
+/** PERF-01: chiều rộng tối đa của ảnh tĩnh (ảnh hiển thị ≤ 640 css px; 1280 đủ cho màn 2x). */
+export const STATIC_IMG_MAX_WIDTH = 1280;
+const STATIC_IMG_MIN_BYTES = 20 * 1024;
+
+/**
+ * Thu nhỏ + nén lại ảnh tĩnh vừa chép vào out/img (chỉ bản trong out/, public/ giữ nguyên).
+ * sharp không giữ metadata (Exif/GPS) khi không gọi withMetadata ⇒ giữ luật bỏ siêu dữ liệu.
+ * Lỗi giải mã ⇒ giữ bản đã chép (shortcut: không nén được thì vẫn đủ ảnh; nâng cấp khi có ảnh hỏng thật).
+ * Chỉ ghi lại khi bản mới nhỏ hơn.
+ */
+export async function optimizeStaticImages(outImgDir: string, files: readonly string[]): Promise<void> {
+  for (const f of files) {
+    const m = f.toLowerCase().match(/\.(jpe?g|png)$/);
+    if (!m) continue;
+    const p = join(outImgDir, f);
+    try {
+      const src = readFileSync(p);
+      if (src.length < STATIC_IMG_MIN_BYTES) continue;
+      const base = sharp(src).rotate().resize({ width: STATIC_IMG_MAX_WIDTH, withoutEnlargement: true });
+      const out =
+        m[1] === 'png'
+          ? await base.png({ compressionLevel: 9, palette: true }).toBuffer()
+          : await base.jpeg({ quality: 76, mozjpeg: true }).toBuffer();
+      if (out.length < src.length) writeFileSync(p, out);
+    } catch {}
+  }
 }
 
 function listHtmlFiles(dir: string): string[] {
@@ -908,7 +948,7 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
           </p>
         </div>
         <figure class="hero-media" data-testid="home-cover">
-          <img src="${coverSrc}" alt="${escHtml(coverAlt)}" width="1024" height="1024" />
+          <img src="${coverSrc}" alt="${escHtml(coverAlt)}" width="1024" height="1024"${coverSrc === `/${HERO_IMG_REL}` ? ` srcset="/${HERO_IMG_SMALL_REL} 512w, /${HERO_IMG_REL} 1024w" sizes="(min-width: 900px) 520px, 100vw"` : ''} fetchpriority="high" decoding="async" />
           ${coverIsRender ? `<figcaption class="photo-label" data-testid="photo-label">${escHtml(coverLabel)}</figcaption>` : ''}
         </figure>
       </div>
@@ -2309,7 +2349,8 @@ export async function runBuildSite(options?: {
   for (const img of loaded.images.values()) {
     await processAndWriteImage(img, outDir);
   }
-  copyStaticImages(join(PUBLIC_DIR, 'img'), join(outDir, 'img'), new Set(loaded.images.keys()));
+  const copiedStatic = copyStaticImages(join(PUBLIC_DIR, 'img'), join(outDir, 'img'), new Set(loaded.images.keys()));
+  await optimizeStaticImages(join(outDir, 'img'), copiedStatic);
 
   const sitemapUrls: string[] = [];
   const addSitemapUrl = (urlPath: string, noindex: boolean) => {
