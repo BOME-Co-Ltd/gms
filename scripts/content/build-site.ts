@@ -219,11 +219,6 @@ async function processAndWriteImage(img: LoadedImage, outDir: string): Promise<v
         .toFile(join(outDir, HERO_IMG_SMALL_REL));
     } catch {}
   }
-  try {
-    const publicDest = join(process.cwd(), 'public', relOut);
-    mkdirSync(dirname(publicDest), { recursive: true });
-    writeFileSync(publicDest, outBuf);
-  } catch {}
 }
 
 /**
@@ -2320,11 +2315,6 @@ export async function runBuildSite(options?: {
     .png()
     .toBuffer();
   writeFileSync(join(ogDir, 'default.png'), defaultOgBytes);
-  try {
-    const publicOg = join(PUBLIC_DIR, 'og', 'default.png');
-    mkdirSync(dirname(publicOg), { recursive: true });
-    writeFileSync(publicOg, defaultOgBytes);
-  } catch {}
 
   const brandDir = join(outDir, 'brand');
   mkdirSync(brandDir, { recursive: true });
