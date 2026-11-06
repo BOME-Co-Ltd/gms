@@ -1,5 +1,18 @@
 # contracts/ — gms-hungyen-web
 
+## Lượt 19 (07/11/2026): XQ-QA-L18-1 + đóng XQ-45 — chỉ chữ comment, không đổi hành vi
+
+Task `architect-20261106185337-80dc` (chặng 04-build, sau `design_approved`). Không đổi schema, mã hay thông báo nào; kết quả xanh/đỏ không đổi ở ca nào.
+
+| File | Đổi | Vì sao |
+|---|---|---|
+| `build.ts` §8 đầu mục | Dạng dòng stderr `<CODE>: <thông báo>` ⇒ `[<CODE>] <thông báo>` | XQ-45: qa không có ca so tiền tố (test-plan §0l mục 3); code in `[<CODE>]` ở `scripts/content/check.ts:18`, `build-site.ts:2246`, `:2589`, `:2595` |
+| `build.ts` §8 luật (6)(a) | Thêm câu: tên (kể cả viết liền) trong tên tệp ảnh nguồn ⇒ đúng một mã `FORBIDDEN_NAME_IN_CONTENT` trường "tên tệp"; cùng lần build không có `FORBIDDEN_NAME_IN_OUTPUT` | XQ-QA-L18-1. Code: `names.ts:99–102`, `loader.ts:471–474`, `build-site.ts:2244–2251` dừng trước `out/` (`:2264–2266`) |
+
+Lựa chọn: XQ-QA-L18-1 có hai phương án (CONTENT hay OUTPUT). Chọn CONTENT vì (1) khớp code đang chạy và ca đơn vị `slots-names.test.ts:101–111`; (2) báo được đường dẫn trong `content/` cho người sửa nội dung; (3) luật (4) không chép tệp gốc sang `out/`, nên OUTPUT chỉ có thể xảy ra nếu lượt (a) bị bỏ — khi đó là bug. Loại OUTPUT: bắt muộn hơn, chỉ nêu đường dẫn đã biến đổi trong `out/`.
+
+**Đã kiểm:** đọc code repo HEAD b9a6a1d (cây làm việc sạch) ở các dòng trên. **Chưa kiểm:** `tsc` không chạy lại (chỉ sửa comment).
+
 ## Lượt 18 (07/11/2026): khớp contract với code build V38–V42 (e515138) + XQ-1 của backend
 
 Theo lời giao việc task `architect-20261106182511-9a59` (chặng 04-build, sau đó admin `reapprove design_approved`). Mục đích: contract ghi đúng code đã cài. Kết quả xanh/đỏ của build không đổi ở ca nào; riêng XQ-1 thêm **tên mã** cho một nhóm lỗi vốn đã làm build đỏ (xem dưới).

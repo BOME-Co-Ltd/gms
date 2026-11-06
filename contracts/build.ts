@@ -140,7 +140,8 @@ export const TRUSTED_DEPENDENCIES = ["sharp"] as const;
 
 // ---- 8. Luật nội dung lúc build (lượt 10; design.md §6f, src/content/rules/**, backend) ----
 // content-check chạy MỌI luật rồi mới dừng (gom lỗi, không dừng ở lỗi đầu) ⇒ một dòng bảng so sánh tham chiếu Số liệu
-// thiếu nguồn ra CẢ lỗi S7 lẫn COMPARISON_ROW_SOURCE_MISSING. Mỗi lỗi in một dòng stderr: `<CODE>: <thông báo>`, exit ≠ 0.
+// thiếu nguồn ra CẢ lỗi S7 lẫn COMPARISON_ROW_SOURCE_MISSING. Mỗi lỗi in một dòng stderr: `[<CODE>] <thông báo>`, exit ≠ 0
+// (lượt 19, XQ-45: khớp code scripts/content/check.ts:18, build-site.ts:2246, :2589, :2595; trước đây ghi `<CODE>: …`).
 // Thông báo tiếng Việt, trích NGUYÊN VĂN tên/giá trị trong nội dung nguồn trong nháy kép; qa so chuỗi con của thông báo
 // (các cụm trong nháy ở feature), không so cả dòng. Thêm luật = sửa contract (D7).
 export type ContentRuleIssue = { code: ContentRuleCode; message: string };
@@ -226,6 +227,9 @@ export type ContentRuleCode = keyof typeof CONTENT_RULE_MESSAGES;
 //   (a) content-check: mọi tệp dưới CONTENT_DIR TRỪ DENYLIST_PATH và approvals/** — nội dung tệp văn bản (md frontmatter +
 //       thân, yaml/yml, slugs.lock) theo từng giá trị chuỗi, và đường dẫn tương đối của MỌI tệp (gồm ảnh) ⇒
 //       FORBIDDEN_NAME_IN_CONTENT. Lượt này có vì kịch bản cần nêu ảnh + locale (figures-and-claims.feature:119–124), out/ không cho biết.
+//       Lượt 19 (XQ-QA-L18-1): tên (kể cả dạng viết liền) nằm trong TÊN TỆP ảnh nguồn, vd content/images/xanhasian-so-do.jpg
+//       ⇒ đúng một mã FORBIDDEN_NAME_IN_CONTENT, trường "tên tệp", `file` tương đối CONTENT_DIR. Lỗi (a) dừng build trước khi
+//       dựng out/ ⇒ cùng lần build KHÔNG có FORBIDDEN_NAME_IN_OUTPUT; ảnh ra public/img/ qua sharp chỉ sau khi (a) xanh (luật (4)).
 //   (b) output-check: MỌI tệp dưới OUT_DIR. Đuôi thuộc OUTPUT_SCAN_BINARY_EXTENSIONS ⇒ chỉ so đường dẫn; mọi tệp khác
 //       (html, xml, json, txt, js, mjs, css, svg, webmanifest, map, _headers, _redirects, không đuôi…) đọc UTF-8 (byte
 //       hỏng thay U+FFFD, không bỏ tệp) và so cả nội dung lẫn đường dẫn ⇒ FORBIDDEN_NAME_IN_OUTPUT. Liệt kê đuôi NHỊ PHÂN
