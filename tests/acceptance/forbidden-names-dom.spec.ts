@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, type Page, test } from '@playwright/test';
 import { findForbiddenNames } from '../../contracts/content-model.ts';
 import { buildSite } from '../support/build';
-import { PAGE_KEYS, type Locale, path } from '../support/routes';
+import { type Locale, PAGE_KEYS, path } from '../support/routes';
 import { listHtml, serveDir, urlOfHtml } from '../support/static-server';
 
 const NAMES = ['Xanh Asian'];
@@ -76,10 +76,13 @@ const PAGES: Array<[string, string, string]> = [
   ],
 ];
 
-test('E43-04 Fixture chỉ lộ tên trong DOM: build XANH (quét tĩnh không thấy) nhưng quét DOM bắt được, nêu trang', async ({ page }) => {
+test('E43-04 Fixture chỉ lộ tên trong DOM: build XANH (quét tĩnh không thấy) nhưng quét DOM bắt được, nêu trang', async ({
+  page,
+}) => {
   const overlay: Record<string, string> = {};
   for (const [, file, body] of PAGES)
-    overlay[`public/${file}`] = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>qa</title></head><body>${body}</body></html>`;
+    overlay[`public/${file}`] =
+      `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>qa</title></head><body>${body}</body></html>`;
   const r = buildSite({}, { SITE_ENV: 'test' }, overlay);
   // Nếu build đã đỏ ở bước quét tĩnh thì tầng quét tĩnh đã đổi phạm vi (L-03/L-04): báo appsec, không sửa test cho xanh.
   expect(r.ok, `build phải xanh với 3 fixture này (nếu đỏ: báo appsec M40-d)\n${r.log}`).toBe(true);
