@@ -5,7 +5,7 @@
 // Nguồn: threat-model.md :98, :112, :118; design.md :213 (4). "Xanh Asian" chỉ là DỮ LIỆU của danh sách cấm.
 // Gọi findForbiddenNames của contract, không chép lại hàm.
 import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, type Page, test } from '@playwright/test';
 import { findForbiddenNames } from '../../contracts/content-model.ts';
