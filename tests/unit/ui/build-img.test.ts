@@ -45,6 +45,16 @@ describe('ảnh trong out/', () => {
   });
 });
 
+describe('build không ghi ngược public/', () => {
+  it('build-site.ts không có lệnh ghi nào nhắm vào public/ (chỉ đọc PUBLIC_DIR)', () => {
+    const src = readFileSync(join(__dirname, '..', '..', '..', 'scripts', 'content', 'build-site.ts'), 'utf8');
+    expect(src).not.toMatch(/process\.cwd\(\)\s*,\s*'public'/);
+    expect(src).not.toMatch(/write\w*\(\s*(publicDest|publicOg|publicImg)\b/);
+    expect(src).not.toMatch(/(writeFileSync|copyFileSync|mkdirSync|toFile)\(\s*join\(\s*PUBLIC_DIR/);
+    expect(src).not.toMatch(/(writeFileSync|copyFileSync|mkdirSync|toFile)\(\s*[a-zA-Z]*[pP]ublic[a-zA-Z]*\s*[,)]/);
+  });
+});
+
 describe('PERF-01: nén ảnh tĩnh', () => {
   it('thu nhỏ ảnh rộng quá 1280px, nhỏ hơn bản gốc, bỏ Exif; ảnh nhỏ giữ nguyên', async () => {
     const root = tmp();
