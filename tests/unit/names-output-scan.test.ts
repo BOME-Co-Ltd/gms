@@ -61,9 +61,9 @@ describe('M40 output-check trên out/ tạm', () => {
 
   it('M40-img ảnh trong out/img/ có tên cấm trong tên tệp ⇒ FORBIDDEN_NAME_IN_OUTPUT (đường public/img là đường chép thật)', () => {
     const r = scan({ 'img/xanh-asian-so-do.png': PNG_1X1 });
-    expect(
-      r.some((i) => i.code === 'FORBIDDEN_NAME_IN_OUTPUT' && i.message.includes('xanh-asian-so-do.png')),
-    ).toBe(true);
+    expect(r.some((i) => i.code === 'FORBIDDEN_NAME_IN_OUTPUT' && i.message.includes('xanh-asian-so-do.png'))).toBe(
+      true,
+    );
   });
 
   it('M40-05 tệp .js dưới _next/ chứa tên ⇒ FORBIDDEN_NAME_IN_OUTPUT, nêu tệp .js', () => {
