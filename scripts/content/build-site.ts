@@ -241,6 +241,7 @@ export function copyStaticImages(publicImgDir: string, outImgDir: string, manage
 /** PERF-01: chiều rộng tối đa của ảnh tĩnh (ảnh hiển thị ≤ 640 css px; 1280 đủ cho màn 2x). */
 export const STATIC_IMG_MAX_WIDTH = 1280;
 const SOLUTION_IMG_SMALL_WIDTH = 640;
+const SOLUTION_IMG_MID_WIDTH = 960;
 const SOLUTION_IMG_FILES: ReadonlySet<string> = new Set([
   'sorting-trommel-screen.jpg',
   'vpd-pyrolysis-facility.jpg',
@@ -248,6 +249,7 @@ const SOLUTION_IMG_FILES: ReadonlySet<string> = new Set([
   'scada-control-room.jpg',
 ]);
 const solutionImgSmallName = (f: string): string => f.replace(/\.jpg$/, `-${SOLUTION_IMG_SMALL_WIDTH}.jpg`);
+const solutionImgMidName = (f: string): string => f.replace(/\.jpg$/, `-${SOLUTION_IMG_MID_WIDTH}.jpg`);
 const STATIC_IMG_MIN_BYTES = 20 * 1024;
 
 /**
@@ -272,10 +274,15 @@ export async function optimizeStaticImages(outImgDir: string, files: readonly st
       if (out.length < src.length) writeFileSync(p, out);
       // PERF-01: bản 640w cho ảnh bước trang Giải pháp (srcset); lỗi ⇒ trang vẫn có bản đầy đủ qua src.
       if (SOLUTION_IMG_FILES.has(f)) {
-        await sharp(out.length < src.length ? out : src)
+        const stepSrc = out.length < src.length ? out : src;
+        await sharp(stepSrc)
           .resize({ width: SOLUTION_IMG_SMALL_WIDTH, withoutEnlargement: true })
           .jpeg({ quality: 74, mozjpeg: true })
           .toFile(join(outImgDir, solutionImgSmallName(f)));
+        await sharp(stepSrc)
+          .resize({ width: SOLUTION_IMG_MID_WIDTH, withoutEnlargement: true })
+          .jpeg({ quality: 72, mozjpeg: true })
+          .toFile(join(outImgDir, solutionImgMidName(f)));
       }
     } catch {}
   }
@@ -1105,7 +1112,7 @@ function renderSolutionsPage(content: LoadedSiteContent, locale: Locale): string
             const img = SOLUTION_IMAGES[i];
             // Không có ảnh ⇒ ẩn hẳn vùng ảnh (ux-spec §14c), không để ô trống.
             const fig = img
-              ? `<figure class="step-fig"><img src="${img}" srcset="${img.replace(/\.jpg$/, `-${SOLUTION_IMG_SMALL_WIDTH}.jpg`)} ${SOLUTION_IMG_SMALL_WIDTH}w, ${img} ${STATIC_IMG_MAX_WIDTH}w" sizes="(min-width: 900px) 33vw, 100vw" alt="" width="640" height="360"${i === 0 ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async" /></figure>`
+              ? `<figure class="step-fig"><img src="${img}" srcset="${img.replace(/\.jpg$/, `-${SOLUTION_IMG_SMALL_WIDTH}.jpg`)} ${SOLUTION_IMG_SMALL_WIDTH}w, ${img.replace(/\.jpg$/, `-${SOLUTION_IMG_MID_WIDTH}.jpg`)} ${SOLUTION_IMG_MID_WIDTH}w, ${img} ${STATIC_IMG_MAX_WIDTH}w" sizes="(min-width: 900px) 33vw, calc(100vw - 32px)" alt="" width="640" height="360"${i === 0 ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async" /></figure>`
               : '';
             return `<li class="card step-card" data-testid="solution-item">
               ${fig}
