@@ -76,24 +76,29 @@ a {
   text-underline-offset: 3px;
   display: inline-flex;
   align-items: center;
+}
+:where(a) {
   padding: 2px 4px;
 }
 h1,
 h2,
 h3 {
   line-height: 1.25;
-  margin: 0 0 0.5em;
   color: var(--g900);
   text-wrap: balance;
 }
+:where(h1, h2, h3) {
+  margin: 0 0 0.5em;
+}
+:where(p, li) {
+  margin: 0 0 0.75em;
+}
 p,
 li {
-  margin: 0 0 0.75em;
   overflow-wrap: break-word;
   word-break: break-word;
 }
-ul,
-ol {
+:where(ul, ol) {
   margin: 0;
   padding-left: 20px;
 }
@@ -733,6 +738,8 @@ input[type="checkbox"] {
 }
 .ft a {
   color: var(--ink, #14221b);
+}
+:where(.ft a) {
   padding: 0;
 }
 .ft ul {
@@ -2735,7 +2742,7 @@ main:focus {
 .sec-head .eyebrow {
   justify-self: start;
 }
-.sec a {
+:where(.sec a) {
   padding: 0;
 }
 .sec-body {

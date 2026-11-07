@@ -30,6 +30,9 @@ export function ContactPage({
   const phoneRaw = company.phone?.trim() ?? '';
   const phoneShown = phoneRaw ? formatPublicPhone(phoneRaw, locale) : '';
   const zaloRaw = company.zalo?.trim() ?? '';
+  // Zalo hiển thị bằng số điện thoại (đuôi số của liên kết zalo.me/<số>), không bao giờ hiện URL thô.
+  const zaloDigits = /(\d{9,11})\/?$/.exec(zaloRaw)?.[1] ?? '';
+  const zaloShown = zaloDigits ? formatPublicPhone(zaloDigits, locale) : '';
   const fb = fbName(company);
   // shortcut: sitekey công khai đọc từ môi trường lúc build; thiếu ⇒ sitekey thử của Cloudflare (luôn qua, chỉ dùng cho local/staging).
   // Bản deploy_prod phải đặt TURNSTILE_SITE_KEY thật (XQ cho architect/devops: contract chưa nêu nguồn sitekey).
@@ -46,8 +49,13 @@ export function ContactPage({
         <Streaks variant="sub" />
         <div className="wrap">
           <div className="fade">
-            <p className="kicker">{L('Liên hệ hợp tác', 'Partner with us')}</p>
-            <h1 id="h1">{L('Liên hệ với GMS Hưng Yên', 'Contact GMS Hung Yen')}</h1>
+            <h1 id="h1">{L('Liên hệ', 'Contact')}</h1>
+            <p className="hero-lead">
+              {L(
+                'Bạn muốn hợp tác hoặc cần tư vấn? Hãy để lại thông tin, chúng tôi sẽ liên hệ lại.',
+                'Want to partner with us or need advice? Leave your details and we will get back to you.',
+              )}
+            </p>
           </div>
           {phoneRaw || zaloRaw || fb ? (
             <ul className="jump fade" aria-label={L('Liên hệ nhanh', 'Quick contact')}>
@@ -173,9 +181,23 @@ export function ContactPage({
                           <ZaloMark size={24} className="il-zalo" />
                         </span>
                         <span className="ch-txt">
-                          <span className="ch-lbl">Zalo</span>
-                          <span className="ch-val">{zaloRaw}</span>
+                          <span className="ch-lbl">{L('Nhắn Zalo', 'Message on Zalo')}</span>
+                          <span className="ch-val">{zaloShown ? `Zalo ${zaloShown}` : 'Zalo'}</span>
                         </span>
+                      </a>
+                    </li>
+                  ) : null}
+                  {fb ? (
+                    <li>
+                      <a className="ch" href={`https://m.me/${fb}`} target="_blank" rel="noopener noreferrer">
+                        <span className="ch-ico">
+                          <BrandMark name="messenger" />
+                        </span>
+                        <span className="ch-txt">
+                          <span className="ch-lbl">{L('Nhắn Messenger', 'Message on Messenger')}</span>
+                          <span className="ch-val">{`m.me/${fb}`}</span>
+                        </span>
+                        <span className="sr-only">{newTab}</span>
                       </a>
                     </li>
                   ) : null}
