@@ -84,7 +84,20 @@ export function NewsListPage({
                 <li key={n.slug}>
                   <article className="news" data-testid="news-item">
                     <div className="thumb">
-                      <Icon name="image" className="ico" />
+                      {n.heroImage ? (
+                        <>
+                          <img
+                            src={`/img/${n.heroImage.replace(/^images\//, '')}`}
+                            alt=""
+                            width={1200}
+                            height={900}
+                            loading="lazy"
+                          />
+                          <span className="photo-label">{L('Ảnh minh hoạ', 'Illustration')}</span>
+                        </>
+                      ) : (
+                        <Icon name="image" className="ico" />
+                      )}
                     </div>
                     <div className="news-body">
                       <time className="date" dateTime={n.date}>
@@ -158,7 +171,20 @@ export function ProjectsListPage({
                 <li key={p.slug}>
                   <article className="news" data-testid="list-item">
                     <div className="thumb">
-                      <Icon name="image" className="ico" />
+                      {p.heroImage ? (
+                        <>
+                          <img
+                            src={`/img/${p.heroImage.replace(/^images\//, '')}`}
+                            alt=""
+                            width={1200}
+                            height={900}
+                            loading="lazy"
+                          />
+                          <span className="photo-label">{L('Ảnh minh hoạ', 'Illustration')}</span>
+                        </>
+                      ) : (
+                        <Icon name="image" className="ico" />
+                      )}
                     </div>
                     <div className="news-body">
                       <time className="date" dateTime={p.date}>

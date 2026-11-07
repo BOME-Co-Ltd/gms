@@ -15,7 +15,7 @@ import { type Locale, PAGE_KEYS, path } from '../support/routes';
 import { listHtml, serveDir, urlOfHtml } from '../support/static-server';
 
 const NAMES = ['Xanh Asian'];
-const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../../out');
+const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../../out-e2e');
 const LOCALES: Locale[] = ['vi', 'en'];
 
 async function settle(page: Page, ms = 300) {

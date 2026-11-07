@@ -38,14 +38,14 @@ test('FIG-02 Số liệu thiếu nguồn thì build đỏ (@S7 @kiem-luc-build @
 test('FIG-03 Số liệu "được công bố" = không thì không có trong bản build (@S7 @kiem-luc-build)', () => {
   const r = buildSite(
     figuresFile([
-      figure({ key: 'cong-suat', value: '777', label: { vi: 'Công suất', en: 'Capacity' }, public: false }),
+      figure({ key: 'cong-suat', value: '4815162342', label: { vi: 'Công suất', en: 'Capacity' }, public: false }),
     ]),
   );
   expect(r.ok, r.log).toBe(true);
   for (const f of r.files().filter((x) => /\.(html|json|txt|xml|js|css)$/.test(x))) {
     const t = r.read(f)!;
     expect(t, f).not.toContain('Công suất');
-    expect(t, f).not.toContain('777');
+    expect(t, f).not.toContain('4815162342');
   }
 });
 

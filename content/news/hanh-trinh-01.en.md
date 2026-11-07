@@ -3,6 +3,7 @@ slug: "journey-01"
 key: "hanh-trinh-01"
 title: "From model to reality: The 5-step plant transformation roadmap"
 published: true
+heroImage: "images/hero-plant.jpg"
 summary: "Starting from current-state assessment, site organisation and infrastructure that is now in operation."
 date: "2026-10-20"
 ---

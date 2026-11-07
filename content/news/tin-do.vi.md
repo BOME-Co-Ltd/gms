@@ -3,6 +3,7 @@ slug: "tin-do"
 key: "tin-do"
 title: "Định hướng kết hợp dây chuyền sàng tuyển và công nghệ VPD"
 published: true
+heroImage: "images/project-day-chuyen-sang-tuyen.jpg"
 summary: "Hai nhóm công đoạn chính: sàng tuyển để tách dòng, công nghệ VPD để chuyển hoá."
 date: "2026-10-25"
 ---

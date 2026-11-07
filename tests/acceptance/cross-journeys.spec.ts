@@ -53,7 +53,8 @@ test('X-02 Tin từ nội dung nguồn tới gỡ: đổi ngôn ngữ giữa ch�
   const en = htmlOf(withNews, detailPath('news', 'journey-08', 'en'));
   expect(vi, 'Tin bản vi').toContain('Hành trình 08');
   expect(en, 'Tin bản en').toContain('Journey 08');
-  expect(vi).toMatch(new RegExp(`<a[^>]+hreflang="en"[^>]+href="[^"]*${detailPath('news', 'journey-08', 'en')}`));
+  const enHref = detailPath('news', 'journey-08', 'en');
+  expect(vi).toMatch(new RegExp(`<a(?=[^>]*hreflang="en")(?=[^>]*href="[^"]*${enHref}")[^>]*>`, 'i'));
   const sitemapOn = withNews.read('sitemap.xml') ?? '';
   expect(sitemapOn).toContain(detailPath('news', 'hanh-trinh-08', 'vi'));
   expect(sitemapOn).toContain(detailPath('news', 'journey-08', 'en'));

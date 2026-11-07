@@ -275,58 +275,6 @@
       }
     ]
   },
-  "projects": {
-    "eyebrow": "Projects / Gallery",
-    "title": "GMS Hung Yen Plant Project & Photo Gallery",
-    "lead": "Eco-industrial plant master plan, artist's impressions of the technology line, and high-tech facility imagery.",
-    "items": [
-      {
-        "title": "Panoramic view of GMS Hung Yen Eco-Industrial Plant",
-        "img": "/img/hero-plant-render.jpg",
-        "caption": "Master planning: Solar rooftop array, landscape retention ponds, and isolation greenery belts in My Hao, Hung Yen."
-      },
-      {
-        "title": "VPD Vacuum Pyrolysis System",
-        "img": "/img/vpd-system-render.jpg",
-        "caption": "Artist's impression of the airtight zero-smoke thermal decomposition system recovering syngas and biochar."
-      },
-      {
-        "title": "Vision & Green Eco-Park Planning",
-        "img": "/img/vision-mission.jpg",
-        "caption": "Circular eco-plant complex committed to Net Zero emissions and national green coverage standards."
-      },
-      {
-        "title": "Technology Modernization Journey",
-        "img": "/img/plant-journey.jpg",
-        "caption": "Pre-treatment and mechanical separation facilities operating in high-capacity continuous lines."
-      },
-      {
-        "title": "VPD Pyrolysis Technology Complex",
-        "img": "/img/vpd-pyrolysis-facility.jpg",
-        "caption": "Clean thermal processing hub converting municipal combustible residues into high-caloric syngas and fuel."
-      },
-      {
-        "title": "Heavy-Duty Rotary Trommel Screening System",
-        "img": "/img/sorting-trommel-screen.jpg",
-        "caption": "High-capacity cylindrical trommel separating municipal waste by fraction size and removing impurities."
-      },
-      {
-        "title": "Industrial RDF Fuel Pellet Production Line",
-        "img": "/img/rdf-pellet-production.jpg",
-        "caption": "Pelletizing high-calorific sorted fractions into clean RDF pellets replacing industrial coal."
-      },
-      {
-        "title": "24/7 Central SCADA Room & CEMS Emission Telemetry",
-        "img": "/img/scada-control-room.jpg",
-        "caption": "Real-time automated control room monitoring pyrolysis chamber parameters and continuous emissions."
-      },
-      {
-        "title": "Circular Product Quality Assurance Laboratory",
-        "img": "/img/lab-quality-control.jpg",
-        "caption": "Standardized analytical laboratory testing syngas purity, biochar porosity, and fuel calorific values."
-      }
-    ]
-  },
   "careers": {
     "eyebrow": "Careers",
     "title": "Career Opportunities at GMS Hung Yen",

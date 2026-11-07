@@ -19,8 +19,8 @@ const NAV_MENU_ORDER: PageKey[] = [
   'contact',
   'privacy',
 ];
-// Tin mẫu cố định của bản build mặc định (XQ-21): cặp slug vi/en của Tin "doi-ngon-ngu".
-const NEWS_SAMPLE = { vi: 'doi-ngon-ngu-vi', en: 'doi-ngon-ngu-en' };
+// Tin mẫu cố định của bản build mặc định (XQ-21): cặp slug vi/en của Tin "phan-loai-tai-nguon" (07/11 thay doi-ngon-ngu đã xoá).
+const NEWS_SAMPLE = { vi: 'phan-loai-tai-nguon', en: 'sorting-at-source' };
 const NOT_FOUND = { vi: '/khong-co-trang-nay-xyz', en: '/en/this-page-does-not-exist-xyz' };
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 

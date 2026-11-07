@@ -5,7 +5,7 @@
 //    mà build-site đã loại khỏi JSON-LD;
 //  - CONTACT_MAIL_READY=true (SITE_ENV=test: qa đặt biến này, theo contracts/build.ts §9).
 // Bản deploy thật vẫn đi qua `bun run build` (không qua file này) ⇒ form vẫn đóng tới khi có MST + email nhận thật.
-// Chạy: `bun run build:e2e` rồi `wrangler dev --local --config wrangler.test.jsonc`.
+// Chạy: `bun run build:e2e` (ghi ra out-e2e/, tách khỏi out/ mà các ca build dựng lại) rồi `wrangler dev --local --config wrangler.test.jsonc`.
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -26,9 +26,9 @@ try {
   writeFileSync(companyPath, `${company.replace(/\n*$/, '\n')}taxId: "${TEST_TAX_ID}"\n`);
 
   process.env.CONTACT_MAIL_READY = 'true';
-  const res = await runBuildSite({ cwd: ROOT, contentDir, outDir: join(ROOT, 'out'), siteEnv: 'test' });
+  const res = await runBuildSite({ cwd: ROOT, contentDir, outDir: join(ROOT, 'out-e2e'), siteEnv: 'test' });
   if (!res.ok) process.exit(1);
-  const status = JSON.parse(readFileSync(join(ROOT, 'out', 'form-status.json'), 'utf8'));
+  const status = JSON.parse(readFileSync(join(ROOT, 'out-e2e', 'form-status.json'), 'utf8'));
   if (!status.open) throw new Error(`form vẫn đóng ở bản e2e: ${JSON.stringify(status)}`);
   console.log('e2e build: form mở (MST giả, CONTACT_MAIL_READY=true)');
 } finally {

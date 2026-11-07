@@ -3,6 +3,7 @@ slug: "journey-02"
 key: "hanh-trinh-02"
 title: "Standardising the waste reception and feedstock sorting area"
 published: true
+heroImage: "images/project-khu-tiep-nhan.jpg"
 summary: "Reorganising covered intake storage before feeding material onto the processing line."
 date: "2026-10-15"
 ---

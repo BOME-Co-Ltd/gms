@@ -5,7 +5,7 @@ import { ROUTES } from '../../../../contracts/routes.ts';
 import type { LoadedSiteContent, Locale } from '../../../content/loader.ts';
 import { formatPublicPhone } from '../../../shared/contact/schema.ts';
 import { ContactForm } from '../ContactForm.tsx';
-import { BrandMark, Icon, ZaloMark } from '../icons.tsx';
+import { Icon, MessengerBadge, ZaloMark } from '../icons.tsx';
 import { MapBlock } from '../MapBlock.tsx';
 import { pick, Streaks } from '../parts.tsx';
 import { fbName, type ShellCompany } from '../Shell.tsx';
@@ -80,7 +80,7 @@ export function ContactPage({
               {fb ? (
                 <li>
                   <a href={`https://m.me/${fb}`} target="_blank" rel="noopener noreferrer">
-                    <BrandMark name="messenger" />
+                    <MessengerBadge />
                     {L('Nhắn Messenger', 'Message on Messenger')}
                     <span className="sr-only">{newTab}</span>
                   </a>
@@ -178,7 +178,7 @@ export function ContactPage({
                     <li>
                       <a className="ch" href={`https://m.me/${fb}`} target="_blank" rel="noopener noreferrer">
                         <span className="ch-ico">
-                          <BrandMark name="messenger" />
+                          <MessengerBadge />
                         </span>
                         <span className="ch-txt">
                           <span className="ch-lbl">{L('Nhắn Messenger', 'Message on Messenger')}</span>
