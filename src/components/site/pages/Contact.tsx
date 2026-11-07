@@ -7,8 +7,8 @@ import { formatPublicPhone } from '../../../shared/contact/schema.ts';
 import { ContactForm } from '../ContactForm.tsx';
 import { BrandMark, Icon, ZaloMark } from '../icons.tsx';
 import { MapBlock } from '../MapBlock.tsx';
-import { Streaks, pick } from '../parts.tsx';
-import { type ShellCompany, fbName } from '../Shell.tsx';
+import { pick, Streaks } from '../parts.tsx';
+import { fbName, type ShellCompany } from '../Shell.tsx';
 
 export function ContactPage({
   content,
@@ -83,7 +83,10 @@ export function ContactPage({
           ) : null}
         </div>
       </section>
-      <section className="sec sec-mist c-sec" aria-label={L('Form liên hệ và kênh liên hệ', 'Contact form and channels')}>
+      <section
+        className="sec sec-mist c-sec"
+        aria-label={L('Form liên hệ và kênh liên hệ', 'Contact form and channels')}
+      >
         <div className="wrap">
           <div className="c-grid">
             <div className="c-card" id="lien-he-form">

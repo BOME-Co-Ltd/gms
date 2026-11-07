@@ -75,7 +75,13 @@ function build(): Site {
         careers: () => <CareersListPage content={loaded} locale={locale} />,
         faq: () => <FaqPage content={loaded} locale={locale} />,
         contact: () => (
-          <ContactPage content={loaded} locale={locale} company={company} formOpen={formOpen} hasRecipient={hasRecipient} />
+          <ContactPage
+            content={loaded}
+            locale={locale}
+            company={company}
+            formOpen={formOpen}
+            hasRecipient={hasRecipient}
+          />
         ),
         privacy: () => <PrivacyPage content={loaded} locale={locale} />,
       };
@@ -317,7 +323,10 @@ export function SitePage({ path }: { path: string }): React.ReactElement {
       <SiteFrame locale={s.locale} viPath={s.viPath} enPath={s.enPath} company={company} active={s.activeKey}>
         {s.render()}
       </SiteFrame>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: buildOrgJsonLd(company, cfg.siteUrl, s.locale) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: buildOrgJsonLd(company, cfg.siteUrl, s.locale) }}
+      />
     </>
   );
 }

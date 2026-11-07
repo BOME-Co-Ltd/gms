@@ -37,7 +37,7 @@ const IDS: Record<FieldKey, string> = {
 const ORDER: FieldKey[] = ['fullName', 'email', 'phone', 'company', 'message', 'consent'];
 const MAX: Partial<Record<FieldKey, number>> = { fullName: 200, email: 254, phone: 20, company: 200, message: 5000 };
 // Ký tự điều khiển / ngắt dòng / ký tự ẩn khi dán (dựng bằng chuỗi để không dính ký tự ngắt dòng thật trong mã nguồn).
-const CTRL = new RegExp('[\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]');
+const CTRL = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
 const EMPTY: Values = { fullName: '', email: '', phone: '', company: '', message: '', consent: false };
 
 const TEXT = {
@@ -51,19 +51,22 @@ const TEXT = {
     errName: 'Vui lòng nhập họ và tên.',
     errContact: 'Vui lòng nhập email hoặc số điện thoại',
     errEmail: 'Email chưa đúng dạng. Ví dụ: ten@congty.vn',
-    errPhone: 'Số điện thoại chưa đúng. Nhập 8–20 ký tự gồm số, có thể có dấu + ở đầu, dấu cách, dấu chấm hoặc gạch ngang.',
+    errPhone:
+      'Số điện thoại chưa đúng. Nhập 8–20 ký tự gồm số, có thể có dấu + ở đầu, dấu cách, dấu chấm hoặc gạch ngang.',
     errMsg: 'Vui lòng nhập nội dung bạn muốn gửi.',
     errConsent: 'Vui lòng đồng ý với việc xử lý thông tin để gửi liên hệ.',
     errLong: (n: number) => `Nội dung dài quá ${n} ký tự. Vui lòng rút gọn.`,
     errChars: (l: string) =>
       `Ô “${l}” có ký tự không dùng được, ví dụ ký tự xuống dòng hoặc ký tự ẩn khi dán. Vui lòng xoá đi và gõ lại bằng chữ, số và dấu câu thông thường.`,
     sum: (n: number) => `Cần sửa ${n} mục trước khi gửi:`,
-    rate: (s?: number) => `Bạn đã gửi quá nhiều lần. Vui lòng thử lại sau ${s ? `${Math.ceil(s / 60)} phút` : 'ít phút'}. Chữ bạn đã nhập vẫn còn.`,
+    rate: (s?: number) =>
+      `Bạn đã gửi quá nhiều lần. Vui lòng thử lại sau ${s ? `${Math.ceil(s / 60)} phút` : 'ít phút'}. Chữ bạn đã nhập vẫn còn.`,
     human: 'Chưa xác minh được bạn là người thật. Vui lòng thử gửi lại. Chữ bạn đã nhập vẫn còn.',
     humanWait: 'Vui lòng hoàn tất bước xác minh bên dưới để gửi liên hệ.',
     origin:
       'Liên hệ chưa được gửi vì yêu cầu không đến từ trang web của GMS. Vui lòng mở form liên hệ trên trang web chính thức của GMS rồi gửi lại. Chữ bạn đã nhập vẫn còn trên trang này.',
-    policy: 'Chính sách bảo mật vừa được cập nhật. Vui lòng đọc lại và tick ô đồng ý, rồi gửi lại. Chữ bạn đã nhập vẫn còn.',
+    policy:
+      'Chính sách bảo mật vừa được cập nhật. Vui lòng đọc lại và tick ô đồng ý, rồi gửi lại. Chữ bạn đã nhập vẫn còn.',
     policyLink: 'Chính sách bảo mật',
     tooBig: 'Nội dung gửi quá lớn. Vui lòng rút gọn rồi gửi lại.',
     fail: 'Chưa gửi được liên hệ của bạn, GMS chưa nhận được. Chữ bạn đã nhập vẫn còn; vui lòng thử lại sau ít phút.',
@@ -97,19 +100,22 @@ const TEXT = {
     errName: 'Please enter your full name.',
     errContact: 'Please enter an email or a phone number',
     errEmail: "That email doesn't look right. Example: name@company.com",
-    errPhone: "That phone number doesn't look right. Use 8–20 characters: digits, an optional leading +, spaces, dots or hyphens.",
+    errPhone:
+      "That phone number doesn't look right. Use 8–20 characters: digits, an optional leading +, spaces, dots or hyphens.",
     errMsg: 'Please enter your message.',
     errConsent: 'Please agree to the processing of your details to send your message.',
     errLong: (n: number) => `This is longer than ${n} characters. Please shorten it.`,
     errChars: (l: string) =>
       `The “${l}” field contains characters that can't be used, such as a line break or a hidden character from pasting. Please delete it and retype using ordinary letters, numbers and punctuation.`,
     sum: (n: number) => `${n} item(s) to fix before sending:`,
-    rate: (s?: number) => `You've sent too many messages. Please try again ${s ? `in ${Math.ceil(s / 60)} minute(s)` : 'in a few minutes'}. What you typed is still here.`,
+    rate: (s?: number) =>
+      `You've sent too many messages. Please try again ${s ? `in ${Math.ceil(s / 60)} minute(s)` : 'in a few minutes'}. What you typed is still here.`,
     human: "We couldn't verify that you're a person. Please try sending again. What you typed is still here.",
     humanWait: 'Please complete the verification below to send your message.',
     origin:
       "Your message wasn't sent because the request did not come from the GMS website. Please open the contact form on the official GMS website and send it again. What you typed is still on this page.",
-    policy: 'The privacy policy has just been updated. Please read it again, tick the consent box, then send again. What you typed is still here.',
+    policy:
+      'The privacy policy has just been updated. Please read it again, tick the consent box, then send again. What you typed is still here.',
     policyLink: 'Privacy policy',
     tooBig: "What you're sending is too large. Please shorten it and try again.",
     fail: "We couldn't send your message and GMS has not received it. What you typed is still here; please try again in a few minutes.",
@@ -128,7 +134,8 @@ const TEXT = {
     fullName: 'Full name',
     msgLbl: 'Message (required)',
     consentPre: 'I agree that ',
-    consentMid: ' may collect and use the full name, email or phone number, company and message I enter in order to reply and respond to my inquiry. See the ',
+    consentMid:
+      ' may collect and use the full name, email or phone number, company and message I enter in order to reply and respond to my inquiry. See the ',
     privacy: 'Privacy policy',
     noscript: 'The contact form needs JavaScript. You can reach GMS through the channels below.',
   },
@@ -265,7 +272,16 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
       const c = fields[key];
       let m: string | null = null;
       if (c === 'REQUIRED')
-        m = k === 'fullName' ? T.errName : k === 'message' ? T.errMsg : k === 'consent' ? T.errConsent : k === 'email' || k === 'phone' ? T.errContact : null;
+        m =
+          k === 'fullName'
+            ? T.errName
+            : k === 'message'
+              ? T.errMsg
+              : k === 'consent'
+                ? T.errConsent
+                : k === 'email' || k === 'phone'
+                  ? T.errContact
+                  : null;
       else if (c === 'TOO_LONG') m = MAX[k] ? T.errLong(MAX[k] as number) : null;
       else if (c === 'INVALID_EMAIL') m = k === 'email' ? T.errEmail : null;
       else if (c === 'INVALID_PHONE') m = k === 'phone' ? T.errPhone : null;
@@ -415,7 +431,16 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
     setFeedback({ type: 'success' });
     setFocusSeq((n) => n + 1);
   };
-  const onResult = (status: number, data: { ok?: boolean; code?: string; fields?: Record<string, string>; retryAfterSeconds?: number; policyVersion?: string } | null) => {
+  const onResult = (
+    status: number,
+    data: {
+      ok?: boolean;
+      code?: string;
+      fields?: Record<string, string>;
+      retryAfterSeconds?: number;
+      policyVersion?: string;
+    } | null,
+  ) => {
     if (status === 200 && data?.ok === true) {
       showSuccess();
       return;
@@ -585,7 +610,15 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
             </div>
           ) : null}
           {feedback?.type === 'fields' ? (
-            <div className="error-box" data-testid="contact-error" id="contact-summary" data-fields="1" role="alert" tabIndex={-1} ref={boxRef}>
+            <div
+              className="error-box"
+              data-testid="contact-error"
+              id="contact-summary"
+              data-fields="1"
+              role="alert"
+              tabIndex={-1}
+              ref={boxRef}
+            >
               <p style={{ margin: '0 0 6px' }}>
                 <strong>{T.sum(summaryItems.length)}</strong>
               </p>
@@ -607,7 +640,14 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
             </div>
           ) : null}
           {done ? (
-            <div className="success-box" data-testid="contact-success" id="contact-ok" role="status" tabIndex={-1} ref={boxRef}>
+            <div
+              className="success-box"
+              data-testid="contact-success"
+              id="contact-ok"
+              role="status"
+              tabIndex={-1}
+              ref={boxRef}
+            >
               <h2 style={{ margin: '0 0 6px', fontSize: '1.1rem' }}>{T.okTitle}</h2>
               <p style={{ margin: '0 0 10px' }}>{T.ok}</p>
               <p style={{ margin: 0 }}>
@@ -703,7 +743,15 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
             {fieldError('message')}
           </div>
           <div className="hp-trap" aria-hidden="true">
-            <input id="contact-trap" name="website" type="text" tabIndex={-1} autoComplete="off" data-testid="contact-trap" ref={trapRef} />
+            <input
+              id="contact-trap"
+              name="website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              data-testid="contact-trap"
+              ref={trapRef}
+            />
           </div>
           <div className="form-group" data-testid="contact-consent-block">
             <label
@@ -736,7 +784,13 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
             {wait ? T.humanWait : ''}
           </p>
           <div id="contact-human-slot" className="human-slot" data-testid="contact-human-slot" ref={slotRef} />
-          <button type="submit" className="btn" data-testid="contact-submit" id="contact-submit-btn" disabled={busy || formOff}>
+          <button
+            type="submit"
+            className="btn"
+            data-testid="contact-submit"
+            id="contact-submit-btn"
+            disabled={busy || formOff}
+          >
             {busy ? T.sending : T.send}
           </button>
         </div>

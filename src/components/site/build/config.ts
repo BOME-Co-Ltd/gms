@@ -17,7 +17,8 @@ export type SiteConfig = {
 
 export function siteConfigFromEnv(cwd: string = process.cwd()): SiteConfig {
   const contentDir =
-    process.env.GMS_CONTENT_DIR ?? (process.env.CONTENT_DIR ? join(cwd, process.env.CONTENT_DIR) : join(cwd, 'content'));
+    process.env.GMS_CONTENT_DIR ??
+    (process.env.CONTENT_DIR ? join(cwd, process.env.CONTENT_DIR) : join(cwd, 'content'));
   return {
     contentDir,
     siteUrl: (process.env.SITE_URL ?? 'https://gms.example.test').replace(/\/$/, ''),

@@ -4,14 +4,19 @@ import { spawnSync } from 'node:child_process';
 import { cpSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadSiteContent } from '../../src/content/loader.ts';
 import { type SiteConfig, siteConfigFromEnv } from '../../src/components/site/build/config.ts';
 import { postBuild } from '../../src/components/site/build/verify.ts';
+import { loadSiteContent } from '../../src/content/loader.ts';
 import { computeContentHash } from '../deploy/deploy-prod.ts';
 
-// Giữ các tên xuất cũ cho test/tooling đang import từ đây.
-export { buildOrgJsonLd, currentFormStatus, loadSocial, siteConfigFromEnv } from '../../src/components/site/build/config.ts';
 export type { SiteConfig } from '../../src/components/site/build/config.ts';
+// Giữ các tên xuất cũ cho test/tooling đang import từ đây.
+export {
+  buildOrgJsonLd,
+  currentFormStatus,
+  loadSocial,
+  siteConfigFromEnv,
+} from '../../src/components/site/build/config.ts';
 export {
   copyStaticImages,
   optimizeStaticImages,
@@ -19,7 +24,13 @@ export {
   stripExifFromJpegBuffer,
 } from '../../src/components/site/build/images.ts';
 export { findBrokenImgRefs, postBuild } from '../../src/components/site/build/verify.ts';
-export { formatDateLocale, MENU_LABELS, MENU_ORDER, PAGE_DESCRIPTIONS, type StaticPageKey } from '../../src/components/site/menu.ts';
+export {
+  formatDateLocale,
+  MENU_LABELS,
+  MENU_ORDER,
+  PAGE_DESCRIPTIONS,
+  type StaticPageKey,
+} from '../../src/components/site/menu.ts';
 
 export function escHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -61,19 +72,23 @@ export async function runBuildSite(options?: {
 
   const nextOut = join(APP_ROOT, 'out');
   rmSync(nextOut, { recursive: true, force: true });
-  const run = spawnSync(process.env.NODE_BIN ?? 'node', [join(APP_ROOT, 'node_modules', 'next', 'dist', 'bin', 'next'), 'build'], {
-    cwd: APP_ROOT,
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      NEXT_TELEMETRY_DISABLED: '1',
-      GMS_CONTENT_DIR: cfg.contentDir,
-      SITE_URL: cfg.siteUrl,
-      SITE_ENV: cfg.siteEnv,
-      CONTACT_RECIPIENT: cfg.contactRecipient,
-      ...(cfg.dateOverride ? { DATE_OVERRIDE: cfg.dateOverride } : {}),
+  const run = spawnSync(
+    process.env.NODE_BIN ?? 'node',
+    [join(APP_ROOT, 'node_modules', 'next', 'dist', 'bin', 'next'), 'build'],
+    {
+      cwd: APP_ROOT,
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        NEXT_TELEMETRY_DISABLED: '1',
+        GMS_CONTENT_DIR: cfg.contentDir,
+        SITE_URL: cfg.siteUrl,
+        SITE_ENV: cfg.siteEnv,
+        CONTACT_RECIPIENT: cfg.contactRecipient,
+        ...(cfg.dateOverride ? { DATE_OVERRIDE: cfg.dateOverride } : {}),
+      },
     },
-  });
+  );
   if (run.status !== 0) {
     const m = `[NEXT_BUILD_FAILED] next build thoát với mã ${run.status ?? run.signal}`;
     console.error(m);

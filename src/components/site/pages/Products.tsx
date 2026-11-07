@@ -19,7 +19,9 @@ export function ProductsPage({ content, locale }: { content: LoadedSiteContent; 
                 <article className="tcard" data-testid="output-row">
                   <h3>{item.name[locale]}</h3>
                   <p className="tag-line">
-                    <span className="st">{item.state === 'da-co' ? L('Đã có', 'Available') : L('Định hướng', 'Planned')}</span>
+                    <span className="st">
+                      {item.state === 'da-co' ? L('Đã có', 'Available') : L('Định hướng', 'Planned')}
+                    </span>
                   </p>
                   <p>{item.desc[locale]}</p>
                 </article>
