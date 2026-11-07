@@ -37,12 +37,31 @@ export type SeedOutboxRow = {
   bodyB64?: string;
 };
 
+// Socket keep-alive rảnh > ~5 s bị workerd đóng; nếu vòng sự kiện Node bị chặn đồng bộ (spawnSync buildSite lúc máy tải)
+// thì fetch kế tiếp dùng lại socket chết ⇒ ECONNRESET / UND_ERR_SOCKET. Lỗi này xảy ra TRƯỚC khi server nhận yêu cầu
+// nên thử lại đúng MỘT lần là an toàn (Node mở socket mới).
+function isDeadSocket(e: unknown): boolean {
+  const codes = new Set(['ECONNRESET', 'UND_ERR_SOCKET', 'EPIPE']);
+  for (let c: any = e, i = 0; c && i < 4; c = c.cause, i++) {
+    if (codes.has(c.code) || /ECONNRESET|other side closed/.test(String(c.message ?? ''))) return true;
+  }
+  return false;
+}
+
 async function call<T = unknown>(op: string, args: object = {}): Promise<T> {
-  const res = await fetch(`${CONTROL_URL}/${op}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(args),
-  });
+  const send = () =>
+    fetch(`${CONTROL_URL}/${op}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(args),
+    });
+  let res: Response;
+  try {
+    res = await send();
+  } catch (e) {
+    if (!isDeadSocket(e)) throw e;
+    res = await send();
+  }
   if (!res.ok) throw new Error(`Cửa điều khiển "${op}" trả ${res.status}`);
   return (await res.json()) as T;
 }
