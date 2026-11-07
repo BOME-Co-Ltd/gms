@@ -1,6 +1,9 @@
 import type React from 'react';
-import { TechnologyPageView } from '../../cong-nghe/page.tsx';
+import { SitePage, siteMetadata } from '../../../components/site/site.tsx';
 
-export default function EnglishTechnologyPage(): React.ReactElement {
-  return <TechnologyPageView locale="en" />;
+const PATH = '/en/technology';
+export const generateMetadata = () => siteMetadata(PATH);
+
+export default function Page(): React.ReactElement {
+  return <SitePage path={PATH} />;
 }

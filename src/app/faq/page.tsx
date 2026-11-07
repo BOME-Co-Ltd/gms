@@ -1,6 +1,9 @@
 import type React from 'react';
-import { FaqPageView } from '../../components/pages/FaqPageView.tsx';
+import { SitePage, siteMetadata } from '../../components/site/site.tsx';
 
-export default function FaqPage(): React.ReactElement {
-  return <FaqPageView locale="vi" />;
+const PATH = '/faq';
+export const generateMetadata = () => siteMetadata(PATH);
+
+export default function Page(): React.ReactElement {
+  return <SitePage path={PATH} />;
 }

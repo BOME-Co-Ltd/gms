@@ -1,6 +1,9 @@
 import type React from 'react';
-import { ContactPageView } from '../../lien-he/page.tsx';
+import { SitePage, siteMetadata } from '../../../components/site/site.tsx';
 
-export default function EnglishContactPage(): React.ReactElement {
-  return <ContactPageView locale="en" />;
+const PATH = '/en/contact';
+export const generateMetadata = () => siteMetadata(PATH);
+
+export default function Page(): React.ReactElement {
+  return <SitePage path={PATH} />;
 }

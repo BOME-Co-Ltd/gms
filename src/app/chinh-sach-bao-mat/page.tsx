@@ -1,6 +1,9 @@
 import type React from 'react';
-import { PrivacyPageView } from '../../components/pages/PrivacyPageView.tsx';
+import { SitePage, siteMetadata } from '../../components/site/site.tsx';
 
-export default function PrivacyPage(): React.ReactElement {
-  return <PrivacyPageView locale="vi" />;
+const PATH = '/chinh-sach-bao-mat';
+export const generateMetadata = () => siteMetadata(PATH);
+
+export default function Page(): React.ReactElement {
+  return <SitePage path={PATH} />;
 }

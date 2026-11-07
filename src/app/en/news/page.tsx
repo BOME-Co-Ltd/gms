@@ -1,7 +1,9 @@
 import type React from 'react';
-import { loadJourneyNames } from '../../../components/pages/journeyNames.ts';
-import { NewsPageView } from '../../../components/pages/NewsPageView.tsx';
+import { SitePage, siteMetadata } from '../../../components/site/site.tsx';
 
-export default function NewsEnPage(): React.ReactElement {
-  return <NewsPageView locale="en" stepNames={loadJourneyNames('en')} />;
+const PATH = '/en/news';
+export const generateMetadata = () => siteMetadata(PATH);
+
+export default function Page(): React.ReactElement {
+  return <SitePage path={PATH} />;
 }

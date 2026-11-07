@@ -1,76 +1,65 @@
 // Biểu tượng toàn site (ux-spec §13b): lucide-react, dựng SVG inline LÚC BUILD bằng renderToStaticMarkup.
 // Không font biểu tượng, không sprite/CDN, không tải gì lúc chạy; màu qua currentColor.
 // Chỉ build-site.ts import module này (bản build tĩnh); mã Next dùng thẳng component lucide-react.
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
-  Check,
-  ChevronRight,
-  Circle,
-  CircleAlert,
-  CircleCheck,
-  Clock,
-  Cpu,
-  ExternalLink,
-  FileQuestionMark,
-  FileText,
-  HeartHandshake,
-  Image,
-  Info,
-  LoaderCircle,
-  type LucideIcon,
-  Mail,
-  Map as MapIcon,
-  MapPin,
-  Menu,
-  MoveHorizontal,
-  Newspaper,
-  Phone,
-  ReceiptText,
-  Recycle,
-  ServerCrash,
-  ShieldCheck,
-  Sprout,
-  X,
-} from 'lucide-react';
-import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-export const ICONS = {
-  'arrow-down': ArrowDown,
-  'arrow-left': ArrowLeft,
-  'arrow-right': ArrowRight,
-  'arrow-up': ArrowUp,
-  check: Check,
-  'chevron-right': ChevronRight,
-  circle: Circle,
-  'circle-alert': CircleAlert,
-  'circle-check': CircleCheck,
-  clock: Clock,
-  cpu: Cpu,
-  'external-link': ExternalLink,
-  'file-question': FileQuestionMark,
-  'file-text': FileText,
-  'heart-handshake': HeartHandshake,
-  image: Image,
-  info: Info,
-  'loader-circle': LoaderCircle,
-  mail: Mail,
-  map: MapIcon,
-  'map-pin': MapPin,
-  menu: Menu,
-  'move-horizontal': MoveHorizontal,
-  newspaper: Newspaper,
-  phone: Phone,
-  'receipt-text': ReceiptText,
-  recycle: Recycle,
-  'server-crash': ServerCrash,
-  'shield-check': ShieldCheck,
-  sprout: Sprout,
-  x: X,
-} as const satisfies Record<string, LucideIcon>;
+// NEXT-1: trang Next (Server Component) gọi icon() lúc build; component lucide-react là "client reference" nên không gọi
+// được ở đó. Đọc dữ liệu vẽ (`node`) từ gói lucide-react và dựng chuỗi SVG cùng dạng thuộc tính của lucide.
+// Chỉ chạy ở Node lúc build/test (cần node_modules). shortcut: chuỗi SVG, nâng cấp sang JSX ở NEXT-2.
+const LUCIDE_EXPORT = {
+  'arrow-down': 'ArrowDown',
+  'arrow-left': 'ArrowLeft',
+  'arrow-right': 'ArrowRight',
+  'arrow-up': 'ArrowUp',
+  check: 'Check',
+  'chevron-right': 'ChevronRight',
+  circle: 'Circle',
+  'circle-alert': 'CircleAlert',
+  'circle-check': 'CircleCheck',
+  clock: 'Clock',
+  cpu: 'Cpu',
+  'external-link': 'ExternalLink',
+  'file-question': 'FileQuestionMark',
+  'file-text': 'FileText',
+  'heart-handshake': 'HeartHandshake',
+  image: 'Image',
+  info: 'Info',
+  'loader-circle': 'LoaderCircle',
+  mail: 'Mail',
+  map: 'Map',
+  'map-pin': 'MapPin',
+  menu: 'Menu',
+  'move-horizontal': 'MoveHorizontal',
+  newspaper: 'Newspaper',
+  phone: 'Phone',
+  'receipt-text': 'ReceiptText',
+  recycle: 'Recycle',
+  'server-crash': 'ServerCrash',
+  'shield-check': 'ShieldCheck',
+  sprout: 'Sprout',
+  x: 'X',
+} as const;
+
+type IconNode = Array<[string, Record<string, string | number>]>;
+const nodeCache = new Map<string, IconNode>();
+function iconNodeOf(name: keyof typeof LUCIDE_EXPORT): IconNode {
+  const hit = nodeCache.get(name);
+  if (hit) return hit;
+  const dir = join(process.cwd(), 'node_modules', 'lucide-react', 'dist', 'esm', 'icons');
+  let src = readFileSync(join(dir, `${name}.mjs`), 'utf8');
+  const alias = src.match(/export \{ default \} from '\.\/([\w-]+)\.mjs'/)?.[1]; // tệp bí danh
+  if (alias) src = readFileSync(join(dir, `${alias}.mjs`), 'utf8');
+  const m = src.match(/node:\s*(\[[\s\S]*?\])\s*\};/);
+  if (!m?.[1]) throw new Error(`Không đọc được dữ liệu biểu tượng lucide "${name}"`);
+  const node = new Function(`return ${m[1]}`)() as IconNode;
+  nodeCache.set(name, node);
+  return node;
+}
+
+const attrEsc = (v: string | number): string => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+export const ICONS = LUCIDE_EXPORT;
 
 export type IconName = keyof typeof ICONS;
 
@@ -142,15 +131,19 @@ export function icon(name: IconName, opts: IconOptions = {}): string {
   const key = `${name}|${size}|${strokeWidth}|${className ?? ''}`;
   const hit = cache.get(key);
   if (hit) return hit;
-  const svg = renderToStaticMarkup(
-    createElement(ICONS[name], {
-      size,
-      strokeWidth,
-      className,
-      'aria-hidden': 'true',
-      focusable: 'false',
-    }),
-  );
+  const cls = ['lucide', `lucide-${name}`, ...(className ?? '').split(' ').filter(Boolean)].join(' ');
+  const children = iconNodeOf(name)
+    .map(([tag, attrs]) => {
+      const a = Object.entries(attrs)
+        .filter(([k]) => k !== 'key')
+        .map(([k, v]) => ` ${k}="${attrEsc(v)}"`)
+        .join('');
+      return `<${tag}${a}></${tag}>`;
+    })
+    .join('');
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
+    `stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" class="${cls}" aria-hidden="true" focusable="false">${children}</svg>`;
   cache.set(key, svg);
   return svg;
 }
