@@ -625,6 +625,35 @@ ${WF_CSS}
 }
 `;
 
+const HERO_STREAKS = `<svg class="hero-streaks" viewBox="0 0 1280 480" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><g fill="none" stroke="#9FB43B" stroke-linecap="round"><path d="M760 520L1060 -40" stroke-opacity=".22" stroke-width="2"/><path d="M880 520L1180 -40" stroke-opacity=".16" stroke-width="2"/><path d="M1000 520L1300 -40" stroke-opacity=".1" stroke-width="2"/></g></svg>`;
+
+/**
+ * Trang con (M2–M13): đầu trang dùng khung `.hero.hero-sub` của wireframe green v0.3.8 (nền gradient, đường cắt chéo,
+ * kicker C20), phần còn lại giữ trong `.container.legacy`. Mở đầu nhận ra: <section|article class="section-block|hero-banner">
+ * [<p class="eyebrow">] <h1> [<p> dẫn]. Không khớp ⇒ giữ nguyên (không đoán).
+ */
+function wrapSubpage(bodyHtml: string): string {
+  const m = bodyHtml.match(
+    /^\s*<(section|article) class="(section-block|hero-banner on-dark)"([^>]*)>\s*(?:<p class="eyebrow">([\s\S]*?)<\/p>\s*)?<h1>([\s\S]*?)<\/h1>\s*(?:<p>([\s\S]*?)<\/p>)?/,
+  );
+  if (!m) return `<div class="container legacy">${bodyHtml}</div>`;
+  const [whole, tag, cls, attrs, eyebrow, h1, lead] = m;
+  const kicker = eyebrow ? `<p class="kicker">${eyebrow}</p>` : '';
+  const leadHtml = lead ? `<p class="hero-lead">${lead}</p>` : '';
+  let rest = bodyHtml.slice(whole.length);
+  let extra = '';
+  if (cls.startsWith('hero-banner')) {
+    const end = rest.indexOf('</section>');
+    extra = rest.slice(0, end);
+    rest = rest.slice(end + '</section>'.length);
+  }
+  const hero = `<section class="hero hero-sub on-dark" aria-labelledby="h1">${HERO_STREAKS}<div class="wrap"><div class="fade">${kicker}<h1 id="h1">${h1}</h1>${leadHtml}${extra}</div></div></section>`;
+  const reopened = cls.startsWith('hero-banner')
+    ? ''
+    : `<${tag} class="section-block"${tag === 'section' ? attrs : ''}>`;
+  return `${hero}<div class="container legacy">${reopened}${rest}</div>`;
+}
+
 function renderLayout(opts: {
   locale: Locale;
   title: string;
@@ -706,7 +735,7 @@ function renderLayout(opts: {
     brandLabel: locale === 'vi' ? 'GMS Hưng Yên, về trang chủ' : 'GMS Hung Yen, back to home',
   } as const;
   const bleed = bodyHtml.trimStart().startsWith('<!--bleed-->');
-  const mainHtml = bleed ? bodyHtml : `<div class="container legacy">${bodyHtml}</div>`;
+  const mainHtml = bleed ? bodyHtml : wrapSubpage(bodyHtml);
 
   return `<!DOCTYPE html>
 <html lang="${locale}">
