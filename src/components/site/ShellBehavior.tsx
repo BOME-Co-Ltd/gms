@@ -129,7 +129,16 @@ export function ShellBehavior(): null {
       };
       const cur = () => nav.querySelector<HTMLAnchorElement>('a[aria-current="true"]');
       const c = cur();
-      if (c) put(c);
+      if (c) {
+        // Đặt pill đúng ngôn ngữ hiện tại KHÔNG animation rồi mới hiện (tránh trượt VN→EN sau khi tải trang).
+        pill.style.transition = 'none';
+        put(c);
+        void pill.offsetWidth;
+        nav.classList.add('pill-on');
+        requestAnimationFrame(() => {
+          pill.style.transition = '';
+        });
+      }
       const onLang = (e: MouseEvent) => {
         const a = (e.target as HTMLElement).closest('a');
         if (!a || a === cur() || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;

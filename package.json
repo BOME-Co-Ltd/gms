@@ -7,8 +7,8 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "next dev",
-    "mock": "NEXT_PUBLIC_API_MOCK=1 next dev",
+    "dev": "bun run scripts/dev/sync-images.ts && next dev",
+    "mock": "bun run scripts/dev/sync-images.ts && NEXT_PUBLIC_API_MOCK=1 next dev",
     "content-check": "bun run scripts/content/check.ts",
     "build": "bun run scripts/content/build-site.ts",
     "build:e2e": "bun run tests/support/build-e2e-site.ts",

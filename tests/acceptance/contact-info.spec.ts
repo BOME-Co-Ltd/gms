@@ -9,6 +9,7 @@ import { open, tid } from '../support/ui';
 
 const text = (html: string) =>
   html
+    .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ');
@@ -78,7 +79,7 @@ test('INFO-05 Số điện thoại công khai sai dạng thì build đỏ (@S24 
 
 // contact-info.feature dòng 26–32 (spec v0.5, N27). Email nhận yêu cầu dữ liệu có, CONTACT_MAIL_READY=true ⇒ lý do DUY NHẤT
 // khiến form đóng là thiếu MST (contracts/build.ts §9 FormStatus; content-model.ts Company.taxId).
-test('INFO-06 Thiếu mã số thuế thì build xanh, chân trang chỉ hiện tên pháp lý, form tạm đóng (@S24 @kiem-luc-build @cho-khach:N27)', () => {
+test('INFO-06 Thiếu mã số thuế thì build xanh, chân trang chỉ hiện tên pháp lý, form vẫn mở — admin 07/11 bỏ điều kiện MST (@S24 @kiem-luc-build @cho-khach:N27)', () => {
   const r = buildSite(companyFile({ legalName: 'Công ty Mẫu GMS', taxId: null }), { CONTACT_MAIL_READY: 'true' });
   expect(r.ok, r.log).toBe(true);
   for (const locale of ['vi', 'en'] as Locale[]) {
@@ -91,11 +92,11 @@ test('INFO-06 Thiếu mã số thuế thì build xanh, chân trang chỉ hiện 
     expect(ft, `${locale}: chân trang hiện tên pháp lý`).toContain('Công ty Mẫu GMS');
     expect(footer, `${locale}: không phần tử mã số thuế`).not.toContain('data-testid="tax-id"');
     expect(ft, `${locale}: không dòng mã số thuế`).not.toMatch(/mã số thuế|\bMST\b|tax (id|code|number)|\bVAT\b/i);
-    expect(html, `${locale}: form tạm đóng`).not.toContain('data-testid="contact-form"');
+    expect(html, `${locale}: form mở dù thiếu MST`).toContain('data-testid="contact-form"');
   }
   const status = JSON.parse(r.read('form-status.json') ?? '{}');
-  expect(status.open).toBe(false);
-  expect(status.reasons, 'chỉ một lý do: thiếu mã số thuế').toEqual(['no-tax-id']);
+  expect(status.open).toBe(true);
+  expect(status.reasons).toEqual([]);
 });
 
 // contact-info.feature dòng 40–44: điểm bản đồ "20.930031, 106.065651" (nhà máy). Phần cứng: bản đang chạy dùng nội dung thật

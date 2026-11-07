@@ -275,58 +275,6 @@
       }
     ]
   },
-  "projects": {
-    "eyebrow": "Dự án / Thư viện",
-    "title": "Dự án Nhà máy GMS Hưng Yên & Thư viện hình ảnh",
-    "lead": "Hình ảnh quy hoạch nhà máy sinh thái, phối cảnh dây chuyền công nghệ và thực địa phân khu xử lý GMS Hưng Yên.",
-    "items": [
-      {
-        "title": "Toàn cảnh khuôn viên Nhà máy Sinh thái GMS Hưng Yên",
-        "img": "/img/hero-plant-render.jpg",
-        "caption": "Quy hoạch tổng thể: Mái pin mặt trời, hồ sinh học cảnh quan và dải cây xanh cách ly tại Mỹ Hào, Hưng Yên."
-      },
-      {
-        "title": "Hệ thống buồng nhiệt phân chân không VPD",
-        "img": "/img/vpd-system-render.jpg",
-        "caption": "Phối cảnh dự kiến buồng kín phân huỷ nhiệt không sinh khói thu hồi syngas và biochar."
-      },
-      {
-        "title": "Tầm nhìn & Quy hoạch xanh GMS Hưng Yên",
-        "img": "/img/vision-mission.jpg",
-        "caption": "Khuôn viên nhà máy sinh thái tuần hoàn hướng tới Net Zero với diện tích cây xanh cách ly đạt chuẩn quốc gia."
-      },
-      {
-        "title": "Lộ trình hiện đại hoá dây chuyền công nghệ",
-        "img": "/img/plant-journey.jpg",
-        "caption": "Khu vực tiền xử lý và vận hành tích hợp chuỗi công nghệ sàng tuyển cơ học đa cấp hiện đại."
-      },
-      {
-        "title": "Khu phức hợp công nghệ nhiệt phân VPD",
-        "img": "/img/vpd-pyrolysis-facility.jpg",
-        "caption": "Trung tâm buồng nhiệt phân chân không VPD chuyển hoá rác trơ thành nhiên liệu và syngas chất lượng cao."
-      },
-      {
-        "title": "Hệ thống sàng lồng quay hạng nặng Trommel Screen",
-        "img": "/img/sorting-trommel-screen.jpg",
-        "caption": "Trục sàng lồng công suất lớn phân ly rác thải sinh hoạt theo kích thước hạt và loại bỏ tạp chất."
-      },
-      {
-        "title": "Dây chuyền ép viên nhiên liệu RDF công nghiệp",
-        "img": "/img/rdf-pellet-production.jpg",
-        "caption": "Quy trình ép mùn và vật liệu nhiệt trị cao thành viên nhiên liệu RDF thay thế than đá công nghiệp."
-      },
-      {
-        "title": "Trung tâm điều khiển SCADA & Quan trắc CEMS 24/7",
-        "img": "/img/scada-control-room.jpg",
-        "caption": "Màn hình điều khiển tự động hoá giám sát thời gian thực toàn bộ chu trình nhiệt phân và khí thải."
-      },
-      {
-        "title": "Phòng kiểm nghiệm chất lượng sản phẩm tuần hoàn",
-        "img": "/img/lab-quality-control.jpg",
-        "caption": "Kiểm chuẩn phân tích hoá nghiệm định kỳ hàm lượng Syngas, Biochar và nhiên liệu trước khi xuất xưởng."
-      }
-    ]
-  },
   "careers": {
     "eyebrow": "Tuyển dụng",
     "title": "Cơ hội nghề nghiệp tại GMS Hưng Yên",

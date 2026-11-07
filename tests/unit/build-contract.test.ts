@@ -148,21 +148,21 @@ describe('build.ts §9 — trạng thái form lúc build', () => {
   it.each([
     [{ mailReady: false, privacyRequestEmail: 'ct@vi-du.test', taxId: '1' }, ['mail-not-ready']],
     [{ mailReady: true, taxId: '1' }, ['no-privacy-email']],
-    [{ mailReady: true, privacyRequestEmail: 'ct@vi-du.test' }, ['no-tax-id']],
-    [{ mailReady: false }, ['mail-not-ready', 'no-privacy-email', 'no-tax-id']],
+    [{ mailReady: false }, ['mail-not-ready', 'no-privacy-email']],
   ])('thiếu dữ liệu ⇒ form tạm đóng với đúng lý do: %j', (input, reasons) => {
     expect(formStatusOf(input)).toEqual({ open: false, reasons });
   });
-  it('email/mã số thuế rỗng tính là thiếu', () => {
-    expect(formStatusOf({ mailReady: true, privacyRequestEmail: '', taxId: '' }).reasons).toEqual([
-      'no-privacy-email',
-      'no-tax-id',
-    ]);
+  it('email rỗng tính là thiếu; thiếu MST không đóng form (admin 07/11)', () => {
+    expect(formStatusOf({ mailReady: true, privacyRequestEmail: '', taxId: '' }).reasons).toEqual(['no-privacy-email']);
+    expect(formStatusOf({ mailReady: true, privacyRequestEmail: 'ct@vi-du.test' })).toEqual({
+      open: true,
+      reasons: [],
+    });
   });
   it('FormStatus: open ⇔ không có lý do', () => {
     expect(FormStatus.safeParse({ open: true, reasons: [] }).success).toBe(true);
-    expect(FormStatus.safeParse({ open: false, reasons: ['no-tax-id'] }).success).toBe(true);
-    expect(FormStatus.safeParse({ open: true, reasons: ['no-tax-id'] }).success).toBe(false);
+    expect(FormStatus.safeParse({ open: false, reasons: ['no-privacy-email'] }).success).toBe(true);
+    expect(FormStatus.safeParse({ open: true, reasons: ['no-privacy-email'] }).success).toBe(false);
     expect(FormStatus.safeParse({ open: false, reasons: [] }).success).toBe(false);
     expect(FormStatus.safeParse({ open: false, reasons: ['ly-do-la'] }).success).toBe(false);
   });

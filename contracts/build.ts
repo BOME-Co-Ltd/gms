@@ -257,8 +257,8 @@ export const OUTPUT_SCAN_BINARY_EXTENSIONS = [
 export const FORM_CLOSED_REASONS = [
   "mail-not-ready",      // P12/V3: chưa có tên miền/Email Routing hoặc chưa có email nhận liên hệ đã verify
   "no-privacy-email",    // V14: Company.privacyRequestEmail thiếu
-  "no-tax-id",           // N27: Company.taxId thiếu
 ] as const;
+// 07/11/2026 admin quyết (chế độ chốt giao): bỏ điều kiện MST (N27) — form mở khi chưa có Company.taxId; taxId vẫn tuỳ chọn để hiện chân trang/JSON-LD.
 export const FormStatus = z.object({ open: z.boolean(), reasons: z.array(z.enum(FORM_CLOSED_REASONS)) })
   .refine((s) => s.open === (s.reasons.length === 0), "open ⇔ không có lý do");
 // Biến build (thêm vào BuildEnv khi hiện thực; không phải bí mật): CONTACT_MAIL_READY="true" chỉ khi devops đã verify
@@ -269,7 +269,6 @@ export const formStatusOf = (i: { mailReady: boolean; privacyRequestEmail?: stri
   const reasons = [
     ...(i.mailReady ? [] : ["mail-not-ready" as const]),
     ...(i.privacyRequestEmail ? [] : ["no-privacy-email" as const]),
-    ...(i.taxId ? [] : ["no-tax-id" as const]),
   ];
   return { open: reasons.length === 0, reasons };
 };

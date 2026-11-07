@@ -564,19 +564,24 @@ textarea:focus-visible {
 }
 
 /* ux-spec §12a: khung ảnh dây chuyền sàng tuyển (contain, 3:2, nền --mist) */
-.gms-sorting-line {
+.fig-box.gms-sorting-line {
   position: relative;
   aspect-ratio: 3 / 2;
   background: var(--mist);
   border: 1px solid var(--line);
   border-radius: 18px;
   overflow: hidden;
+  padding: 0;
+  box-shadow: none;
 }
-.gms-sorting-line img {
+.fig-box.gms-sorting-line > img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
+  object-position: center;
 }
 
 /* Forms & Footer */
@@ -1167,10 +1172,10 @@ body {
     transform 0.32s var(--ease-spring),
     width 0.2s ease;
 }
-.js .lang-pill {
+.lang.pill-on .lang-pill {
   display: block;
 }
-.js .lang a[aria-current="true"] {
+.lang.pill-on a[aria-current="true"] {
   background: transparent;
 }
 .lang .flag {
@@ -2400,6 +2405,8 @@ main:focus {
   transition: transform 0.16s var(--ease-spring);
 }
 .thumb {
+  position: relative;
+  overflow: hidden;
   aspect-ratio: 16 / 10;
   display: grid;
   place-items: center;
@@ -2507,6 +2514,10 @@ main:focus {
   gap: 16px;
   justify-items: start;
 }
+.err-art {
+  width: min(320px, 100%);
+  height: auto;
+}
 .err .ico-lg {
   width: 48px;
   height: 48px;
@@ -2568,6 +2579,11 @@ main:focus {
   position: relative;
   width: 36px;
   height: 36px;
+}
+.msg-badge {
+  width: 24px;
+  height: 24px;
+  flex: none;
 }
 .fab .brand-mark {
   position: relative;
@@ -2817,6 +2833,19 @@ main:focus {
   box-shadow: var(--shadow);
   color: var(--ink);
   transition: transform 0.16s var(--ease-spring);
+}
+.tc-fig {
+  position: relative;
+  margin: -24px -24px 4px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 18px 18px 0 0;
+}
+.tc-fig img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .tcard h2,
 .tcard h3 {

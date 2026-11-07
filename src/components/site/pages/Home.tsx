@@ -162,8 +162,8 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
                 <div className="stat" key={f.label[locale]}>
                   <dt>{f.label[locale]}</dt>
                   <dd>
-                    {f.value} {f.unit[locale]}
-                    <small className="stat-src">({f.source})</small>
+                    {`${f.value} ${f.unit[locale]}`}
+                    <small className="stat-src">{`(${f.source})`}</small>
                   </dd>
                 </div>
               ))}

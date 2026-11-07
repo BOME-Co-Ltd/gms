@@ -1,6 +1,7 @@
 node_modules/
 .next/
 out/
+out-e2e/
 .wrangler/
 coverage/
 .evals/
@@ -14,3 +15,8 @@ playwright-report/
 .env
 .env.local
 next-env.d.ts
+
+# Bản chép ảnh content/images cho next dev (scripts/dev/sync-images.ts)
+public/img/news-*
+public/img/project-*
+public/img/gms-sorting-line.*

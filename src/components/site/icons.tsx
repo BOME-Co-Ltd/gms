@@ -139,6 +139,32 @@ export function BrandMark({ name }: { name: 'messenger' | 'facebook' }): React.R
   );
 }
 
+/** Logo Messenger dạng huy hiệu tròn gradient, tia chớp trắng (dùng trên nền sáng/tối, không đen). */
+export function MessengerBadge({ size = 24 }: { size?: number }): React.ReactElement {
+  return (
+    <svg
+      className="msg-badge"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        <linearGradient id="msg-badge-g" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stopColor="#0099ff" />
+          <stop offset=".6" stopColor="#a033ff" />
+          <stop offset=".9" stopColor="#ff5280" />
+          <stop offset="1" stopColor="#ff7061" />
+        </linearGradient>
+      </defs>
+      <circle cx="12" cy="12" r="12" fill="url(#msg-badge-g)" />
+      <path transform="translate(5.4 5.6) scale(.55)" fill="#fff" d={MESSENGER_PATH} />
+    </svg>
+  );
+}
+
 /** Định nghĩa gradient + symbol logo GMS (bản vẽ lại tạm từ fanpage, chờ file gốc: D1, D8). Đặt MỘT lần đầu <body>. */
 export function LogoSprite(): React.ReactElement {
   return (

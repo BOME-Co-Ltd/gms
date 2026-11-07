@@ -39,7 +39,7 @@ export function loadSocial(contentDir: string): Array<{ url: string }> {
 
 export function currentFormStatus(company: LoadedCompany): ReturnType<typeof formStatusOf> {
   return formStatusOf({
-    mailReady: (process.env.CONTACT_MAIL_READY ?? 'false') === 'true',
+    mailReady: (process.env.CONTACT_MAIL_READY ?? 'true') !== 'false', // admin 07/11: mở mặc định
     privacyRequestEmail: company.privacyRequestEmail?.trim(),
     taxId: company.taxId?.trim(),
   });

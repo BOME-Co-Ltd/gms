@@ -3,6 +3,16 @@ import type React from 'react';
 import type { LoadedSiteContent, Locale } from '../../../content/loader.ts';
 import { CtaSection, pick, SubHero } from '../parts.tsx';
 
+// Ảnh minh hoạ từng dòng đầu ra (public/img, ảnh dựng AI ⇒ gắn nhãn C29).
+const OUTPUT_IMG: Record<string, string> = {
+  nilon: '/img/output-plastic-film.jpg',
+  'mun-huu-co': '/img/output-organic-humus.jpg',
+  rdf: '/img/output-rdf.jpg',
+  syngas: '/img/output-syngas.jpg',
+  'than-hoat-tinh': '/img/output-biochar.jpg',
+  'dau-tai-che': '/img/output-pyrolysis-oil.jpg',
+};
+
 export function ProductsPage({ content, locale }: { content: LoadedSiteContent; locale: Locale }): React.ReactElement {
   const L = (vi: string, en: string) => pick(locale, vi, en);
   const group = (title: string, g: 'sang-tuyen' | 'vpd', mist: boolean) => (
@@ -17,6 +27,19 @@ export function ProductsPage({ content, locale }: { content: LoadedSiteContent; 
             .map((item) => (
               <li key={item.name[locale]}>
                 <article className="tcard" data-testid="output-row">
+                  {OUTPUT_IMG[item.key] ? (
+                    <figure className="tc-fig">
+                      <img
+                        src={OUTPUT_IMG[item.key]}
+                        alt={item.name[locale]}
+                        width={1200}
+                        height={900}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      <figcaption className="photo-label">{L('Ảnh minh hoạ', 'Illustration')}</figcaption>
+                    </figure>
+                  ) : null}
                   <h3>{item.name[locale]}</h3>
                   <p className="tag-line">
                     <span className="st">

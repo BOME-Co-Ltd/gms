@@ -13,7 +13,7 @@ const attr = (html: string, re: RegExp) => [...html.matchAll(re)].map((m) => m[1
 const hreflangs = (html: string) => {
   const out: Record<string, string> = {};
   for (const m of html.matchAll(/<link[^>]*rel="alternate"[^>]*>/g)) {
-    const h = m[0].match(/hreflang="([^"]+)"/)?.[1];
+    const h = m[0].match(/hreflang="([^"]+)"/i)?.[1];
     const href = m[0].match(/href="([^"]+)"/)?.[1];
     if (h && href) out[h] = href;
   }
