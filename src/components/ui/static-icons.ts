@@ -57,7 +57,8 @@ function iconNodeOf(name: keyof typeof LUCIDE_EXPORT): IconNode {
   return node;
 }
 
-const attrEsc = (v: string | number): string => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+const attrEsc = (v: string | number): string =>
+  String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
 export const ICONS = LUCIDE_EXPORT;
 

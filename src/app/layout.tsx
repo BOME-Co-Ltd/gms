@@ -21,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
   return (
     <html lang="vi" suppressHydrationWarning>
       <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: chuỗi hằng cố định; truyền bằng children thì React escape dấu nháy làm vỡ script. */}
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
       </head>
       <body id="top" suppressHydrationWarning>

@@ -325,7 +325,8 @@ export function SitePage({ path }: { path: string }): React.ReactElement {
       </SiteFrame>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: buildOrgJsonLd(company, cfg.siteUrl, s.locale) }}
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD do JSON.stringify dựng, `<` đã thay bằng < nên không đóng được thẻ script.
+        dangerouslySetInnerHTML={{ __html: buildOrgJsonLd(company, cfg.siteUrl, s.locale).replace(/</g, '\\u003c') }}
       />
     </>
   );

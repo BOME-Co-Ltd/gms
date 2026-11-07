@@ -189,12 +189,14 @@ export function LogoSprite(): React.ReactElement {
 /** Logo GMS dùng lại symbol ở LogoSprite. `label` rỗng ⇒ trang trí (aria-hidden). */
 export function GmsLogo({ className, label = '' }: { className: string; label?: string }): React.ReactElement {
   return (
+    // biome-ignore lint/a11y/noSvgWithoutTitle: có nhãn thì có <title> + aria-label; không nhãn thì trang trí (aria-hidden), title rỗng sẽ sai.
     <svg
       className={className}
       viewBox="0 0 1930 520"
       {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true })}
       focusable="false"
     >
+      {label ? <title>{label}</title> : null}
       <use href="#logo-gms" />
     </svg>
   );

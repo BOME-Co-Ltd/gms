@@ -23,7 +23,6 @@ export function ContactPage({
   formOpen: boolean;
   hasRecipient: boolean;
 }): React.ReactElement {
-  const isVi = locale === 'vi';
   const L = (vi: string, en: string) => pick(locale, vi, en);
   const hasLegalName = Boolean(company.legalName && company.legalName.trim() !== '');
   // FormStatus (build.ts §9): thiếu mail sẵn sàng / email yêu cầu riêng tư / mã số thuế ⇒ form tạm đóng (F4), build vẫn xanh

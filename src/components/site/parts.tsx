@@ -17,6 +17,7 @@ export function Html({
   as?: 'div' | 'span';
   className?: string;
 }): React.ReactElement {
+  // biome-ignore lint/security/noDangerouslySetInnerHtml: HTML do markdown-it dựng từ content/ của repo lúc build, không nhận dữ liệu người dùng.
   return <Tag className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
@@ -245,7 +246,6 @@ export function BoardFigure({
   branchesId: string;
   anchors: boolean;
 }): React.ReactElement {
-  const isVi = locale === 'vi';
   const outputItem = (o: LoadedSiteContent['outputLines'][number]) => (
     <li className="o" data-testid="output-row" key={o.name[locale]}>
       <span className="o-name">{o.name[locale]}</span>
