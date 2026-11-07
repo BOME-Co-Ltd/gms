@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { copyStaticImages, findBrokenImgRefs, optimizeStaticImages } from '../../../scripts/content/build-site.ts';
-import { buildFooterHtml } from '../../../src/components/ui/static-footer.ts';
 
 function tmp(): string {
   return mkdtempSync(join(tmpdir(), 'gms-img-'));
@@ -82,11 +81,5 @@ describe('PERF-01: nén ảnh tĩnh', () => {
   });
 });
 
-describe('logo chân trang', () => {
-  it('dùng logo thật trong ô trắng bo góc, không còn ô chữ giữ chỗ', () => {
-    const input = { locale: 'vi', legalName: 'Công ty', slogan: 's', year: 2026, explore: [], info: [] };
-    const html = buildFooterHtml(input as unknown as Parameters<typeof buildFooterHtml>[0]);
-    expect(html).toContain('<span class="ft-logo"><img src="/brand/logo-gms-mark.svg"');
-    expect(html).not.toContain('>GMS</span>');
-  });
-});
+// Ca "logo chân trang" chuyển sang e2e (tests/acceptance/wireframe-green.spec.ts WF-FT-LOGO): buildFooterHtml (static-footer.ts)
+// là mã chết sau khi giao diện chuyển sang Next thật; wireframe v0.3.8 dùng <svg class="ft-logo" role="img" aria-label="Logo GMS">.
