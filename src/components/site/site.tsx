@@ -1,40 +1,24 @@
-// NEXT-1: một đường duy nhất cho giao diện web — `next build` (output: export ⇒ out/).
+// NEXT-1: một đường duy nhất cho giao diện web: `next build` (output: export ⇒ out/).
 // Mỗi trang Next gọi `<SitePage path=... />` + `siteMetadata(path)`; danh sách trang, tiêu đề, noindex, ảnh og
-// suy từ content/ tại thời điểm build (cùng quy tắc build-site.ts cũ). Markup thân trang vẫn là bản đã khớp wireframe
-// v0.3.8 (chuỗi HTML trong scripts/content/build-site.ts).
-// shortcut: thân trang chèn qua dangerouslySetInnerHTML (một nguồn markup, không JS client riêng); nâng cấp: chuyển
-// từng renderXxx sang thành phần JSX theo trang (NEXT-2), mỗi lượt một trang.
+// suy từ content/ lúc build. Thân trang là thành phần React trong ./pages (markup theo wireframe green v0.3.8).
 import type { Metadata } from 'next';
 import type React from 'react';
 import { PAGE_SIZE, ROUTES } from '../../../contracts/routes.ts';
-import {
-  currentFormStatus,
-  detailPage,
-  escHtml,
-  formatDateLocale,
-  loadSocial,
-  MENU_LABELS,
-  MENU_ORDER,
-  PAGE_DESCRIPTIONS,
-  renderAboutPage,
-  renderCareersListPage,
-  renderContactPage,
-  renderErrorBody,
-  renderFaqPage,
-  renderHomePage,
-  renderNewsListPage,
-  renderPrivacyPage,
-  renderProductsPage,
-  renderProjectsListPage,
-  renderShell,
-  renderSolutionsPage,
-  renderTechnologyPage,
-  type SiteConfig,
-  type StaticPageKey,
-  siteConfigFromEnv,
-} from '../../../scripts/content/build-site.ts';
 import { type LoadedSiteContent, type Locale, loadSiteContent } from '../../content/loader.ts';
-import { icon } from '../ui/static-icons.ts';
+import { buildOrgJsonLd, currentFormStatus, loadSocial, type SiteConfig, siteConfigFromEnv } from './build/config.ts';
+import { Icon } from './icons.tsx';
+import { formatDateLocale, MENU_LABELS, MENU_ORDER, PAGE_DESCRIPTIONS, type StaticPageKey } from './menu.ts';
+import { AboutPage } from './pages/About.tsx';
+import { ContactPage } from './pages/Contact.tsx';
+import { DetailPage } from './pages/Detail.tsx';
+import { ErrorBody } from './pages/ErrorBody.tsx';
+import { HomePage } from './pages/Home.tsx';
+import { CareersListPage, FaqPage, NewsListPage, ProjectsListPage } from './pages/Lists.tsx';
+import { PrivacyPage } from './pages/Privacy.tsx';
+import { ProductsPage } from './pages/Products.tsx';
+import { SolutionsPage } from './pages/Solutions.tsx';
+import { TechnologyPage } from './pages/Technology.tsx';
+import { type ShellCompany, SiteFrame } from './Shell.tsx';
 
 export type PageSpec = {
   path: string;
@@ -46,13 +30,13 @@ export type PageSpec = {
   noindex: boolean;
   ogImageRel: string;
   activeKey?: StaticPageKey;
-  render: () => string;
+  render: () => React.ReactElement;
 };
 
 type Site = {
   cfg: SiteConfig;
   loaded: LoadedSiteContent;
-  company: LoadedSiteContent['company'] & { social: ReturnType<typeof loadSocial> };
+  company: ShellCompany;
   specs: Map<string, PageSpec>;
 };
 
@@ -66,30 +50,34 @@ function build(): Site {
   if (loaded.errors.length > 0) {
     throw new Error(loaded.errors.map((e) => `[${e.code}] ${e.message}`).join('\n'));
   }
-  const company = { ...loaded.company, social: loadSocial(cfg.contentDir) };
+  const company: ShellCompany = { ...loaded.company, social: loadSocial(cfg.contentDir) };
   const isStaging = cfg.siteEnv === 'staging';
   const formOpen = currentFormStatus(loaded.company).open;
+  const hasRecipient = cfg.contactRecipient.trim() !== '';
   const specs = new Map<string, PageSpec>();
   const add = (s: PageSpec) => specs.set(s.path, s);
 
   for (const locale of ['vi', 'en'] as Locale[]) {
+    const isVi = locale === 'vi';
     for (const key of MENU_ORDER) {
       const isEmptyList =
         (key === 'projects' && loaded.projects[locale].length === 0) ||
         (key === 'careers' && loaded.jobs[locale].length === 0) ||
         (key === 'faq' && loaded.faq[locale].length === 0);
-      const renderers: Record<StaticPageKey, () => string> = {
-        home: () => renderHomePage(loaded, locale),
-        about: () => renderAboutPage(loaded, locale),
-        solutions: () => renderSolutionsPage(loaded, locale),
-        technology: () => renderTechnologyPage(loaded, locale),
-        products: () => renderProductsPage(loaded, locale),
-        news: () => renderNewsListPage(loaded, locale, 1),
-        projects: () => renderProjectsListPage(loaded, locale),
-        careers: () => renderCareersListPage(loaded, locale),
-        faq: () => renderFaqPage(loaded, locale),
-        contact: () => renderContactPage(loaded, locale, cfg.contactRecipient, formOpen),
-        privacy: () => renderPrivacyPage(loaded, locale),
+      const renderers: Record<StaticPageKey, () => React.ReactElement> = {
+        home: () => <HomePage content={loaded} locale={locale} />,
+        about: () => <AboutPage content={loaded} locale={locale} />,
+        solutions: () => <SolutionsPage content={loaded} locale={locale} />,
+        technology: () => <TechnologyPage content={loaded} locale={locale} />,
+        products: () => <ProductsPage content={loaded} locale={locale} />,
+        news: () => <NewsListPage content={loaded} locale={locale} pageNum={1} />,
+        projects: () => <ProjectsListPage content={loaded} locale={locale} />,
+        careers: () => <CareersListPage content={loaded} locale={locale} />,
+        faq: () => <FaqPage content={loaded} locale={locale} />,
+        contact: () => (
+          <ContactPage content={loaded} locale={locale} company={company} formOpen={formOpen} hasRecipient={hasRecipient} />
+        ),
+        privacy: () => <PrivacyPage content={loaded} locale={locale} />,
       };
       add({
         path: ROUTES[key][locale],
@@ -110,7 +98,7 @@ function build(): Site {
       const viPath = `${ROUTES.news.vi}/trang/${p}`;
       const enPath = `${ROUTES.news.en}/page/${p}`;
       add({
-        path: locale === 'vi' ? viPath : enPath,
+        path: isVi ? viPath : enPath,
         locale,
         viPath,
         enPath,
@@ -119,31 +107,31 @@ function build(): Site {
         noindex: isStaging,
         ogImageRel: 'og/default.png',
         activeKey: 'news',
-        render: () => renderNewsListPage(loaded, locale, p),
+        render: () => <NewsListPage content={loaded} locale={locale} pageNum={p} />,
       });
     }
 
     for (const n of loaded.news[locale]) {
-      const viSlug = locale === 'vi' ? n.slug : (n.counterpartSlug ?? n.slug);
-      const enSlug = locale === 'en' ? n.slug : (n.counterpartSlug ?? n.slug);
+      const viSlug = isVi ? n.slug : (n.counterpartSlug ?? n.slug);
+      const enSlug = !isVi ? n.slug : (n.counterpartSlug ?? n.slug);
       const viPath = `${ROUTES.news.vi}/${viSlug}`;
       const enPath = `${ROUTES.news.en}/${enSlug}`;
-      let heroHtml = '';
+      let lead: { src: string; alt: string; label?: string } | undefined;
       let ogImageRel = 'og/default.png';
       if (n.heroImage) {
         const imgObj = loaded.images.get(n.heroImage);
         if (imgObj?.allowedInBuild) {
           const publicImg = `img/${n.heroImage.replace(/^images\//, '')}`;
           if (imgObj.allowedForOg) ogImageRel = publicImg;
-          const caption =
-            imgObj.kind === 'anh-dung-ai'
-              ? `<figcaption class="photo-label" data-testid="photo-label">${locale === 'vi' ? 'Phối cảnh dự kiến' : "Artist's impression"}</figcaption>`
-              : '';
-          heroHtml = `<figure class="fig lead-fig"><div class="frame-wf r169"><img src="/${publicImg}" alt="${escHtml(imgObj.alt[locale])}" width="1200" height="675" />${caption}</div></figure>`;
+          lead = {
+            src: `/${publicImg}`,
+            alt: imgObj.alt[locale],
+            label: imgObj.kind === 'anh-dung-ai' ? (isVi ? 'Phối cảnh dự kiến' : "Artist's impression") : undefined,
+          };
         }
       }
       add({
-        path: locale === 'vi' ? viPath : enPath,
+        path: isVi ? viPath : enPath,
         locale,
         viPath,
         enPath,
@@ -152,26 +140,29 @@ function build(): Site {
         noindex: isStaging,
         ogImageRel,
         activeKey: 'news',
-        render: () =>
-          detailPage(loaded, locale, {
-            listLabel: locale === 'vi' ? 'Tin tức / Hành trình' : 'News / Journey',
-            listHref: ROUTES.news[locale],
-            title: n.title,
-            metaHtml: `<time datetime="${escHtml(n.date)}">${escHtml(formatDateLocale(n.date, locale))}</time>`,
-            leadFigureHtml: heroHtml,
-            bodyHtml: n.bodyHtml,
-            backLabel: locale === 'vi' ? 'Tất cả tin tức' : 'All news',
-          }),
+        render: () => (
+          <DetailPage
+            content={loaded}
+            locale={locale}
+            listLabel={isVi ? 'Tin tức / Hành trình' : 'News / Journey'}
+            listHref={ROUTES.news[locale]}
+            title={n.title}
+            meta={<time dateTime={n.date}>{formatDateLocale(n.date, locale)}</time>}
+            lead={lead}
+            bodyHtml={n.bodyHtml}
+            backLabel={isVi ? 'Tất cả tin tức' : 'All news'}
+          />
+        ),
       });
     }
 
     for (const p of loaded.projects[locale]) {
-      const viSlug = locale === 'vi' ? p.slug : (p.counterpartSlug ?? p.slug);
-      const enSlug = locale === 'en' ? p.slug : (p.counterpartSlug ?? p.slug);
+      const viSlug = isVi ? p.slug : (p.counterpartSlug ?? p.slug);
+      const enSlug = !isVi ? p.slug : (p.counterpartSlug ?? p.slug);
       const viPath = `${ROUTES.projects.vi}/${viSlug}`;
       const enPath = `${ROUTES.projects.en}/${enSlug}`;
       add({
-        path: locale === 'vi' ? viPath : enPath,
+        path: isVi ? viPath : enPath,
         locale,
         viPath,
         enPath,
@@ -180,29 +171,34 @@ function build(): Site {
         noindex: isStaging,
         ogImageRel: 'og/default.png',
         activeKey: 'projects',
-        render: () =>
-          detailPage(loaded, locale, {
-            listLabel: locale === 'vi' ? 'Dự án / Thư viện' : 'Projects / Gallery',
-            listHref: ROUTES.projects[locale],
-            title: p.title,
-            metaHtml: `<time datetime="${escHtml(p.date)}">${escHtml(formatDateLocale(p.date, locale))}</time><span>${escHtml(p.category)}</span>`,
-            bodyHtml: p.bodyHtml,
-            backLabel: locale === 'vi' ? 'Tất cả dự án' : 'All projects',
-          }),
+        render: () => (
+          <DetailPage
+            content={loaded}
+            locale={locale}
+            listLabel={isVi ? 'Dự án / Thư viện' : 'Projects / Gallery'}
+            listHref={ROUTES.projects[locale]}
+            title={p.title}
+            meta={
+              <>
+                <time dateTime={p.date}>{formatDateLocale(p.date, locale)}</time>
+                <span>{p.category}</span>
+              </>
+            }
+            bodyHtml={p.bodyHtml}
+            backLabel={isVi ? 'Tất cả dự án' : 'All projects'}
+          />
+        ),
       });
     }
 
     for (const j of loaded.jobs[locale]) {
-      const viSlug = locale === 'vi' ? j.slug : (j.counterpartSlug ?? j.slug);
-      const enSlug = locale === 'en' ? j.slug : (j.counterpartSlug ?? j.slug);
+      const viSlug = isVi ? j.slug : (j.counterpartSlug ?? j.slug);
+      const enSlug = !isVi ? j.slug : (j.counterpartSlug ?? j.slug);
       const viPath = `${ROUTES.careers.vi}/${viSlug}`;
       const enPath = `${ROUTES.careers.en}/${enSlug}`;
-      const deadlineLabel =
-        locale === 'vi'
-          ? `Hạn nộp: ${formatDateLocale(j.validThrough, 'vi')}`
-          : `Deadline: ${formatDateLocale(j.validThrough, 'en')}`;
+      const deadlineLabel = `${isVi ? 'Hạn nộp' : 'Deadline'}: ${formatDateLocale(j.validThrough, locale)}`;
       add({
-        path: locale === 'vi' ? viPath : enPath,
+        path: isVi ? viPath : enPath,
         locale,
         viPath,
         enPath,
@@ -211,21 +207,28 @@ function build(): Site {
         noindex: isStaging,
         ogImageRel: 'og/default.png',
         activeKey: 'careers',
-        render: () =>
-          detailPage(loaded, locale, {
-            listLabel: locale === 'vi' ? 'Tuyển dụng' : 'Careers',
-            listHref: ROUTES.careers[locale],
-            title: j.title,
-            metaHtml: `<p class="il">${icon('circle-alert', { className: 'ico' })}<strong>${escHtml(deadlineLabel)}</strong></p>`,
-            bodyHtml: j.bodyHtml,
-            backLabel: locale === 'vi' ? 'Tất cả vị trí tuyển dụng' : 'All open positions',
-          }),
+        render: () => (
+          <DetailPage
+            content={loaded}
+            locale={locale}
+            listLabel={isVi ? 'Tuyển dụng' : 'Careers'}
+            listHref={ROUTES.careers[locale]}
+            title={j.title}
+            meta={
+              <p className="il">
+                <Icon name="circle-alert" className="ico" />
+                <strong>{deadlineLabel}</strong>
+              </p>
+            }
+            bodyHtml={j.bodyHtml}
+            backLabel={isVi ? 'Tất cả vị trí tuyển dụng' : 'All open positions'}
+          />
+        ),
       });
     }
 
     // M13: 404/500. Đường dẫn giả (`/404`, `/en/404`) chỉ để tra cứu; tệp ra là 404.html / 500.html.
     for (const kind of ['404', '500'] as const) {
-      const isVi = locale === 'vi';
       const path = isVi ? `/${kind}` : `/en/${kind}`;
       add({
         path,
@@ -250,7 +253,7 @@ function build(): Site {
               : 'Please try again in a few minutes.',
         noindex: true,
         ogImageRel: 'og/default.png',
-        render: () => renderErrorBody(locale, kind),
+        render: () => <ErrorBody locale={locale} kind={kind} />,
       });
     }
   }
@@ -264,7 +267,7 @@ function site(): Site {
 
 function specOf(path: string): PageSpec {
   let s = site().specs.get(path);
-  // Giữ chỗ cho tuyến động rỗng (Next export cấm generateStaticParams rỗng); postBuild xoá file `_.html` này.
+  // Giữ chỗ cho tuyến động rỗng (Next export cấm generateStaticParams rỗng); bước kiểm sau build xoá file `_.html` này.
   if (!s && path.endsWith('/_')) s = site().specs.get(path.startsWith('/en') ? '/en/404' : '/404');
   if (!s) throw new Error(`Không có trang cho đường dẫn ${path}`);
   return s;
@@ -309,22 +312,12 @@ export function siteMetadata(path: string): Metadata {
 export function SitePage({ path }: { path: string }): React.ReactElement {
   const s = specOf(path);
   const { cfg, company } = site();
-  const parts = renderShell({
-    locale: s.locale,
-    viPath: s.viPath,
-    enPath: s.enPath,
-    siteUrl: cfg.siteUrl,
-    company,
-    activePageKey: s.activeKey,
-    bodyHtml: s.render(),
-  });
-  const contents = { display: 'contents' } as const;
   return (
     <>
-      <div style={contents} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: parts.before }} />
-      <main id="noi-dung" tabIndex={-1} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: parts.main }} />
-      <div style={contents} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: parts.after }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: parts.orgJsonLd }} />
+      <SiteFrame locale={s.locale} viPath={s.viPath} enPath={s.enPath} company={company} active={s.activeKey}>
+        {s.render()}
+      </SiteFrame>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: buildOrgJsonLd(company, cfg.siteUrl, s.locale) }} />
     </>
   );
 }

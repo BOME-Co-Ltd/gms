@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type React from 'react';
-import { INLINE_STYLES } from '../../scripts/content/build-site.ts';
+import '../styles/site.css';
 
 // Biểu tượng dùng chung mọi trang; title/description/canonical/hreflang/robots/og do từng trang khai (siteMetadata).
 export const metadata: Metadata = {
@@ -15,13 +15,13 @@ export const metadata: Metadata = {
   },
 };
 
-// lang="vi" mặc định; trang /en/** được sửa thành "en" ở bước hậu kỳ build (postBuild, build-site.ts).
+// lang="vi" mặc định; trang /en/** được sửa thành "en" ở bước hậu kỳ build (src/components/site/build/verify.ts).
+// Script nhỏ thêm lớp `js` trước khi vẽ để trạng thái đầu của hiệu ứng không nhấp nháy.
 export default function RootLayout({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <html lang="vi" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
-        <style dangerouslySetInnerHTML={{ __html: INLINE_STYLES }} />
       </head>
       <body id="top" suppressHydrationWarning>
         {children}
