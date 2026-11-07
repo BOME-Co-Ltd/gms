@@ -2,37 +2,73 @@
 // Không font biểu tượng, không sprite/CDN, không tải gì lúc chạy; màu qua currentColor.
 // Chỉ build-site.ts import module này (bản build tĩnh); mã Next dùng thẳng component lucide-react.
 import {
+  ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
   Check,
+  ChevronRight,
   Circle,
   CircleAlert,
+  CircleCheck,
   Clock,
+  Cpu,
   ExternalLink,
+  FileQuestionMark,
+  FileText,
+  HeartHandshake,
+  Image,
+  Info,
+  LoaderCircle,
   type LucideIcon,
   Mail,
+  Map as MapIcon,
   MapPin,
   Menu,
+  MoveHorizontal,
+  Newspaper,
   Phone,
   ReceiptText,
+  Recycle,
+  ServerCrash,
+  ShieldCheck,
+  Sprout,
   X,
 } from 'lucide-react';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 export const ICONS = {
+  'arrow-down': ArrowDown,
   'arrow-left': ArrowLeft,
   'arrow-right': ArrowRight,
+  'arrow-up': ArrowUp,
   check: Check,
+  'chevron-right': ChevronRight,
   circle: Circle,
   'circle-alert': CircleAlert,
+  'circle-check': CircleCheck,
   clock: Clock,
+  cpu: Cpu,
   'external-link': ExternalLink,
+  'file-question': FileQuestionMark,
+  'file-text': FileText,
+  'heart-handshake': HeartHandshake,
+  image: Image,
+  info: Info,
+  'loader-circle': LoaderCircle,
   mail: Mail,
+  map: MapIcon,
   'map-pin': MapPin,
   menu: Menu,
+  'move-horizontal': MoveHorizontal,
+  newspaper: Newspaper,
   phone: Phone,
   'receipt-text': ReceiptText,
+  recycle: Recycle,
+  'server-crash': ServerCrash,
+  'shield-check': ShieldCheck,
+  sprout: Sprout,
   x: X,
 } as const satisfies Record<string, LucideIcon>;
 
@@ -57,6 +93,45 @@ export function zaloLogo(opts: { size?: number; className?: string } = {}): stri
     `<rect width="24" height="24" fill="${ZALO_BLUE}"/>` +
     `<path fill="#fff" transform="translate(3 3.6) scale(.75)" d="${ZALO_PATH}"/></svg>`
   );
+}
+
+/** Logo Zalo dạng ô bo góc (wireframe `i-zalo`, V33): nền #0068FF, bóng thoại trắng, chữ Zalo. */
+export function zaloMark(opts: { size?: number; className?: string } = {}): string {
+  const { size = 24, className = 'zalo-mark' } = opts;
+  return (
+    `<svg class="${className}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" focusable="false">` +
+    `<rect width="24" height="24" rx="6" fill="${ZALO_BLUE}"/><ellipse cx="12" cy="11.3" rx="9" ry="7.1" fill="#fff"/>` +
+    `<path d="M5.2 15.4 4.3 19.8l4.6-2.6z" fill="#fff"/>` +
+    `<path transform="translate(5.4 4.7) scale(.55)" fill="${ZALO_BLUE}" d="${ZALO_PATH}"/></svg>`
+  );
+}
+
+// Messenger và Facebook: simple-icons 13.21.0 (CC0-1.0), viewBox 24, tô bằng fill (wireframe `i-messenger`, `i-facebook`, V33).
+const MESSENGER_PATH =
+  'M.001 11.639C.001 4.949 5.241 0 12.001 0S24 4.95 24 11.639c0 6.689-5.24 11.638-12 11.638-1.21 0-2.38-.16-3.47-.46a.96.96 0 00-.64.05l-2.39 1.05a.96.96 0 01-1.35-.85l-.07-2.14a.97.97 0 00-.32-.68A11.39 11.389 0 01.002 11.64zm8.32-2.19l-3.52 5.6c-.35.53.32 1.139.82.75l3.79-2.87c.26-.2.6-.2.87 0l2.8 2.1c.84.63 2.04.4 2.6-.48l3.52-5.6c.35-.53-.32-1.13-.82-.75l-3.79 2.87c-.25.2-.6.2-.86 0l-2.8-2.1a1.8 1.8 0 00-2.61.48z';
+const FACEBOOK_PATH =
+  'M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z';
+
+export function brandMark(name: 'messenger' | 'facebook', className = 'brand-mark'): string {
+  const d = name === 'messenger' ? MESSENGER_PATH : FACEBOOK_PATH;
+  const extra = name === 'facebook' ? ' fb-mark' : '';
+  return `<svg class="${className}${extra}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${d}"/></svg>`;
+}
+
+/** Logo GMS (bản vẽ lại tạm từ fanpage, chờ file gốc: D1, D8). Định nghĩa gradient + symbol đặt MỘT lần ở đầu <body>. */
+export const LOGO_SPRITE_HTML = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<radialGradient id="gms-gm" gradientUnits="userSpaceOnUse" cx="690" cy="545" r="875" gradientTransform="translate(690 545) scale(1 0.643) translate(-690 -545)"><stop offset="0" stop-color="#A4B93A"/><stop offset="0.34" stop-color="#90AC3C"/><stop offset="0.49" stop-color="#648F40"/><stop offset="0.66" stop-color="#40773F"/><stop offset="0.78" stop-color="#27673C"/><stop offset="0.86" stop-color="#22633B"/><stop offset="1" stop-color="#0F5838"/></radialGradient>
+<linearGradient id="gms-s" gradientUnits="userSpaceOnUse" x1="0" y1="545" x2="0" y2="1037"><stop offset="0.15" stop-color="#1C70B8"/><stop offset="0.315" stop-color="#2367B0"/><stop offset="0.5" stop-color="#2059A6"/><stop offset="0.7" stop-color="#204F9F"/><stop offset="0.84" stop-color="#244999"/></linearGradient>
+<symbol id="logo-gms" viewBox="60 530 1930 520">
+<path fill="url(#gms-gm)" d="M292,545 L653,545 A98 98 0 0 1 555,643 L310,643 A122 122 0 0 0 188,765 L188,817 A122 122 0 0 0 310,939 L527,939 Q537,939 537,929 L537,840 L322,840 A98 98 0 0 1 420,742 L595,742 A58 58 0 0 1 653,800 L653,922 A115 115 0 0 1 538,1037 L292,1037 C149,1037 72,960 72,817 L72,765 C72,622 149,545 292,545 Z"/>
+<path fill="url(#gms-gm)" d="M732,1037 L732,605 A60 60 0 0 1 792,545 L848,545 L1023,693 L1198,545 L1254,545 A60 60 0 0 1 1314,605 L1314,981 A56 56 0 0 1 1258,1037 L1198,1037 L1198,697 L1053,818 Q1023,844 993,818 L848,697 L848,981 A56 56 0 0 1 792,1037 Z"/>
+<path fill="url(#gms-s)" d="M1974,545 C1974,584.2 1915.2,643 1876,643 L1559,643 A49.5 49.5 0 0 0 1559,742 L1826.5,742 A147.5 147.5 0 0 1 1826.5,1037 L1393,1037 C1393,997.8 1451.8,939 1491,939 L1808,939 A49.5 49.5 0 0 0 1808,840 L1540,840 A147.5 147.5 0 0 1 1540,545 Z"/>
+</symbol></defs></svg>`;
+
+/** Logo GMS dùng lại symbol ở LOGO_SPRITE_HTML. `label` rỗng ⇒ trang trí (aria-hidden). */
+export function gmsLogo(className: string, label = ''): string {
+  const a = label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"';
+  return `<svg class="${className}" viewBox="0 0 1930 520" ${a} focusable="false"><use href="#logo-gms"/></svg>`;
 }
 
 const cache = new Map<string, string>();
