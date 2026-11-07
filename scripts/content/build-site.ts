@@ -6,7 +6,8 @@ import { parse as parseYaml } from 'yaml';
 import { formStatusOf } from '../../contracts/build.ts';
 import { PAGE_SIZE, ROUTES } from '../../contracts/routes.ts';
 import { buildFooterHtml, FOOTER_CSS, type FooterLink, parseSocial } from '../../src/components/ui/static-footer.ts';
-import { icon, zaloLogo } from '../../src/components/ui/static-icons.ts';
+import { icon, LOGO_SPRITE_HTML, zaloLogo } from '../../src/components/ui/static-icons.ts';
+import { buildFabsHtml, buildHeaderHtml, WF_CSS, WF_SCRIPT, type WfLink } from '../../src/components/ui/wf-shell.ts';
 import {
   type LoadedCompany,
   type LoadedImage,
@@ -67,6 +68,10 @@ const MENU_LABELS: Record<Locale, Record<StaticPageKey, string>> = {
   },
 };
 
+// ux-spec V26: menu chính 7 mục; menu phụ 4 mục (thứ tự theo wireframe: Tuyển dụng · FAQ · Chính sách bảo mật · Liên hệ).
+const WF_MAIN_KEYS: StaticPageKey[] = ['home', 'about', 'solutions', 'technology', 'products', 'news', 'projects'];
+const WF_SUB_KEYS: StaticPageKey[] = ['careers', 'faq', 'privacy', 'contact'];
+
 // ux-spec §14a: hai nhóm liên kết chân trang. Trang chủ đã có ở logo đầu trang nên không lặp.
 const FOOTER_EXPLORE: StaticPageKey[] = ['about', 'solutions', 'technology', 'products', 'news', 'projects'];
 const FOOTER_INFO: StaticPageKey[] = ['careers', 'faq', 'privacy', 'contact'];
@@ -103,30 +108,6 @@ const PAGE_DESCRIPTIONS: Record<Locale, Record<StaticPageKey, string>> = {
     privacy: 'Privacy policy and personal data protection under Law No. 91/2025/QH15.',
   },
 };
-
-const INLINE_LOGO_MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="60 530 1930 520" width="104" height="28" role="img" aria-label="GMS">
-  <defs>
-    <radialGradient id="gms-gm" gradientUnits="userSpaceOnUse" cx="690" cy="545" r="875" gradientTransform="translate(690 545) scale(1 0.643) translate(-690 -545)">
-      <stop offset="0" stop-color="#A4B93A"/>
-      <stop offset="0.34" stop-color="#90AC3C"/>
-      <stop offset="0.49" stop-color="#648F40"/>
-      <stop offset="0.66" stop-color="#40773F"/>
-      <stop offset="0.78" stop-color="#27673C"/>
-      <stop offset="0.86" stop-color="#22633B"/>
-      <stop offset="1" stop-color="#0F5838"/>
-    </radialGradient>
-    <linearGradient id="gms-s" gradientUnits="userSpaceOnUse" x1="0" y1="545" x2="0" y2="1037">
-      <stop offset="0.15" stop-color="#1C70B8"/>
-      <stop offset="0.315" stop-color="#2367B0"/>
-      <stop offset="0.5" stop-color="#2059A6"/>
-      <stop offset="0.7" stop-color="#204F9F"/>
-      <stop offset="0.84" stop-color="#244999"/>
-    </linearGradient>
-  </defs>
-  <path fill="url(#gms-gm)" d="M292,545 L653,545 A98 98 0 0 1 555,643 L310,643 A122 122 0 0 0 188,765 L188,817 A122 122 0 0 0 310,939 L527,939 Q537,939 537,929 L537,840 L322,840 A98 98 0 0 1 420,742 L595,742 A58 58 0 0 1 653,800 L653,922 A115 115 0 0 1 538,1037 L292,1037 C149,1037 72,960 72,817 L72,765 C72,622 149,545 292,545 Z"/>
-  <path fill="url(#gms-gm)" d="M732,1037 L732,605 A60 60 0 0 1 792,545 L848,545 L1023,693 L1198,545 L1254,545 A60 60 0 0 1 1314,605 L1314,981 A56 56 0 0 1 1258,1037 L1198,1037 L1198,697 L1053,818 Q1023,844 993,818 L848,697 L848,981 A56 56 0 0 1 792,1037 Z"/>
-  <path fill="url(#gms-s)" d="M1974,545 C1974,584.2 1915.2,643 1876,643 L1559,643 A49.5 49.5 0 0 0 1559,742 L1826.5,742 A147.5 147.5 0 0 1 1826.5,1037 L1393,1037 C1393,997.8 1451.8,939 1491,939 L1808,939 A49.5 49.5 0 0 0 1808,840 L1540,840 A147.5 147.5 0 0 1 1540,545 Z"/>
-</svg>`;
 
 export function escHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -401,47 +382,6 @@ input:focus, input:focus-visible, select:focus, select:focus-visible, textarea:f
 }
 .skip-link:focus { top: 8px; color: var(--white); }
 
-/* Header & Navigation */
-.topbar { background: var(--g900); color: var(--white); font-size: 14px; padding: 6px 0; }
-.topbar .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
-.topbar p { margin: 0; }
-.topbar a { color: var(--white); text-decoration: none; font-weight: 600; }
-.site-header {
-  position: sticky; top: 0; z-index: 50;
-  background: rgb(255 255 255 / 0.98);
-  border-bottom: 1px solid var(--line);
-  padding: 4px 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-/* Thứ tự DOM = thứ tự tab ux-spec §5.1 (logo, menu chính, rồi ngôn ngữ); bố cục nhìn thấy do grid-area quyết định. */
-.header-grid {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand tools" "nav nav";
-  align-items: center; column-gap: 12px; padding-top: 8px; padding-bottom: 8px;
-}
-.header-grid > .brand-link { grid-area: brand; min-width: 0; min-height: 44px; }
-.brand-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.header-tools { grid-area: tools; display: flex; align-items: center; gap: 8px; }
-.header-nav { grid-area: nav; padding: 4px 0; }
-.header-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
-.brand-link { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--g900); font-weight: 800; font-size: 1.05rem; padding: 4px 6px; }
-nav[data-testid="nav-main"] { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 3px; width: 100%; }
-nav[data-testid="nav-main"] a {
-  display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 6px 8px;
-  border-radius: var(--radius-s); color: var(--g900); text-decoration: none;
-  font-weight: 600; font-size: 0.85rem; white-space: nowrap;
-}
-nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); color: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-.lang-switcher {
-  display: inline-flex; gap: 4px; border: 1.5px solid var(--line); border-radius: 999px; padding: 3px; align-items: center; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-.lang-switcher a {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 44px; min-height: 40px; padding: 0 10px; border-radius: 999px; text-decoration: none;
-  color: var(--g900); font-weight: 600; font-size: 0.85rem; white-space: nowrap;
-  position: relative; cursor: pointer;
-}
-.lang-switcher a[aria-current="true"] { background: var(--g900); color: var(--white); text-decoration: underline; text-underline-offset: 3px; box-shadow: 0 2px 6px rgba(15, 88, 56, 0.28); }
-
 /* Buttons & Badges */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -453,12 +393,6 @@ nav[data-testid="nav-main"] a[aria-current="page"] { background: var(--g900); co
 .btn-light { background: #ffffff; color: var(--g900); border-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
 .btn-ghost { background: transparent; border-color: rgba(255, 255, 255, 0.85); color: var(--white); }
 .btn-secondary, .btn-outline { background: var(--white); border-color: var(--g700); color: var(--g700); }
-/* ux-spec V25: hover chỉ phóng to (nút 1.08, menu 1.05), không đổi màu/viền/bóng; reduced motion thì không scale. */
-@media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .btn, .floating-circle-btn, .lang-switcher a, nav[data-testid="nav-main"] a, .mobile-menu-btn { transition: transform 0.16s var(--ease-spring); }
-  .btn:hover, .floating-circle-btn:hover, .mobile-menu-btn:hover { transform: scale(1.08); }
-  .lang-switcher a:hover, nav[data-testid="nav-main"] a:hover { transform: scale(1.05); }
-}
 .btn[aria-pressed="true"] { background: var(--g900); color: var(--white); border-color: var(--g900); }
 
 .badge {
@@ -650,47 +584,6 @@ input[type="checkbox"] {
   transform: translateY(-4px); box-shadow: 0 12px 28px -8px rgba(15, 88, 56, 0.16) !important;
 }
 
-/* Floating Contact Buttons */
-.floating-contact-group {
-  position: fixed; bottom: 24px; right: 24px; z-index: 99;
-  display: flex; flex-direction: column; gap: 12px; align-items: flex-end;
-}
-.floating-circle-btn {
-  display: flex; align-items: center; justify-content: center;
-  width: 56px; height: 56px; min-width: 56px; min-height: 56px; padding: 0; border-radius: 16px;
-  color: #ffffff; text-decoration: none; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  position: relative; cursor: pointer;
-}
-.floating-btn-phone { background: #27673C; }
-/* Logo Zalo thật: ngoại lệ thương hiệu màu #0068FF (ux-spec Q-UX-18); nền trắng để logo đúng màu. */
-.floating-btn-zalo { background: #0068FF; overflow: hidden; }
-.floating-btn-zalo > svg { width: 56px; height: 56px; }
-
-/* Mobile Menu */
-.mobile-menu-btn {
-  display: none; align-items: center; justify-content: center;
-  min-width: 44px; min-height: 44px; padding: 8px; border-radius: 8px;
-  border: 1px solid var(--line); background: #ffffff; color: var(--g900);
-  cursor: pointer;
-}
-@media (max-width: 1023px) {
-  .mobile-menu-btn { display: inline-flex; }
-  .header-nav { display: none; }
-  .header-nav.is-mobile-open {
-    display: block !important; padding: 12px 0 16px; border-top: 1px solid var(--line);
-  }
-  .header-nav.is-mobile-open nav[data-testid="nav-main"] {
-    flex-direction: column; align-items: stretch; gap: 6px;
-  }
-  .header-nav.is-mobile-open nav[data-testid="nav-main"] a {
-    width: 100%; justify-content: flex-start; padding: 10px 14px; font-size: 0.95rem; border-radius: 8px;
-  }
-}
-@media (min-width: 1024px) {
-  .mobile-menu-btn { display: none !important; }
-  .header-nav { display: block !important; }
-}
-
 .error-box { background: var(--error-bg); color: var(--error); border: 1px solid var(--error); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
 .notice-box { background: var(--tint); color: var(--g900); border: 1px solid var(--line); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
 .notice-box[hidden] { display: none; }
@@ -698,8 +591,6 @@ input[type="checkbox"] {
 .field-error > svg { flex: none; margin-top: 2px; }
 .field-error[hidden] { display: none; }
 .btn > svg { flex: none; }
-.mobile-menu-btn .ic-close, .mobile-menu-btn[aria-expanded="true"] .ic-open { display: none; }
-.mobile-menu-btn[aria-expanded="true"] .ic-close { display: block; }
 [aria-invalid="true"] { border-color: var(--error) !important; }
 .human-slot { min-height: 65px; margin-bottom: 12px; }
 .error-box ul, .notice-box ul { margin: 0; padding-left: 20px; }
@@ -708,6 +599,7 @@ input[type="checkbox"] {
 .hp-trap { position: absolute !important; left: -9999px !important; width: 1px !important; height: 1px !important; overflow: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 
 ${FOOTER_CSS}
+${WF_CSS}
 
 @media (max-width: 480px) {
   .wrap, .container { padding: 0 14px; }
@@ -720,8 +612,7 @@ ${FOOTER_CSS}
   a, button, input, select, textarea, summary,
   .card, .output-card, .pillar-card, .figure-card,
   .btn, .btn-light, .btn-ghost, .btn-secondary, .btn-outline,
-  .floating-circle-btn,
-  nav a, .lang-switcher a, .site-header, .site-footer {
+  .fab, .lang a, .hdr, .ft {
     animation: none !important;
     animation-duration: 0s !important;
     animation-delay: 0s !important;
@@ -771,12 +662,14 @@ function renderLayout(opts: {
   const skipText = locale === 'vi' ? 'Bỏ qua, tới nội dung chính' : 'Skip to main content';
   const brandName = company.legalName || (locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen');
 
-  // prd.md §4 S1: menu chính đủ 11 trang, theo thứ tự MENU_ORDER
-  const navLinks = MENU_ORDER.map((k) => {
-    const href = ROUTES[k][locale];
-    const current = activePageKey === k ? ' aria-current="page"' : '';
-    return `<a href="${href}" data-testid="nav-menu"${current}>${escHtml(MENU_LABELS[locale][k])}</a>`;
-  }).join('');
+  // prd.md §4 S1: đủ 11 trang. Wireframe V26: 7 mục ở menu chính, 4 mục (tuyển dụng, FAQ, chính sách, liên hệ) ở menu phụ.
+  const wfLink = (k: StaticPageKey): WfLink => ({
+    href: ROUTES[k][locale],
+    label: MENU_LABELS[locale][k],
+    current: activePageKey === k,
+  });
+  const mainMenu = WF_MAIN_KEYS.map(wfLink);
+  const subMenu = WF_SUB_KEYS.map(wfLink);
 
   const phoneRaw = company.phone?.trim() ?? '';
   const zaloRaw = company.zalo?.trim() ?? '';
@@ -796,30 +689,24 @@ function renderLayout(opts: {
   });
 
   const orgJsonLd = buildOrgJsonLd(company, siteUrl, locale);
-  // legalName là một chuỗi không tách locale (content-model.ts Company.legalName): vi và en cùng hiện đúng chuỗi này.
-  const displayBrand = brandName;
-  const switcherLabel = locale === 'vi' ? 'Đổi ngôn ngữ' : 'Language switcher';
-  const viSwitcherText = canonicalPath === '/en/404' ? 'Vietnamese' : 'Tiếng Việt';
-
-  const floatingZaloHtml =
-    company.zalo && company.zalo.trim()
-      ? `<a href="${escHtml(company.zalo.trim())}" target="_blank" rel="noopener noreferrer" class="floating-circle-btn floating-btn-zalo" aria-label="${locale === 'vi' ? 'Nhắn Zalo (mở tab mới)' : 'Message on Zalo (opens in a new tab)'}">
-        ${zaloLogo({ size: 56 })}
-      </a>`
-      : '';
-  const floatingPhoneHtml =
-    company.phone && company.phone.trim()
-      ? `<a href="tel:${escHtml(company.phone.trim())}" class="floating-circle-btn floating-btn-phone" aria-label="${locale === 'vi' ? 'Gọi' : 'Call'} ${escHtml(phoneShown || company.phone.trim())}">
-        ${icon('phone', { size: 24 })}
-      </a>`
-      : '';
-  const floatingAsideHtml =
-    floatingZaloHtml || floatingPhoneHtml
-      ? `<aside class="floating-contact-group" aria-label="${locale === 'vi' ? 'Liên hệ nhanh' : 'Quick contact'}">
-        ${floatingZaloHtml}
-        ${floatingPhoneHtml}
-      </aside>`
-      : '';
+  // Messenger: suy từ fanpage facebook.com/<tên> ⇒ m.me/<tên> [giả định, chờ khách xác nhận, wireframe ghi cùng điều này].
+  const fbName = (company.social ?? [])
+    .map((s) => s.url.match(/facebook\.com\/([^/?#]+)/i)?.[1])
+    .find((n): n is string => Boolean(n));
+  const shell = {
+    locale,
+    homeHref: ROUTES.home[locale],
+    main: mainMenu,
+    sub: subMenu,
+    viPath,
+    enPath,
+    phone: phoneRaw ? { href: `tel:${phoneRaw}`, text: phoneShown } : null,
+    zaloHref: zaloRaw || null,
+    messengerHref: fbName ? `https://m.me/${fbName}` : null,
+    brandLabel: locale === 'vi' ? 'GMS Hưng Yên, về trang chủ' : 'GMS Hung Yen, back to home',
+  } as const;
+  const bleed = bodyHtml.trimStart().startsWith('<!--bleed-->');
+  const mainHtml = bleed ? bodyHtml : `<div class="container legacy">${bodyHtml}</div>`;
 
   return `<!DOCTYPE html>
 <html lang="${locale}">
@@ -844,63 +731,46 @@ function renderLayout(opts: {
   <meta property="og:url" content="${escHtml(canonicalUrl)}" />
   <meta property="og:image" content="${escHtml(ogImgUrl)}" />
   <script type="application/ld+json">${orgJsonLd}</script>
+  <script>document.documentElement.classList.add('js')</script>
   <style>${INLINE_STYLES}</style>
 </head>
-<body>
-  <a href="#main-content" class="skip-link" data-testid="nav-menu">${escHtml(skipText)}</a>
-  <header class="site-header">
-    <div class="container">
-      <div class="header-grid">
-        <a href="${ROUTES.home[locale]}" class="brand-link" data-testid="nav-menu">
-          ${INLINE_LOGO_MARK_SVG}
-          <span>${escHtml(displayBrand)}</span>
-        </a>
-        <div class="header-nav" id="header-nav-wrap">
-          <nav data-testid="nav-main" aria-label="${locale === 'vi' ? 'Điều hướng chính' : 'Main navigation'}">
-            ${navLinks}
-          </nav>
-        </div>
-        <div class="header-tools">
-          <div class="lang-switcher" data-testid="lang-switcher" role="group" aria-label="${switcherLabel}">
-            <a hreflang="vi" href="${escHtml(viPath)}" lang="vi"${locale === 'vi' ? ' aria-current="true"' : ''}>${escHtml(viSwitcherText)}</a>
-            <a hreflang="en" href="${escHtml(enPath)}" lang="en"${locale === 'en' ? ' aria-current="true"' : ''}>English</a>
-          </div>
-          <button type="button" class="mobile-menu-btn" id="btn-mobile-menu" aria-label="${locale === 'vi' ? 'Menu di động' : 'Mobile menu'}" aria-expanded="false" aria-controls="header-nav-wrap" onclick="var el=document.getElementById('header-nav-wrap');if(el){var o=el.classList.toggle('is-mobile-open');this.setAttribute('aria-expanded', o);if(o){var f=el.querySelector('a');if(f)f.focus();}}">
-            ${icon('menu', { size: 24, className: 'ic-open' })}${icon('x', { size: 24, className: 'ic-close' })}
-          </button>
-        </div>
-      </div>
-    </div>
-  </header>
-  <main id="main-content" class="container">
-    ${bodyHtml}
+<body id="top">
+  ${LOGO_SPRITE_HTML}
+  <a href="#noi-dung" class="skip-link" data-testid="nav-menu">${escHtml(skipText)}</a>
+  ${buildHeaderHtml(shell)}
+  <main id="noi-dung" tabindex="-1">
+    ${mainHtml}
   </main>
   ${footerHtml}
-  ${floatingAsideHtml}
+  ${buildFabsHtml(shell)}
+  ${WF_SCRIPT}
 </body>
 </html>`;
 }
 
 function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
-  const slogan = isVi ? 'Giải pháp thông minh, Kiến tạo giá trị xanh' : 'Smart solutions, Creating green value';
+  const sloganLines = isVi
+    ? ['Giải pháp thông minh –', 'Kiến tạo giá trị xanh']
+    : ['Smart solutions –', 'Creating green value'];
   const pillars = isVi
     ? ['Công nghệ VPD', 'Sàng tuyển', 'Tái tạo tài nguyên']
     : ['VPD technology', 'Sorting', 'Resource recovery'];
 
   const figuresHtml =
     content.figures.length > 0
-      ? `<section class="section-block" data-testid="figures-strip" aria-label="${isVi ? 'Số liệu chính' : 'Key figures'}">
-          <p class="eyebrow">${isVi ? 'Số liệu chính' : 'Key figures'}</p>
-          <h2>${isVi ? 'Quy mô & Số liệu đã xác nhận' : 'Confirmed Plant Figures'}</h2>
-          <ul class="grid-cards">
-            ${content.figures
-              .map(
-                (f) =>
-                  `<li class="stat-card"><strong class="stat-value">${escHtml(f.value)} ${escHtml(f.unit[locale])}</strong><span>${escHtml(f.label[locale])}</span> <small>(${escHtml(f.source)})</small></li>`,
-              )
-              .join('')}
-          </ul>
+      ? `<section class="sec" data-testid="figures-strip" aria-label="${isVi ? 'Số liệu chính' : 'Key figures'}">
+          <div class="wrap">
+            <div class="sec-head"><h2>${isVi ? 'Năng lực nhà máy' : 'Plant capacity'}</h2></div>
+            <ul class="grid-cards">
+              ${content.figures
+                .map(
+                  (f) =>
+                    `<li class="stat-card"><strong class="stat-value">${escHtml(f.value)} ${escHtml(f.unit[locale])}</strong><span>${escHtml(f.label[locale])}</span> <small>(${escHtml(f.source)})</small></li>`,
+                )
+                .join('')}
+            </ul>
+          </div>
         </section>`
       : '';
 
@@ -915,29 +785,30 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
       ? 'Phối cảnh nhà máy GMS dự kiến: mái pin mặt trời, hồ nước và cây xanh giữa khu công nghiệp sinh thái'
       : "Artist's impression of the planned GMS plant: solar roof, retention ponds and green buffer belts";
 
-  const outputsList = content.outputLines
-    .map(
-      (o) =>
-        `<li class="card" data-testid="output-row"><strong>${escHtml(o.name[locale])}</strong> — <span class="badge">${o.state === 'da-co' ? (isVi ? 'Đã có' : 'Available') : isVi ? 'Định hướng' : 'Planned'}</span><p>${escHtml(o.desc[locale])}</p></li>`,
-    )
-    .join('');
+  const outputItem = (o: LoadedSiteContent['outputLines'][number]) =>
+    `<li class="o" data-testid="output-row"><span class="o-name">${escHtml(o.name[locale])}</span><span class="tag">${o.state === 'da-co' ? (isVi ? 'Đã có' : 'Available') : isVi ? 'Định hướng' : 'Planned'}</span></li>`;
+  const sortingOutputs = content.outputLines.filter((o) => o.group === 'sang-tuyen').map(outputItem);
+  const vpdOutputs = content.outputLines.filter((o) => o.group === 'vpd').map(outputItem);
 
   const top3News = content.news[locale].slice(0, 3);
   const newsSection =
     top3News.length > 0
-      ? `<section class="section-block" data-testid="home-news">
-          <p class="eyebrow">${isVi ? 'Tin tức / Hành trình' : 'News / Journey'}</p>
-          <h2>${isVi ? 'Bài mới trên hành trình' : 'Latest from the journey'}</h2>
-          <div class="grid-cards">
-            ${top3News
-              .map(
-                (n) => `<article class="card" data-testid="news-item">
-                  <h3><a href="${ROUTES.news[locale]}/${n.slug}">${escHtml(n.title)}</a></h3>
-                  <p><small>${escHtml(formatDateLocale(n.date, locale))}</small></p>
-                  <p>${escHtml(n.summary)}</p>
-                </article>`,
-              )
-              .join('')}
+      ? `<section class="sec sec-news" data-testid="home-news" aria-labelledby="h-news">
+          <div class="wrap">
+            <div class="news-head">
+              <h2 id="h-news">${isVi ? 'Tin mới nhất' : 'Latest news'}</h2>
+              <a class="more" href="${ROUTES.news[locale]}">${isVi ? 'Xem tất cả tin' : 'See all news'}${icon('arrow-right', { className: 'ico' })}</a>
+            </div>
+            <ul class="news-grid">
+              ${top3News
+                .map(
+                  (n) => `<li><a class="news" data-testid="news-item" href="${ROUTES.news[locale]}/${n.slug}">
+                <div class="thumb">${icon('image', { className: 'ico' })}</div>
+                <div class="news-body"><h3>${escHtml(n.title)}</h3><time datetime="${escHtml(n.date)}">${escHtml(formatDateLocale(n.date, locale))}</time></div>
+              </a></li>`,
+                )
+                .join('')}
+            </ul>
           </div>
         </section>`
       : '';
@@ -946,112 +817,142 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
     ? 'Sơ đồ: chất thải đầu vào chia hai nhánh. Sàng tuyển ra nilon, mùn hữu cơ, RDF. Công nghệ VPD ra syngas, than hoạt tính, dầu tái chế.'
     : 'Diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil.';
 
-  return `
-    <section class="hero-banner on-dark" data-testid="home-hero">
-      <div class="hero-grid">
+  // Hành trình: tên + trạng thái lấy từ content/journey-steps.yaml (V40: cả 5 bước "đã xong"); mô tả ngắn theo wireframe (chỉ có tiếng Việt).
+  const journeyDesc = [
+    'Đánh giá hạ tầng, rà soát thiết bị và các dòng vật chất tồn lưu.',
+    'Tổ chức lại mặt bằng và các khu vực vận hành.',
+    'Cải tạo hạ tầng và xử lý các dòng vật chất tồn lưu.',
+    'Triển khai dây chuyền sàng tuyển và công nghệ VPD theo định hướng.',
+    'Xây dựng hệ thống vận hành theo định hướng mới.',
+  ];
+  const journeyDefault = isVi
+    ? [
+        'Đánh giá hiện trạng',
+        'Tổ chức mặt bằng',
+        'Cải tạo hạ tầng',
+        'Triển khai công nghệ',
+        'Hoàn thiện hệ thống vận hành',
+      ]
+    : [
+        'Current-state assessment',
+        'Site organisation',
+        'Infrastructure upgrade',
+        'Technology deployment',
+        'Operating-system completion',
+      ];
+  const journeyRows = content.journeySteps
+    ? content.journeySteps.map((s) => ({ name: s.name[locale], status: s.status as string | null }))
+    : journeyDefault.map((name) => ({ name, status: null as string | null }));
+  const journeyLabels: Record<string, string> = getDictionary(locale).journeyStatus;
+  const journeyHtml = journeyRows
+    .map((s, i) => {
+      const label = s.status ? (journeyLabels[s.status] ?? '') : '';
+      const done = s.status === 'đã xong';
+      const badge = label
+        ? `<span class="badge badge-status badge-status--${done ? 'done' : s.status === 'đang làm' ? 'doing' : 'upcoming'}" data-status="${escHtml(s.status ?? '')}">${icon(done ? 'check' : s.status === 'đang làm' ? 'clock' : 'circle', { size: 14, strokeWidth: 2 })}${escHtml(label)}</span>`
+        : '';
+      return `<li class="j-step now" data-testid="journey-step" data-status="${escHtml(s.status ?? '')}"><span class="step-n">${isVi ? 'Bước' : 'Step'} ${String(i + 1).padStart(2, '0')}</span><h3>${escHtml(s.name)}</h3>${isVi && journeyDesc[i] ? `<p>${journeyDesc[i]}</p>` : ''}${badge}</li>`;
+    })
+    .join('');
+  const heroLead = isVi
+    ? 'Công ty Cổ phần Môi trường Năng lượng Xanh Hưng Yên đã đưa nhà máy vào hoạt động, xử lý chất thải rắn theo hai nhánh Sàng tuyển và công nghệ VPD, định hướng thu hồi 6 dòng tài nguyên thay vì chỉ chôn lấp hay đốt.'
+    : 'Green Energy Environment Joint Stock Company Hung Yen has put the plant into operation, treating solid waste along two branches, Sorting and VPD technology, aiming to recover 6 resource streams instead of only landfilling or burning.';
+  const ctaPhoneRaw = content.company.phone?.trim() ?? '';
+  const ctaPhone = ctaPhoneRaw
+    ? `<a class="alt" href="tel:${escHtml(ctaPhoneRaw)}">${icon('phone', { className: 'ico' })}${isVi ? 'Hoặc gọi' : 'Or call'} ${escHtml(formatPublicPhone(ctaPhoneRaw, locale))}</a>`
+    : '';
+  const streaks = (box: string, paths: string) =>
+    `<svg class="hero-streaks" viewBox="${box}" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><g fill="none" stroke="#9FB43B" stroke-linecap="round">${paths}</g></svg>`;
+
+  return `<!--bleed-->
+    <section class="hero" data-testid="home-hero" aria-labelledby="h1">
+      ${streaks(
+        '0 0 1280 720',
+        '<path d="M640 760L1060 -40" stroke-opacity=".22" stroke-width="2"/><path d="M760 760L1180 -40" stroke-opacity=".16" stroke-width="2"/><path d="M880 760L1300 -40" stroke-opacity=".1" stroke-width="2"/><path d="M-40 640C260 600 520 560 760 470" stroke="#A4B93A" stroke-opacity=".28" stroke-width="2" stroke-dasharray="2 14"/>',
+      )}
+      <div class="wrap">
         <div>
-          <ul class="pills">
-            ${pillars.map((p) => `<li>${escHtml(p)}</li>`).join('')}
-          </ul>
-          <h1>${escHtml(slogan)}</h1>
-          <p>${
-            isVi
-              ? 'Từ chất thải đến tài nguyên. GMS Hưng Yên đang từng bước xây dựng hệ thống sàng tuyển và chuyển hoá, đưa những dòng vật chất còn giá trị trở lại chu trình sử dụng.'
-              : 'From waste to resources. GMS Hung Yen is building, step by step, a sorting and conversion system that returns still-valuable material streams to a new cycle of use.'
-          }</p>
-          <p style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px;">
-            <a href="${ROUTES.technology[locale]}" class="btn btn-light">${isVi ? 'Tìm hiểu công nghệ' : 'Explore the technology'}${icon('arrow-right', { size: 18 })}</a>
-            <a href="${ROUTES.contact[locale]}" class="btn btn-ghost" data-testid="cta-contact">${isVi ? 'Liên hệ hợp tác' : 'Partner with us'}</a>
-          </p>
+          <p class="kicker fade">${pillars.map((p) => escHtml(p)).join(' · ')}</p>
+          <h1 id="h1">${sloganLines.map((l) => `<span class="ln"><span>${escHtml(l)}</span></span>`).join('')}</h1>
+          <p class="hero-lead fade">${escHtml(heroLead)}</p>
+          <div class="hero-cta fade2">
+            <a class="btn btn-light" data-testid="hero-primary" href="${ROUTES.technology[locale]}">${isVi ? 'Tìm hiểu công nghệ' : 'Explore the technology'}${icon('arrow-right', { className: 'ico' })}</a>
+            <a class="btn btn-ghost" data-testid="cta-contact" href="${ROUTES.contact[locale]}">${isVi ? 'Liên hệ hợp tác' : 'Partner with us'}</a>
+          </div>
         </div>
-        <figure class="hero-media" data-testid="home-cover">
-          <img src="${coverSrc}" alt="${escHtml(coverAlt)}" width="1024" height="1024"${coverSrc === `/${HERO_IMG_REL}` ? ` srcset="/${HERO_IMG_SMALL_REL} 512w, /${HERO_IMG_REL} 1024w" sizes="(min-width: 900px) 520px, 100vw"` : ''} fetchpriority="high" decoding="async" />
-          ${coverIsRender ? `<figcaption class="photo-label" data-testid="photo-label">${escHtml(coverLabel)}</figcaption>` : ''}
+        <figure class="hero-art fade2" data-testid="home-cover">
+          <div class="art-box">
+            <img src="${coverSrc}" alt="${escHtml(coverAlt)}" width="1024" height="1024"${coverSrc === `/${HERO_IMG_REL}` ? ` srcset="/${HERO_IMG_SMALL_REL} 512w, /${HERO_IMG_REL} 1024w" sizes="(min-width: 1024px) 520px, 100vw"` : ''} fetchpriority="high" decoding="async" />
+            ${coverIsRender ? `<span class="pill" data-testid="photo-label">${escHtml(coverLabel)}</span>` : ''}
+          </div>
         </figure>
       </div>
     </section>
     ${figuresHtml}
-    <section class="section-block" aria-labelledby="pillars-title">
-      <p class="eyebrow">${isVi ? 'Định hướng của GMS' : 'What GMS stands for'}</p>
-      <h2 id="pillars-title">${isVi ? 'Ba trụ cột của nhà máy' : "The plant's three pillars"}</h2>
-      <ul class="grid-cards">
-        <li class="card">
-          <span class="card-num" aria-hidden="true">01</span>
-          <h3>${isVi ? 'Công nghệ VPD' : 'VPD technology'}</h3>
-          <p>${isVi ? 'Định hướng chuyển hoá một số dòng nguyên liệu phù hợp thành các sản phẩm đầu ra mới.' : 'Aims to convert suitable feedstock streams into new output products.'}</p>
-          <ul class="chips">
-            <li>Syngas</li>
-            <li>${isVi ? 'Than hoạt tính' : 'Activated carbon'}</li>
-            <li>${isVi ? 'Dầu tái chế' : 'Recycled oil'}</li>
-          </ul>
-        </li>
-        <li class="card">
-          <span class="card-num" aria-hidden="true">02</span>
-          <h3>${isVi ? 'Sàng tuyển' : 'Sorting'}</h3>
-          <p>${isVi ? 'Phân tách các dòng vật chất phù hợp để tiếp tục xử lý hoặc khai thác giá trị.' : 'Separates suitable material streams for further processing or value recovery.'}</p>
-          <ul class="chips">
-            <li>${isVi ? 'Nilon' : 'Plastic film'}</li>
-            <li>${isVi ? 'Mùn hữu cơ' : 'Organic humus'}</li>
-            <li>RDF</li>
-          </ul>
-        </li>
-        <li class="card">
-          <span class="card-num" aria-hidden="true">03</span>
-          <h3>${isVi ? 'Tái tạo tài nguyên' : 'Resource recovery'}</h3>
-          <p>${isVi ? 'Đưa những dòng vật chất còn giá trị trở lại chu trình sản xuất, kiến tạo vòng đời tài nguyên mới.' : 'Returns still-valuable materials to production, creating new resource life cycles.'}</p>
-          <ul class="chips">
-            <li>${isVi ? 'Phân loại' : 'Separate'}</li>
-            <li>${isVi ? 'Chuyển hoá' : 'Convert'}</li>
-            <li>${isVi ? 'Thu hồi giá trị' : 'Recover value'}</li>
-          </ul>
-        </li>
-      </ul>
-    </section>
-    <section class="section-block section-dark on-dark" data-testid="home-branches">
-      <div class="split">
-        <div>
-          <p class="eyebrow">${isVi ? 'Công nghệ' : 'Technology'}</p>
-          <h2>${isVi ? 'Hai nhóm công đoạn, sáu dòng đầu ra' : 'Two process groups, six output streams'}</h2>
-          <p>${isVi ? 'Chất thải đi qua sàng tuyển để tách dòng, và qua công nghệ VPD để chuyển hoá những dòng nguyên liệu phù hợp thành sản phẩm mới.' : 'Waste passes through sorting to separate streams, and through VPD technology to convert suitable feedstock into new products.'}</p>
-          <p><a class="btn btn-light" href="${ROUTES.technology[locale]}">${isVi ? 'Xem quy trình công nghệ' : 'See the process'}${icon('arrow-right', { size: 18 })}</a></p>
+    <section class="sec" id="hai-nhanh" aria-labelledby="h-flow">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 id="h-flow">${isVi ? 'Hai nhánh xử lý, sáu dòng tài nguyên' : 'Two processing branches, six resource streams'}</h2>
+          <p>${isVi ? 'Chất thải rắn đầu vào được chia thành hai nhánh. Mỗi nhánh hướng tới ba dòng đầu ra, thay vì chỉ chôn lấp hay đốt.' : 'Incoming solid waste is split into two branches. Each branch aims at three output streams, instead of only landfilling or burning.'}</p>
         </div>
-        <div class="mini-flow" role="img" aria-label="${escHtml(miniDiagramAria)}">
-          <div class="mf-node mf-in">${isVi ? 'Chất thải đầu vào' : 'Incoming waste'}</div>
-          <div class="mf-branches">
-            <div class="mf-branch">
-              <div class="mf-node">${isVi ? 'Sàng tuyển' : 'Sorting'}</div>
-              <ul class="mf-out">
-                <li>${isVi ? 'Nilon' : 'Plastic film'}</li>
-                <li>${isVi ? 'Mùn hữu cơ' : 'Organic humus'}</li>
-                <li>RDF</li>
-              </ul>
-            </div>
-            <div class="mf-branch">
-              <div class="mf-node">${isVi ? 'Công nghệ VPD' : 'VPD technology'}</div>
-              <ul class="mf-out">
-                <li>Syngas</li>
-                <li>${isVi ? 'Than hoạt tính' : 'Activated carbon'}</li>
-                <li>${isVi ? 'Dầu tái chế' : 'Recycled oil'}</li>
-              </ul>
+        <figure>
+          <div class="board" data-testid="home-outputs">
+            <div class="dg" data-testid="home-branches" role="img" aria-label="${escHtml(miniDiagramAria)}">
+              <div class="node n-in"><strong>${isVi ? 'Chất thải rắn đầu vào' : 'Incoming solid waste'}</strong><span>${isVi ? 'Tiếp nhận và phân loại' : 'Reception and classification'}</span></div>
+              <svg class="dg-conn conn-a" viewBox="0 0 80 632" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="rail" pathLength="1" d="M0 316C40 316 40 150 80 150"/><path class="rail" pathLength="1" d="M0 316C40 316 40 482 80 482"/><path class="flow soft" d="M0 316C40 316 40 150 80 150"/><path class="flow soft" d="M0 316C40 316 40 482 80 482"/></svg>
+              <div class="grp grp1">
+                <div class="node n-br b1"><span>${isVi ? 'Nhánh 1' : 'Branch 1'}</span><strong>${isVi ? 'Sàng tuyển' : 'Sorting'}</strong></div>
+                <ul class="o-list o1">${sortingOutputs.join('')}</ul>
+              </div>
+              <div class="grp grp2">
+                <div class="node n-br b2"><span>${isVi ? 'Nhánh 2' : 'Branch 2'}</span><strong>${isVi ? 'Công nghệ VPD' : 'VPD technology'}</strong></div>
+                <ul class="o-list o2">${vpdOutputs.join('')}</ul>
+              </div>
+              <svg class="dg-conn conn-b" viewBox="0 0 96 632" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="rail" pathLength="1" d="M0 150C48 150 48 46 96 46"/><path class="rail" pathLength="1" d="M0 150H96"/><path class="rail" pathLength="1" d="M0 150C48 150 48 254 96 254"/><path class="rail" pathLength="1" d="M0 482C48 482 48 378 96 378"/><path class="rail" pathLength="1" d="M0 482H96"/><path class="rail" pathLength="1" d="M0 482C48 482 48 586 96 586"/><path class="flow" d="M0 150C48 150 48 46 96 46"/><path class="flow" d="M0 150H96"/><path class="flow" d="M0 150C48 150 48 254 96 254"/><path class="flow" d="M0 482C48 482 48 378 96 378"/><path class="flow" d="M0 482H96"/><path class="flow" d="M0 482C48 482 48 586 96 586"/><g class="end"><circle cx="93" cy="46" r="4"/><circle cx="93" cy="150" r="4"/><circle cx="93" cy="254" r="4"/><circle cx="93" cy="378" r="4"/><circle cx="93" cy="482" r="4"/><circle cx="93" cy="586" r="4"/></g></svg>
             </div>
           </div>
+          <figcaption class="dg-notes">
+            <div><h3>${isVi ? 'Sàng tuyển' : 'Sorting'}</h3><p>${isVi ? 'Phân tách các dòng vật chất phù hợp để tiếp tục xử lý hoặc khai thác giá trị.' : 'Separates suitable material streams for further processing or value recovery.'}</p></div>
+            <div><h3>${isVi ? 'Công nghệ VPD' : 'VPD technology'}</h3><p>${isVi ? 'Định hướng chuyển hoá một số dòng nguyên liệu phù hợp thành các sản phẩm đầu ra mới.' : 'Aims to convert suitable feedstock streams into new output products.'}</p></div>
+            <div><h3>${isVi ? 'Sáu dòng ở mức định hướng' : 'Six streams, planned direction'}</h3><p>${isVi ? 'Nhà máy đã đi vào hoạt động; các dòng đầu ra vẫn ở mức định hướng, chưa phải sản phẩm đang cung cấp.' : 'The plant is in operation; the output streams remain a planned direction, not products currently supplied.'}</p><a href="${ROUTES.products[locale]}">${isVi ? 'Xem sản phẩm đầu ra' : 'See output products'}${icon('arrow-right', { className: 'ico' })}</a></div>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+    <section class="sec sec-journey on-dark" data-testid="home-journey" id="hanh-trinh" aria-labelledby="h-journey">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 id="h-journey">${isVi ? 'Hành trình chuyển đổi' : 'Transformation journey'}</h2>
+          <p>${isVi ? 'Năm bước GMS đã đi qua, từ đánh giá hiện trạng tới hệ thống vận hành hoàn chỉnh. Nhà máy đã đi vào hoạt động.' : 'Five steps GMS has completed, from assessing the current state to a fully operating system. The plant is in operation.'}</p>
+        </div>
+        <ol class="j-steps">${journeyHtml}</ol>
+      </div>
+    </section>
+    <section class="sec sec-values on-dark" aria-labelledby="h-values">
+      <div class="wrap">
+        <div class="sec-head"><h2 id="h-values">${isVi ? 'Giá trị chúng tôi theo đuổi' : 'Values we pursue'}</h2></div>
+        <ul class="bento">
+          <li class="val v1">${icon('cpu', { className: 'vi', strokeWidth: 1.8 })}<h3>${isVi ? 'Công nghệ tiên tiến' : 'Advanced technology'}</h3><p>${isVi ? 'Kết hợp Sàng tuyển và công nghệ VPD để thu hồi tối đa các dòng tài nguyên từ chất thải.' : 'Combining Sorting and VPD technology to recover as many resource streams from waste as possible.'}</p></li>
+          <li class="val v2">${icon('recycle', { className: 'vi', strokeWidth: 1.8 })}<h3>${isVi ? 'Tái tạo tài nguyên' : 'Resource recovery'}</h3><p>${isVi ? 'Chuyển từ tư duy “xử lý chất thải” sang “thu hồi và tái tạo giá trị tài nguyên”.' : 'Shifting from “waste treatment” to “recovering and regenerating the value of resources”.'}</p></li>
+          <li class="val v3">${icon('sprout', { className: 'vi', strokeWidth: 1.8 })}<h3>${isVi ? 'Phát triển bền vững' : 'Sustainable development'}</h3><p>${isVi ? 'Từng bước đưa những nguồn tài nguyên có thể tái sử dụng trở lại chu trình sản xuất.' : 'Step by step returning reusable resources to the production cycle.'}</p></li>
+          <li class="val v4">${icon('heart-handshake', { className: 'vi', strokeWidth: 1.8 })}<h3>${isVi ? 'Vì cộng đồng xanh' : 'For a green community'}</h3></li>
+        </ul>
+      </div>
+    </section>
+    ${newsSection}
+    <section class="sec sec-cta on-dark" id="hop-tac" aria-labelledby="h-cta">
+      ${streaks('0 0 1280 420', '<path d="M900 460L1140 -40" stroke-opacity=".22" stroke-width="2"/><path d="M1010 460L1250 -40" stroke-opacity=".14" stroke-width="2"/>')}
+      <div class="wrap">
+        <div>
+          <h2 id="h-cta">${isVi ? 'Bạn muốn hợp tác hoặc cần tư vấn?' : 'Looking to partner or need advice?'}</h2>
+          <p>${isVi ? 'Hãy để lại thông tin, chúng tôi sẽ liên hệ lại.' : 'Leave your details and we will get back to you.'}</p>
+        </div>
+        <div class="cta-act">
+          <a class="btn btn-light" href="${ROUTES.contact[locale]}">${isVi ? 'Liên hệ hợp tác' : 'Partner with us'}${icon('arrow-right', { className: 'ico' })}</a>
+          ${ctaPhone}
         </div>
       </div>
     </section>
-    <section class="section-block" data-testid="home-outputs">
-      <p class="eyebrow">${isVi ? 'Đầu ra định hướng' : 'Planned outputs'}</p>
-      <h2>${isVi ? 'Sáu dòng sản phẩm đầu ra' : 'Six Output Product Lines'}</h2>
-      <ul class="grid-cards">
-        ${outputsList}
-      </ul>
-    </section>
-    <section class="section-block section-alt" data-testid="home-journey">
-      <p class="eyebrow">${isVi ? 'Hành trình chuyển đổi' : 'Transformation journey'}</p>
-      <h2>${isVi ? 'Từ hiện trạng hôm nay, kiến tạo giá trị cho ngày mai' : "From today's reality to tomorrow's value"}</h2>
-      <p>${isVi ? 'Nhà máy đang thực hiện lộ trình chuẩn hoá mặt bằng, hạ tầng đã đi vào hoạt động và lắp đặt đồng bộ dây chuyền công nghệ.' : 'The facility is executing a structured roadmap of site preparation, infrastructure that is now in operation and technology deployment.'}</p>
-      <p><a href="${ROUTES.news[locale]}" class="btn btn-outline">${isVi ? 'Xem lộ trình 5 bước' : 'View the 5-step roadmap'}</a></p>
-    </section>
-    ${newsSection}
   `;
 }
 
