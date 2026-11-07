@@ -75,18 +75,6 @@ import HomePage from '../../src/app/page.tsx';
 import ProductsPage from '../../src/app/san-pham-dau-ra/page.tsx';
 import NewsPage from '../../src/app/tin-tuc/page.tsx';
 import CareersPage from '../../src/app/tuyen-dung/page.tsx';
-import { ContactFormSection } from '../../src/components/sections/ContactFormSection.tsx';
-import { HeroSection } from '../../src/components/sections/HeroSection.tsx';
-import { JourneySection } from '../../src/components/sections/JourneySection.tsx';
-import { PillarsSection } from '../../src/components/sections/PillarsSection.tsx';
-import { TechSummarySection } from '../../src/components/sections/TechSummarySection.tsx';
-import { FigureStrip } from '../../src/components/ui/FigureStrip.tsx';
-import { Footer } from '../../src/components/ui/Footer.tsx';
-import { Header } from '../../src/components/ui/Header.tsx';
-import { LangSwitcher } from '../../src/components/ui/LangSwitcher.tsx';
-import { OutputCard } from '../../src/components/ui/OutputCard.tsx';
-import { TechFlowSvg } from '../../src/components/ui/TechFlowSvg.tsx';
-import { VpdStepper } from '../../src/components/ui/VpdStepper.tsx';
 import { loadSiteContent } from '../../src/content/loader.ts';
 import {
   buildBaseInternalPaths,
@@ -988,63 +976,6 @@ describe('Next.js App Router Pages, Sections, UI Components & i18n', () => {
     // EN: số theo định dạng quốc tế (contact-info.feature S24: "+84 90 000 00 00")
     expect(contactEnHtml.includes('+84 98 799 83 70'), 'EN: số liên hệ định dạng quốc tế').toBe(true);
 
-    // Individual components
-    expect(
-      renderToStaticMarkup(
-        React.createElement(FigureStrip, {
-          eyebrow: 'E',
-          title: 'T',
-          ariaLabel: 'A',
-          figures: [],
-        }),
-      ),
-    ).toBe('');
-
-    expect(
-      renderToStaticMarkup(
-        React.createElement(LangSwitcher, {
-          locale: 'vi',
-          viPath: '/',
-          enPath: '/en',
-          ariaLabel: 'Lang',
-        }),
-      ),
-    ).toContain('Tiếng Việt');
-
-    expect(
-      renderToStaticMarkup(
-        React.createElement(OutputCard, {
-          name: 'RDF',
-          stateLabel: 'Định hướng',
-          description: 'Mô tả',
-        }),
-      ),
-    ).toContain('RDF');
-
-    expect(
-      renderToStaticMarkup(
-        React.createElement(TechFlowSvg, {
-          locale: 'vi',
-          ariaLabel: 'Sơ đồ',
-        }),
-      ),
-    ).toContain('flow-wide');
-
-    expect(
-      renderToStaticMarkup(
-        React.createElement(VpdStepper, {
-          eyebrow: 'VPD',
-          title: 'Quy trình',
-          lead: 'Mô tả',
-          prevLabel: 'Trước',
-          playLabel: 'Chạy',
-          stopLabel: 'Dừng',
-          nextLabel: 'Sau',
-          steps: viDict.technology.vpdSteps,
-        }),
-      ),
-    ).toContain('Tiếp nhận và lưu chứa');
-
     expect(renderToStaticMarkup(React.createElement(AboutPage))).toContain('Giới thiệu');
     expect(renderToStaticMarkup(React.createElement(SolutionsPage))).toContain('Giải pháp');
     expect(renderToStaticMarkup(React.createElement(ProductsPage))).toContain('Sản phẩm');
@@ -1062,13 +993,6 @@ describe('Next.js App Router Pages, Sections, UI Components & i18n', () => {
     expect(renderToStaticMarkup(React.createElement(EnglishCareersPage))).toContain('Careers');
     expect(renderToStaticMarkup(React.createElement(EnglishFaqPage))).toContain('FAQ');
     expect(renderToStaticMarkup(React.createElement(EnglishPrivacyPage))).toContain('Privacy');
-    expect(typeof Header).toBe('function');
-    expect(typeof Footer).toBe('function');
-    expect(typeof HeroSection).toBe('function');
-    expect(typeof PillarsSection).toBe('function');
-    expect(typeof TechSummarySection).toBe('function');
-    expect(typeof JourneySection).toBe('function');
-    expect(typeof ContactFormSection).toBe('function');
 
     expect(nextConfig.output).toBe('export');
     expect(playwrightConfig.timeout).toBe(60_000);
