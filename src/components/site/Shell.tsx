@@ -416,7 +416,7 @@ export function SiteFabs({ locale, company }: { locale: Locale; company: ShellCo
   // Messenger: suy từ fanpage facebook.com/<tên> ⇒ m.me/<tên> [giả định, chờ khách xác nhận, wireframe ghi cùng điều này].
   const fb = fbName(company);
   return (
-    <div className="fabs floating-contact-group" role="group" aria-label={t.quick} data-testid="floating-contact">
+    <fieldset className="fabs floating-contact-group" aria-label={t.quick} data-testid="floating-contact">
       <a className="fab to-top" href="#top" aria-label={t.toTop} title={t.toTop} data-testid="back-to-top">
         <Icon name="arrow-up" size={26} strokeWidth={2} className="ico" />
       </a>
@@ -457,7 +457,7 @@ export function SiteFabs({ locale, company }: { locale: Locale; company: ShellCo
           <Icon name="phone" size={26} strokeWidth={2} className="ico" />
         </a>
       ) : null}
-    </div>
+    </fieldset>
   );
 }
 

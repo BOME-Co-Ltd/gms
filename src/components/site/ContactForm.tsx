@@ -37,7 +37,15 @@ const IDS: Record<FieldKey, string> = {
 const ORDER: FieldKey[] = ['fullName', 'email', 'phone', 'company', 'message', 'consent'];
 const MAX: Partial<Record<FieldKey, number>> = { fullName: 200, email: 254, phone: 20, company: 200, message: 5000 };
 // Ký tự điều khiển / ngắt dòng / ký tự ẩn khi dán (dựng bằng chuỗi để không dính ký tự ngắt dòng thật trong mã nguồn).
-const CTRL = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
+const CTRL = {
+  test: (s: string): boolean => {
+    for (let i = 0; i < s.length; i++) {
+      const c = s.charCodeAt(i);
+      if (c <= 0x1f || (c >= 0x7f && c <= 0x9f) || c === 0x2028 || c === 0x2029) return true;
+    }
+    return false;
+  },
+};
 const EMPTY: Values = { fullName: '', email: '', phone: '', company: '', message: '', consent: false };
 
 const TEXT = {
