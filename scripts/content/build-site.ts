@@ -6,8 +6,15 @@ import { parse as parseYaml } from 'yaml';
 import { formStatusOf } from '../../contracts/build.ts';
 import { PAGE_SIZE, ROUTES } from '../../contracts/routes.ts';
 import { buildFooterHtml, FOOTER_CSS, type FooterLink, parseSocial } from '../../src/components/ui/static-footer.ts';
-import { icon, LOGO_SPRITE_HTML, zaloLogo } from '../../src/components/ui/static-icons.ts';
-import { buildFabsHtml, buildHeaderHtml, WF_CSS, WF_SCRIPT, type WfLink } from '../../src/components/ui/wf-shell.ts';
+import { type IconName, icon, LOGO_SPRITE_HTML, zaloLogo } from '../../src/components/ui/static-icons.ts';
+import {
+  buildFabsHtml,
+  buildHeaderHtml,
+  WF_CSS,
+  WF_CSS_BODY,
+  WF_SCRIPT,
+  type WfLink,
+} from '../../src/components/ui/wf-shell.ts';
 import {
   type LoadedCompany,
   type LoadedImage,
@@ -407,18 +414,9 @@ input:focus, input:focus-visible, select:focus, select:focus-visible, textarea:f
 .il > svg { flex: none; }
 .il-zalo { border-radius: 4px; }
 /* §14c U17: thẻ bước có vùng ảnh 16:9 riêng, huy hiệu số tròn 40px cạnh tiêu đề dưới ảnh; không có gì đè lên số/chữ. */
-.step-grid { display: grid; grid-template-columns: 1fr; gap: 32px; list-style: none; padding: 0; margin: 0; }
-@media (min-width: 600px) { .step-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 900px) { .step-grid { grid-template-columns: repeat(3, 1fr); } }
-.step-card { display: flex; flex-direction: column; gap: 16px; margin: 0; }
-.step-fig { aspect-ratio: 16 / 9; margin: 0; border-radius: 16px; overflow: hidden; position: relative; background: var(--tint); }
-.step-fig img { width: 100%; height: 100%; object-fit: cover; }
+.step-fig { position: relative; }
 .step-fig figcaption { position: absolute; left: 8px; bottom: 8px; padding: 2px 10px; border-radius: 999px; background: rgb(0 0 0 / 0.65); color: var(--white); font-size: 0.8rem; }
-.stp-head { display: flex; align-items: flex-start; gap: 12px; }
-.stp-head h3 { margin: 0; min-height: 40px; display: flex; align-items: center; }
-.card > h3 { font-size: 1.25rem; margin: 0 0 8px; }
-.step-badge { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #0F5838; color: var(--white); font-weight: 700; }
-.step-card p { margin: 0; }
+.step-badge { flex: none; display: inline-grid; place-items: center; border-radius: 50%; color: var(--white); }
 .badge-status { gap: 8px; font-size: 0.9rem; border: 2px solid transparent; }
 .badge-status svg { flex-shrink: 0; }
 .badge-status--done { background: var(--g900); color: var(--white); border-color: var(--g900); }
@@ -444,18 +442,6 @@ input:focus, input:focus-visible, select:focus, select:focus-visible, textarea:f
 }
 
 /* Sections & Hero */
-main { padding: 0 0 48px; }
-.section-block { margin: 28px 0; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
-.section-alt { background: var(--tint); }
-.section-dark { background: var(--grad); color: var(--white); border-color: transparent; }
-.section-dark h1, .section-dark h2, .section-dark h3, .section-dark p { color: var(--white); }
-.eyebrow {
-  display: inline-flex; align-items: center; gap: 10px; margin: 0 0 8px;
-  font-size: 0.85rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g700);
-}
-.eyebrow::before { content: ""; width: 24px; height: 4px; border-radius: 4px; background: var(--leaf); }
-.section-dark .eyebrow { color: var(--white); }
-
 .hero-banner {
   background: var(--grad); color: var(--white); border-radius: var(--radius);
   padding: 28px 24px; margin: 20px 0 28px; position: relative; overflow: hidden;
@@ -476,16 +462,6 @@ main { padding: 0 0 48px; }
   background: var(--b800); color: var(--white); font-size: 0.85rem; font-weight: 600;
 }
 
-/* Grids & Cards - 3 Columns Layout (Grid 3x3) */
-.grid-cards { display: grid; grid-template-columns: 1fr; gap: 20px; list-style: none; padding: 0; margin: 0; }
-@media (min-width: 640px) { .grid-cards { grid-template-columns: repeat(2, 1fr); gap: 22px; } }
-@media (min-width: 992px) { .grid-cards { grid-template-columns: repeat(3, 1fr); gap: 24px; } }
-.card {
-  position: relative; overflow: hidden;
-  border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; background: var(--white); box-shadow: var(--shadow);
-}
-.card::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; background: var(--leaf); }
-.card-num { position: absolute; right: 16px; top: 12px; font-size: 2rem; font-weight: 800; color: rgb(15 88 56 / 0.14); line-height: 1; }
 .stat-card { border-left: 4px solid var(--lime); padding: 14px 16px; background: var(--white); border-radius: var(--radius-s); border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .stat-value { display: block; font-size: 1.75rem; font-weight: 800; color: var(--g900); line-height: 1.2; }
 
@@ -527,29 +503,6 @@ main { padding: 0 0 48px; }
 .gms-sorting-line { position: relative; aspect-ratio: 3 / 2; background: var(--mist); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
 .gms-sorting-line img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
-/* VPD 8-step interactive stepper */
-.step-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
-.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
-@media (min-width: 900px) { .steps { grid-template-columns: repeat(4, 1fr); } }
-.step {
-  position: relative; background: var(--white); border: 2px solid var(--line); border-radius: var(--radius);
-  padding: 12px 14px;
-}
-.step.is-active { border-color: var(--g700); box-shadow: 0 0 0 3px rgb(159 180 59 / 0.35); }
-.step.loop { border-style: dashed; border-color: var(--b600); background: var(--tint-b); }
-.step-head {
-  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 4px;
-  background: transparent; border: 0; font: inherit; color: var(--g900); text-align: left; cursor: pointer;
-}
-.step-num {
-  flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--tint-2); color: var(--g900); font-weight: 800; font-size: 0.95rem;
-}
-.step.is-active .step-num { background: var(--g700); color: var(--white); }
-.step.loop .step-num { background: var(--b800); color: var(--white); }
-.step-title { font-weight: 700; font-size: 1rem; line-height: 1.3; }
-.step p { margin: 6px 0 0; font-size: 0.95rem; color: var(--g900); }
-
 /* Forms & Footer */
 figure { margin: 16px 0; }
 figure img { max-width: 100%; height: auto; border-radius: 8px; display: block; }
@@ -576,14 +529,6 @@ input[type="checkbox"] {
   cursor: pointer; font-weight: 500 !important; color: var(--g900); line-height: 1.5;
 }
 
-/* Card Micro-interactions */
-.card, .output-card, .pillar-card, .figure-card {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease !important;
-}
-.card:hover, .output-card:hover, .pillar-card:hover {
-  transform: translateY(-4px); box-shadow: 0 12px 28px -8px rgba(15, 88, 56, 0.16) !important;
-}
-
 .error-box { background: var(--error-bg); color: var(--error); border: 1px solid var(--error); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
 .notice-box { background: var(--tint); color: var(--g900); border: 1px solid var(--line); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
 .notice-box[hidden] { display: none; }
@@ -600,17 +545,18 @@ input[type="checkbox"] {
 
 ${FOOTER_CSS}
 ${WF_CSS}
+${WF_CSS_BODY}
 
 @media (max-width: 480px) {
   .wrap, .container { padding: 0 14px; }
-  .section-block, .hero-banner { padding: 18px 14px; }
-  .grid-cards, .mf-branches { grid-template-columns: 1fr; }
+  .hero-banner { padding: 18px 14px; }
+  .mf-branches { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after,
   html *, body *,
   a, button, input, select, textarea, summary,
-  .card, .output-card, .pillar-card, .figure-card,
+  .tcard, .news, .pg, .btn-sec, .ch,
   .btn, .btn-light, .btn-ghost, .btn-secondary, .btn-outline,
   .fab, .lang a, .hdr, .ft {
     animation: none !important;
@@ -634,24 +580,45 @@ const HERO_STREAKS = `<svg class="hero-streaks" viewBox="0 0 1280 480" preserveA
  */
 function wrapSubpage(bodyHtml: string): string {
   const m = bodyHtml.match(
-    /^\s*<(section|article) class="(section-block|hero-banner on-dark)"([^>]*)>\s*(?:<p class="eyebrow">([\s\S]*?)<\/p>\s*)?<h1>([\s\S]*?)<\/h1>\s*(?:<p>([\s\S]*?)<\/p>)?/,
+    /^\s*<section class="hero-banner on-dark"([^>]*)>\s*(?:<p class="eyebrow">([\s\S]*?)<\/p>\s*)?<h1>([\s\S]*?)<\/h1>\s*(?:<p>([\s\S]*?)<\/p>)?/,
   );
   if (!m) return `<div class="container legacy">${bodyHtml}</div>`;
-  const [whole, tag, cls, attrs, eyebrow, h1, lead] = m;
+  const [whole, attrs, eyebrow, h1, lead] = m;
   const kicker = eyebrow ? `<p class="kicker">${eyebrow}</p>` : '';
   const leadHtml = lead ? `<p class="hero-lead">${lead}</p>` : '';
   let rest = bodyHtml.slice(whole.length);
-  let extra = '';
-  if (cls.startsWith('hero-banner')) {
-    const end = rest.indexOf('</section>');
-    extra = rest.slice(0, end);
-    rest = rest.slice(end + '</section>'.length);
-  }
-  const hero = `<section class="hero hero-sub on-dark" aria-labelledby="h1">${HERO_STREAKS}<div class="wrap"><div class="fade">${kicker}<h1 id="h1">${h1}</h1>${leadHtml}${extra}</div></div></section>`;
-  const reopened = cls.startsWith('hero-banner')
-    ? ''
-    : `<${tag} class="section-block"${tag === 'section' ? attrs : ''}>`;
-  return `${hero}<div class="container legacy">${reopened}${rest}</div>`;
+  const end = rest.indexOf('</section>');
+  const extra = rest.slice(0, end);
+  rest = rest.slice(end + '</section>'.length);
+  // Đường cắt chéo cuối hero lấy màu của khối kế tiếp (nền sáng mist / xanh dương hành trình / trắng).
+  const next = rest.match(/<section class="sec([^"]*)"/)?.[1] ?? '';
+  const after = next.includes('sec-mist') ? 'var(--mist)' : next.includes('sec-journey') ? 'var(--b800)' : '';
+  const style = after ? ` style="--after-hero:${after}"` : '';
+  const hero = `<section class="hero hero-sub on-dark"${attrs} aria-labelledby="h1"${style}>${HERO_STREAKS}<div class="wrap"><div class="fade">${kicker}<h1 id="h1">${h1}</h1>${leadHtml}${extra}</div></div></section>`;
+  return `${hero}${rest}`;
+}
+
+// Khối mời liên hệ cuối trang (UI-V27): cùng markup và chữ với khối ở trang chủ.
+function ctaSection(content: LoadedSiteContent, locale: Locale, id = 'h-cta'): string {
+  const isVi = locale === 'vi';
+  const phoneRaw = content.company.phone?.trim() ?? '';
+  const phone = phoneRaw
+    ? `<a class="alt" href="tel:${escHtml(phoneRaw)}">${icon('phone', { className: 'ico' })}${isVi ? 'Hoặc gọi' : 'Or call'} ${escHtml(formatPublicPhone(phoneRaw, locale))}</a>`
+    : '';
+  const streaks = `<svg class="hero-streaks" viewBox="0 0 1280 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><g fill="none" stroke="#9FB43B" stroke-linecap="round"><path d="M900 460L1140 -40" stroke-opacity=".22" stroke-width="2"/><path d="M1010 460L1250 -40" stroke-opacity=".14" stroke-width="2"/></g></svg>`;
+  return `<section class="sec sec-cta on-dark" aria-labelledby="${id}">
+      ${streaks}
+      <div class="wrap">
+        <div>
+          <h2 id="${id}">${isVi ? 'Bạn muốn hợp tác hoặc cần tư vấn?' : 'Looking to partner or need advice?'}</h2>
+          <p>${isVi ? 'Hãy để lại thông tin, chúng tôi sẽ liên hệ lại.' : 'Leave your details and we will get back to you.'}</p>
+        </div>
+        <div class="cta-act">
+          <a class="btn btn-light" href="${ROUTES.contact[locale]}" data-testid="cta-contact">${isVi ? 'Liên hệ hợp tác' : 'Partner with us'}${icon('arrow-right', { className: 'ico' })}</a>
+          ${phone}
+        </div>
+      </div>
+    </section>`;
 }
 
 function renderLayout(opts: {
@@ -777,6 +744,46 @@ function renderLayout(opts: {
 </html>`;
 }
 
+// Sơ đồ hai nhánh (U12): dùng chung trang chủ và trang Công nghệ (cùng markup, cùng tên 6 dòng).
+function boardFigure(
+  content: LoadedSiteContent,
+  locale: Locale,
+  opts: { outputsId: string; branchesId: string; anchors: boolean },
+): string {
+  const isVi = locale === 'vi';
+  const outputItem = (o: LoadedSiteContent['outputLines'][number]) =>
+    `<li class="o" data-testid="output-row"><span class="o-name">${escHtml(o.name[locale])}</span><span class="tag">${o.state === 'da-co' ? (isVi ? 'Đã có' : 'Available') : isVi ? 'Định hướng' : 'Planned'}</span></li>`;
+  const sortingOutputs = content.outputLines.filter((o) => o.group === 'sang-tuyen').map(outputItem);
+  const vpdOutputs = content.outputLines.filter((o) => o.group === 'vpd').map(outputItem);
+  const ariaText = isVi
+    ? 'Sơ đồ: chất thải đầu vào chia hai nhánh. Sàng tuyển ra nilon, mùn hữu cơ, RDF. Công nghệ VPD ra syngas, than hoạt tính, dầu tái chế.'
+    : 'Diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil.';
+  const down = (href: string, text: string) =>
+    opts.anchors ? `<a href="${href}">${text}${icon('arrow-down', { className: 'ico' })}</a>` : '';
+  return `<figure>
+          <div class="board" data-testid="${opts.outputsId}">
+            <div class="dg" data-testid="${opts.branchesId}" role="img" aria-label="${escHtml(ariaText)}">
+              <div class="node n-in"><strong>${isVi ? 'Chất thải rắn đầu vào' : 'Incoming solid waste'}</strong><span>${isVi ? 'Tiếp nhận và phân loại' : 'Reception and classification'}</span></div>
+              <svg class="dg-conn conn-a" viewBox="0 0 80 632" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="rail" pathLength="1" d="M0 316C40 316 40 150 80 150"/><path class="rail" pathLength="1" d="M0 316C40 316 40 482 80 482"/><path class="flow soft" d="M0 316C40 316 40 150 80 150"/><path class="flow soft" d="M0 316C40 316 40 482 80 482"/></svg>
+              <div class="grp grp1">
+                <div class="node n-br b1"><span>${isVi ? 'Nhánh 1' : 'Branch 1'}</span><strong>${isVi ? 'Sàng tuyển' : 'Sorting'}</strong></div>
+                <ul class="o-list o1">${sortingOutputs.join('')}</ul>
+              </div>
+              <div class="grp grp2">
+                <div class="node n-br b2"><span>${isVi ? 'Nhánh 2' : 'Branch 2'}</span><strong>${isVi ? 'Công nghệ VPD' : 'VPD technology'}</strong></div>
+                <ul class="o-list o2">${vpdOutputs.join('')}</ul>
+              </div>
+              <svg class="dg-conn conn-b" viewBox="0 0 96 632" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="rail" pathLength="1" d="M0 150C48 150 48 46 96 46"/><path class="rail" pathLength="1" d="M0 150H96"/><path class="rail" pathLength="1" d="M0 150C48 150 48 254 96 254"/><path class="rail" pathLength="1" d="M0 482C48 482 48 378 96 378"/><path class="rail" pathLength="1" d="M0 482H96"/><path class="rail" pathLength="1" d="M0 482C48 482 48 586 96 586"/><path class="flow" d="M0 150C48 150 48 46 96 46"/><path class="flow" d="M0 150H96"/><path class="flow" d="M0 150C48 150 48 254 96 254"/><path class="flow" d="M0 482C48 482 48 378 96 378"/><path class="flow" d="M0 482H96"/><path class="flow" d="M0 482C48 482 48 586 96 586"/><g class="end"><circle cx="93" cy="46" r="4"/><circle cx="93" cy="150" r="4"/><circle cx="93" cy="254" r="4"/><circle cx="93" cy="378" r="4"/><circle cx="93" cy="482" r="4"/><circle cx="93" cy="586" r="4"/></g></svg>
+            </div>
+          </div>
+          <figcaption class="dg-notes">
+            <div><h3>${isVi ? 'Sàng tuyển' : 'Sorting'}</h3><p>${isVi ? 'Phân tách các dòng vật chất phù hợp để tiếp tục xử lý hoặc khai thác giá trị.' : 'Separates suitable material streams for further processing or value recovery.'}</p>${down('#sang-tuyen', isVi ? 'Xem công đoạn sàng tuyển' : 'See the sorting stages')}</div>
+            <div><h3>${isVi ? 'Công nghệ VPD' : 'VPD technology'}</h3><p>${isVi ? 'Định hướng chuyển hoá một số dòng nguyên liệu phù hợp thành các sản phẩm đầu ra mới.' : 'Aims to convert suitable feedstock streams into new output products.'}</p>${down('#vpd', isVi ? 'Xem công đoạn VPD' : 'See the VPD stages')}</div>
+            <div><h3>${isVi ? 'Sáu dòng ở mức định hướng' : 'Six streams, planned direction'}</h3><p>${isVi ? 'Nhà máy đã đi vào hoạt động; các dòng đầu ra vẫn ở mức định hướng, chưa phải sản phẩm đang cung cấp.' : 'The plant is in operation; the output streams remain a planned direction, not products currently supplied.'}</p><a href="${ROUTES.products[locale]}">${isVi ? 'Xem sản phẩm đầu ra' : 'See output products'}${icon('arrow-right', { className: 'ico' })}</a></div>
+          </figcaption>
+        </figure>`;
+}
+
 function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
   const sloganLines = isVi
@@ -814,11 +821,6 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
       ? 'Phối cảnh nhà máy GMS dự kiến: mái pin mặt trời, hồ nước và cây xanh giữa khu công nghiệp sinh thái'
       : "Artist's impression of the planned GMS plant: solar roof, retention ponds and green buffer belts";
 
-  const outputItem = (o: LoadedSiteContent['outputLines'][number]) =>
-    `<li class="o" data-testid="output-row"><span class="o-name">${escHtml(o.name[locale])}</span><span class="tag">${o.state === 'da-co' ? (isVi ? 'Đã có' : 'Available') : isVi ? 'Định hướng' : 'Planned'}</span></li>`;
-  const sortingOutputs = content.outputLines.filter((o) => o.group === 'sang-tuyen').map(outputItem);
-  const vpdOutputs = content.outputLines.filter((o) => o.group === 'vpd').map(outputItem);
-
   const top3News = content.news[locale].slice(0, 3);
   const newsSection =
     top3News.length > 0
@@ -841,10 +843,6 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
           </div>
         </section>`
       : '';
-
-  const miniDiagramAria = isVi
-    ? 'Sơ đồ: chất thải đầu vào chia hai nhánh. Sàng tuyển ra nilon, mùn hữu cơ, RDF. Công nghệ VPD ra syngas, than hoạt tính, dầu tái chế.'
-    : 'Diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil.';
 
   // Hành trình: tên + trạng thái lấy từ content/journey-steps.yaml (V40: cả 5 bước "đã xong"); mô tả ngắn theo wireframe (chỉ có tiếng Việt).
   const journeyDesc = [
@@ -924,28 +922,7 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
           <h2 id="h-flow">${isVi ? 'Hai nhánh xử lý, sáu dòng tài nguyên' : 'Two processing branches, six resource streams'}</h2>
           <p>${isVi ? 'Chất thải rắn đầu vào được chia thành hai nhánh. Mỗi nhánh hướng tới ba dòng đầu ra, thay vì chỉ chôn lấp hay đốt.' : 'Incoming solid waste is split into two branches. Each branch aims at three output streams, instead of only landfilling or burning.'}</p>
         </div>
-        <figure>
-          <div class="board" data-testid="home-outputs">
-            <div class="dg" data-testid="home-branches" role="img" aria-label="${escHtml(miniDiagramAria)}">
-              <div class="node n-in"><strong>${isVi ? 'Chất thải rắn đầu vào' : 'Incoming solid waste'}</strong><span>${isVi ? 'Tiếp nhận và phân loại' : 'Reception and classification'}</span></div>
-              <svg class="dg-conn conn-a" viewBox="0 0 80 632" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="rail" pathLength="1" d="M0 316C40 316 40 150 80 150"/><path class="rail" pathLength="1" d="M0 316C40 316 40 482 80 482"/><path class="flow soft" d="M0 316C40 316 40 150 80 150"/><path class="flow soft" d="M0 316C40 316 40 482 80 482"/></svg>
-              <div class="grp grp1">
-                <div class="node n-br b1"><span>${isVi ? 'Nhánh 1' : 'Branch 1'}</span><strong>${isVi ? 'Sàng tuyển' : 'Sorting'}</strong></div>
-                <ul class="o-list o1">${sortingOutputs.join('')}</ul>
-              </div>
-              <div class="grp grp2">
-                <div class="node n-br b2"><span>${isVi ? 'Nhánh 2' : 'Branch 2'}</span><strong>${isVi ? 'Công nghệ VPD' : 'VPD technology'}</strong></div>
-                <ul class="o-list o2">${vpdOutputs.join('')}</ul>
-              </div>
-              <svg class="dg-conn conn-b" viewBox="0 0 96 632" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="rail" pathLength="1" d="M0 150C48 150 48 46 96 46"/><path class="rail" pathLength="1" d="M0 150H96"/><path class="rail" pathLength="1" d="M0 150C48 150 48 254 96 254"/><path class="rail" pathLength="1" d="M0 482C48 482 48 378 96 378"/><path class="rail" pathLength="1" d="M0 482H96"/><path class="rail" pathLength="1" d="M0 482C48 482 48 586 96 586"/><path class="flow" d="M0 150C48 150 48 46 96 46"/><path class="flow" d="M0 150H96"/><path class="flow" d="M0 150C48 150 48 254 96 254"/><path class="flow" d="M0 482C48 482 48 378 96 378"/><path class="flow" d="M0 482H96"/><path class="flow" d="M0 482C48 482 48 586 96 586"/><g class="end"><circle cx="93" cy="46" r="4"/><circle cx="93" cy="150" r="4"/><circle cx="93" cy="254" r="4"/><circle cx="93" cy="378" r="4"/><circle cx="93" cy="482" r="4"/><circle cx="93" cy="586" r="4"/></g></svg>
-            </div>
-          </div>
-          <figcaption class="dg-notes">
-            <div><h3>${isVi ? 'Sàng tuyển' : 'Sorting'}</h3><p>${isVi ? 'Phân tách các dòng vật chất phù hợp để tiếp tục xử lý hoặc khai thác giá trị.' : 'Separates suitable material streams for further processing or value recovery.'}</p></div>
-            <div><h3>${isVi ? 'Công nghệ VPD' : 'VPD technology'}</h3><p>${isVi ? 'Định hướng chuyển hoá một số dòng nguyên liệu phù hợp thành các sản phẩm đầu ra mới.' : 'Aims to convert suitable feedstock streams into new output products.'}</p></div>
-            <div><h3>${isVi ? 'Sáu dòng ở mức định hướng' : 'Six streams, planned direction'}</h3><p>${isVi ? 'Nhà máy đã đi vào hoạt động; các dòng đầu ra vẫn ở mức định hướng, chưa phải sản phẩm đang cung cấp.' : 'The plant is in operation; the output streams remain a planned direction, not products currently supplied.'}</p><a href="${ROUTES.products[locale]}">${isVi ? 'Xem sản phẩm đầu ra' : 'See output products'}${icon('arrow-right', { className: 'ico' })}</a></div>
-          </figcaption>
-        </figure>
+        ${boardFigure(content, locale, { outputsId: 'home-outputs', branchesId: 'home-branches', anchors: false })}
       </div>
     </section>
     <section class="sec sec-journey on-dark" data-testid="home-journey" id="hanh-trinh" aria-labelledby="h-journey">
@@ -992,8 +969,9 @@ function renderAboutPage(content: LoadedSiteContent, locale: Locale): string {
     ? ['Công nghệ tiên tiến', 'Tái tạo tài nguyên', 'Phát triển bền vững', 'Vì cộng đồng xanh']
     : ['Advanced technology', 'Resource recovery', 'Sustainable development', 'For a green community'];
 
+  const valueIcons: IconName[] = ['cpu', 'recycle', 'sprout', 'heart-handshake'];
   return `
-    <section class="section-block" data-testid="about-who">
+    <section class="hero-banner on-dark" data-testid="about-who">
       <p class="eyebrow">${isVi ? 'Giới thiệu' : 'About us'}</p>
       <h1>${isVi ? 'Giới thiệu về GMS Hưng Yên' : 'About GMS Hung Yen'}</h1>
       <p>${
@@ -1001,22 +979,33 @@ function renderAboutPage(content: LoadedSiteContent, locale: Locale): string {
           ? 'Công ty Cổ phần Môi Trường Năng Lượng Xanh Hưng Yên (GMS) phát triển tổ hợp xử lý chất thải rắn và tái tạo tài nguyên tại tỉnh Hưng Yên.'
           : 'Green Energy Environment Joint Stock Company Hung Yen (GMS) develops an integrated solid waste treatment and resource recovery complex in Hung Yen Province.'
       }</p>
-      ${customBody}
     </section>
-    <section class="section-block section-alt" data-testid="about-journey">
-      <h2>${isVi ? 'Hành trình chuyển đổi' : 'Transformation Journey'}</h2>
-      <p>${
-        isVi
-          ? 'Từ đánh giá hiện trạng, tổ chức lại mặt bằng, hạ tầng đã đi vào hoạt động đến triển khai dây chuyền sàng tuyển kết hợp nhiệt phân VPD.'
-          : 'From current-state assessment and site organisation and infrastructure that is now in operation to deployment of sorting and VPD pyrolysis lines.'
-      }</p>
+    ${
+      customBody
+        ? `<section class="sec" aria-label="${isVi ? 'Giới thiệu chi tiết' : 'Details'}"><div class="wrap"><div class="sec-body">${customBody}</div></div></section>`
+        : ''
+    }
+    <section class="sec sec-mist" data-testid="about-journey" aria-labelledby="h-journey">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 id="h-journey">${isVi ? 'Hành trình chuyển đổi' : 'Transformation Journey'}</h2>
+          <p>${
+            isVi
+              ? 'Từ đánh giá hiện trạng, tổ chức lại mặt bằng, hạ tầng đã đi vào hoạt động đến triển khai dây chuyền sàng tuyển kết hợp nhiệt phân VPD.'
+              : 'From current-state assessment and site organisation and infrastructure that is now in operation to deployment of sorting and VPD pyrolysis lines.'
+          }</p>
+        </div>
+      </div>
     </section>
-    <section class="section-block" data-testid="about-values">
-      <h2>${isVi ? 'Bốn giá trị cốt lõi' : 'Four Core Values'}</h2>
-      <ul class="grid-cards">
-        ${values.map((v) => `<li class="card" data-testid="value-card"><strong>${escHtml(v)}</strong></li>`).join('')}
-      </ul>
+    <section class="sec" data-testid="about-values" aria-labelledby="h-values">
+      <div class="wrap">
+        <div class="sec-head"><h2 id="h-values">${isVi ? 'Bốn giá trị cốt lõi' : 'Four Core Values'}</h2></div>
+        <ul class="tgrid t4">
+          ${values.map((v, i) => `<li><div class="tcard" data-testid="value-card">${icon(valueIcons[i] ?? 'check', { className: 'tc-ico' })}<h3>${escHtml(v)}</h3></div></li>`).join('')}
+        </ul>
+      </div>
     </section>
+    ${ctaSection(content, locale)}
   `;
 }
 
@@ -1032,11 +1021,14 @@ function renderSolutionsPage(content: LoadedSiteContent, locale: Locale): string
   const isVi = locale === 'vi';
   const items = content.solutionItems[locale];
   return `
-    <section class="section-block">
+    <section class="hero-banner on-dark">
       <p class="eyebrow">${isVi ? 'Giải pháp' : 'Solutions'}</p>
       <h1>${isVi ? 'Giải pháp xử lý chất thải & Tái tạo tài nguyên' : 'Waste Treatment & Resource Recovery Solutions'}</h1>
-      <h2>${isVi ? 'Quy trình giải pháp khép kín' : 'Integrated solution framework'}</h2>
-      <ol class="step-grid">
+    </section>
+    <section class="sec sec-mist" aria-labelledby="h-sol">
+      <div class="wrap">
+      <div class="sec-head"><h2 id="h-sol">${isVi ? 'Quy trình giải pháp khép kín' : 'Integrated solution framework'}</h2></div>
+      <ol class="tgrid t3">
         ${items
           .map((item, i) => {
             const img = SOLUTION_IMAGES[i];
@@ -1044,25 +1036,24 @@ function renderSolutionsPage(content: LoadedSiteContent, locale: Locale): string
             const fig = img
               ? `<figure class="step-fig"><img src="${img}" srcset="${img.replace(/\.jpg$/, `-${SOLUTION_IMG_SMALL_WIDTH}.jpg`)} ${SOLUTION_IMG_SMALL_WIDTH}w, ${img.replace(/\.jpg$/, `-${SOLUTION_IMG_MID_WIDTH}.jpg`)} ${SOLUTION_IMG_MID_WIDTH}w, ${img} ${STATIC_IMG_MAX_WIDTH}w" sizes="(min-width: 900px) 33vw, calc(100vw - 32px)" alt="" width="640" height="360"${i === 0 ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async" /></figure>`
               : '';
-            return `<li class="card step-card" data-testid="solution-item">
+            return `<li><div class="tcard step-card" data-testid="solution-item">
               ${fig}
-              <div class="stp-head"><span class="step-badge" aria-hidden="true">${i + 1}</span><h3><span class="sr-only">${isVi ? 'Bước' : 'Step'} ${i + 1}: </span>${escHtml(item.title)}</h3></div>
-              <div>${item.bodyHtml}</div>
-              <p><a href="${ROUTES.contact[locale]}" class="btn" data-testid="cta-contact">${isVi ? 'Liên hệ tư vấn' : 'Contact us'}</a></p>
-            </li>`;
+              <div class="step-text">
+                <div class="stp-head"><span class="step-badge" aria-hidden="true">${i + 1}</span><h3><span class="sr-only">${isVi ? 'Bước' : 'Step'} ${i + 1}: </span>${escHtml(item.title)}</h3></div>
+                <div class="step-body">${item.bodyHtml}</div>
+              </div>
+            </div></li>`;
           })
           .join('')}
       </ol>
+      </div>
     </section>
+    ${ctaSection(content, locale)}
   `;
 }
 
 function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
-  const diagramAria = isVi
-    ? 'Sơ đồ tổng quan: chất thải đầu vào chia hai nhánh. Sàng tuyển ra nilon, mùn hữu cơ, RDF. Công nghệ VPD ra syngas, than hoạt tính, dầu tái chế. Các dòng đầu ra quay lại chu trình sử dụng.'
-    : 'Overview diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil. The outputs return to a cycle of use.';
-
   const customBody = content.pagesBody.technology?.[locale]?.bodyHtml ?? '';
   // V39/V42(2)/§12a: khung `gms-sorting-line` — ảnh/bản vẽ của GMS, contain, 3:2; ô null ⇒ ẩn cả khung.
   // Ô đã được loader giải + kiểm theo luật "Ô ảnh cố định" (jpg/jpeg/png/webp); src lấy cùng nguồn với
@@ -1075,16 +1066,13 @@ function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): strin
       ? `<figcaption class="photo-label" data-testid="photo-label">${isVi ? 'Phối cảnh dự kiến' : "Artist's impression"}</figcaption>`
       : '';
   const drawingHtml = drawingImg
-    ? `<section class="section-block section-alt" data-testid="tech-drawing">
-          <h2>${isVi ? 'Dây chuyền sàng tuyển của GMS' : 'The GMS sorting line'}</h2>
-          <figure class="card">
-            <div class="gms-sorting-line" data-testid="gms-sorting-line">
+    ? `<figure class="fig branch-fig" data-testid="tech-drawing">
+            <div class="fig-box has-img gms-sorting-line" data-testid="gms-sorting-line">
               <img src="${escHtml(drawingSrc)}" alt="${escHtml(drawingImg.alt[locale])}" width="1500" height="1000" loading="lazy" />
               ${drawingLabel}
             </div>
-            <figcaption>${isVi ? 'Dây chuyền sàng tuyển của GMS.' : 'The GMS sorting line.'}</figcaption>
-          </figure>
-        </section>`
+            <figcaption><strong>${isVi ? 'Dây chuyền sàng tuyển của GMS.' : 'The GMS sorting line.'}</strong></figcaption>
+          </figure>`
     : '';
 
   const vpdSteps = isVi
@@ -1181,16 +1169,42 @@ function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): strin
         },
       ];
 
-  const vpdStepsHtml = vpdSteps
+  const vpdStagesHtml = vpdSteps
     .map(
-      (s, idx) => `<li class="step${idx === 0 ? ' is-active' : ''}${s.isLoop ? ' loop' : ''}">
-        <button type="button" class="step-head"${idx === 0 ? ' aria-current="step"' : ''}>
-          <span class="step-num">${escHtml(s.num)}</span>
-          <span class="step-title">${escHtml(s.title)}</span>
-        </button>
-        <p>${escHtml(s.desc)}</p>
-        ${s.chips.length > 0 ? `<ul class="chips">${s.chips.map((c) => `<li>${escHtml(c)}</li>`).join('')}</ul>` : ''}
-      </li>`,
+      (s) => `<li class="stage${s.isLoop ? ' stage-loop' : ''}" data-testid="vpd-stage">
+              ${s.isLoop ? `<span class="loop-ico" aria-hidden="true">${icon('recycle', { size: 20 })}</span>` : ''}
+              <h3>${escHtml(s.title)}</h3>
+              <p>${escHtml(s.desc)}</p>
+              ${s.chips.length > 0 ? `<ul class="outs">${s.chips.map((c) => `<li class="out">${escHtml(c)}</li>`).join('')}</ul>` : ''}
+            </li>`,
+    )
+    .join('');
+  const sortSteps = isVi
+    ? [
+        { title: 'Cấp liệu', desc: 'Cấp liệu đều lên dây chuyền.', chips: [] as string[] },
+        { title: 'Mở bao', desc: 'Mở bao tách rời vật liệu.', chips: [] as string[] },
+        {
+          title: 'Tuyển phân loại và thu từng dòng',
+          desc: 'Lồng tuyển phân loại, thu từng dòng.',
+          chips: ['Nilon', 'Mùn hữu cơ', 'RDF'],
+        },
+      ]
+    : [
+        { title: 'Feeding', desc: 'Even feeding onto the line.', chips: [] as string[] },
+        { title: 'Bag opening', desc: 'Bag opening to separate contents.', chips: [] as string[] },
+        {
+          title: 'Rotary screening and stream collection',
+          desc: 'Rotary screening and collection of each stream.',
+          chips: ['Plastic film', 'Organic humus', 'RDF'],
+        },
+      ];
+  const sortStagesHtml = sortSteps
+    .map(
+      (s) => `<li class="stage" data-testid="sorting-stage">
+              <h3>${escHtml(s.title)}</h3>
+              <p>${escHtml(s.desc)}</p>
+              ${s.chips.length > 0 ? `<ul class="outs">${s.chips.map((c) => `<li class="out">${escHtml(c)}</li>`).join('')}</ul>` : ''}
+            </li>`,
     )
     .join('');
 
@@ -1210,187 +1224,46 @@ function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): strin
       </ul>
     </section>
 
-    <section class="section-block">
-      <p class="eyebrow">${isVi ? 'Tổng quan' : 'Overview'}</p>
-      <h2>${isVi ? 'Một dòng vào, sáu dòng tài nguyên ra' : 'One stream in, six resource streams out'}</h2>
-      <div class="diagram-box" data-testid="tech-diagram" role="region" aria-label="${escHtml(diagramAria)}">
-        <svg class="flow-svg flow-wide" viewBox="0 0 1000 380" role="img" aria-label="${escHtml(diagramAria)}">
-          <defs>
-            <marker id="ah-w" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#368F3D"/></marker>
-            <marker id="ah-wb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1D6FB6"/></marker>
-          </defs>
-          <g>
-            <path class="wire" d="M190 190 C240 190 240 90 286 90" marker-end="url(#ah-w)"/>
-            <path class="wire blue" d="M190 190 C240 190 240 290 286 290" marker-end="url(#ah-wb)"/>
-            <path class="wire" d="M480 90 C525 90 525 44 566 44" marker-end="url(#ah-w)"/>
-            <path class="wire" d="M480 90 C525 90 525 96 566 96" marker-end="url(#ah-w)"/>
-            <path class="wire" d="M480 90 C525 90 525 148 566 148" marker-end="url(#ah-w)"/>
-            <path class="wire blue" d="M480 290 C525 290 525 232 566 232" marker-end="url(#ah-wb)"/>
-            <path class="wire blue" d="M480 290 C525 290 525 284 566 284" marker-end="url(#ah-wb)"/>
-            <path class="wire blue" d="M480 290 C525 290 525 336 566 336" marker-end="url(#ah-wb)"/>
-            <path class="wire" d="M750 44 C795 44 795 190 826 190"/>
-            <path class="wire" d="M750 96 C795 96 795 190 826 190"/>
-            <path class="wire" d="M750 148 C795 148 795 190 826 190"/>
-            <path class="wire blue" d="M750 232 C795 232 795 190 826 190"/>
-            <path class="wire blue" d="M750 284 C795 284 795 190 826 190"/>
-            <path class="wire blue" d="M750 336 C795 336 795 190 826 190"/>
-          </g>
-          <g class="node dark"><rect x="20" y="160" width="170" height="60" rx="12"/>
-            <text x="105" y="190" text-anchor="middle" dominant-baseline="central">${isVi ? 'Chất thải đầu vào' : 'Incoming waste'}</text></g>
-          <g class="node green"><rect x="290" y="60" width="190" height="60" rx="12"/>
-            <text x="385" y="90" text-anchor="middle" dominant-baseline="central">${isVi ? 'Sàng tuyển' : 'Sorting'}</text></g>
-          <g class="node blue"><rect x="290" y="260" width="190" height="60" rx="12"/>
-            <text x="385" y="290" text-anchor="middle" dominant-baseline="central">${isVi ? 'Công nghệ VPD' : 'VPD technology'}</text></g>
-          <g class="node out"><rect x="570" y="22" width="180" height="44" rx="22"/>
-            <text x="660" y="44" text-anchor="middle" dominant-baseline="central">${isVi ? 'Nilon' : 'Plastic film'}</text></g>
-          <g class="node out"><rect x="570" y="74" width="180" height="44" rx="22"/>
-            <text x="660" y="96" text-anchor="middle" dominant-baseline="central">${isVi ? 'Mùn hữu cơ' : 'Organic humus'}</text></g>
-          <g class="node out"><rect x="570" y="126" width="180" height="44" rx="22"/>
-            <text x="660" y="148" text-anchor="middle" dominant-baseline="central">RDF</text></g>
-          <g class="node out vpd"><rect x="570" y="210" width="180" height="44" rx="22"/>
-            <text x="660" y="232" text-anchor="middle" dominant-baseline="central">Syngas</text></g>
-          <g class="node out vpd"><rect x="570" y="262" width="180" height="44" rx="22"/>
-            <text x="660" y="284" text-anchor="middle" dominant-baseline="central">${isVi ? 'Than hoạt tính' : 'Activated carbon'}</text></g>
-          <g class="node out vpd"><rect x="570" y="314" width="180" height="44" rx="22"/>
-            <text x="660" y="336" text-anchor="middle" dominant-baseline="central">${isVi ? 'Dầu tái chế' : 'Recycled oil'}</text></g>
-          <g class="node dark"><rect x="830" y="146" width="150" height="88" rx="14"/>
-            <text x="905" y="178" text-anchor="middle" dominant-baseline="central">${isVi ? 'Tài nguyên' : 'Resources back'}</text>
-            <text x="905" y="202" text-anchor="middle" dominant-baseline="central">${isVi ? 'quay lại chu trình' : 'into use'}</text></g>
-          <circle class="dot" cx="826" cy="190" r="5"/>
-        </svg>
+    <section class="sec" id="hai-nhanh" aria-labelledby="h-flow">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 id="h-flow">${isVi ? 'Một dòng vào, hai nhánh xử lý, sáu dòng tài nguyên' : 'One stream in, two processing branches, six resource streams'}</h2>
+        </div>
+        ${boardFigure(content, locale, { outputsId: 'tech-diagram', branchesId: 'tech-branches', anchors: true })}
+        ${customBody}
+      </div>
+    </section>
 
-        <svg class="flow-svg flow-tall" viewBox="0 0 360 500" role="img" aria-label="${escHtml(diagramAria)}">
-          <defs>
-            <marker id="ah-t" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#368F3D"/></marker>
-            <marker id="ah-tb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1D6FB6"/></marker>
-          </defs>
-          <path class="wire" d="M180 68 C180 94 94 90 94 114" marker-end="url(#ah-t)"/>
-          <path class="wire blue" d="M180 68 C180 94 266 90 266 114" marker-end="url(#ah-tb)"/>
-          <path class="wire" d="M94 172 L94 356"/>
-          <path class="wire blue" d="M266 172 L266 356"/>
-          <path class="wire" d="M94 356 C94 396 180 392 180 420" marker-end="url(#ah-t)"/>
-          <path class="wire blue" d="M266 356 C266 396 180 392 180 420" marker-end="url(#ah-tb)"/>
-          <g class="node dark"><rect x="80" y="16" width="200" height="52" rx="12"/>
-            <text x="180" y="42" text-anchor="middle" dominant-baseline="central">${isVi ? 'Chất thải đầu vào' : 'Incoming waste'}</text></g>
-          <g class="node green"><rect x="16" y="120" width="156" height="52" rx="12"/>
-            <text x="94" y="146" text-anchor="middle" dominant-baseline="central">${isVi ? 'Sàng tuyển' : 'Sorting'}</text></g>
-          <g class="node blue"><rect x="188" y="120" width="156" height="52" rx="12"/>
-            <text x="266" y="146" text-anchor="middle" dominant-baseline="central">${isVi ? 'Công nghệ VPD' : 'VPD technology'}</text></g>
-          <g class="node out"><rect x="24" y="210" width="140" height="40" rx="20"/>
-            <text x="94" y="230" text-anchor="middle" dominant-baseline="central">${isVi ? 'Nilon' : 'Plastic film'}</text></g>
-          <g class="node out"><rect x="24" y="262" width="140" height="40" rx="20"/>
-            <text x="94" y="282" text-anchor="middle" dominant-baseline="central">${isVi ? 'Mùn hữu cơ' : 'Organic humus'}</text></g>
-          <g class="node out"><rect x="24" y="314" width="140" height="40" rx="20"/>
-            <text x="94" y="334" text-anchor="middle" dominant-baseline="central">RDF</text></g>
-          <g class="node out vpd"><rect x="196" y="210" width="140" height="40" rx="20"/>
-            <text x="266" y="230" text-anchor="middle" dominant-baseline="central">Syngas</text></g>
-          <g class="node out vpd"><rect x="196" y="262" width="140" height="40" rx="20"/>
-            <text x="266" y="282" text-anchor="middle" dominant-baseline="central">${isVi ? 'Than hoạt tính' : 'Activated carbon'}</text></g>
-          <g class="node out vpd"><rect x="196" y="314" width="140" height="40" rx="20"/>
-            <text x="266" y="334" text-anchor="middle" dominant-baseline="central">${isVi ? 'Dầu tái chế' : 'Recycled oil'}</text></g>
-          <g class="node dark"><rect x="40" y="426" width="280" height="56" rx="14"/>
-            <text x="180" y="454" text-anchor="middle" dominant-baseline="central">${isVi ? 'Tài nguyên quay lại chu trình' : 'Resources back into use'}</text></g>
-        </svg>
-
-        <div class="grid-cards" style="margin-top: 20px;">
-          <div class="card" data-branch="screening">
-            <h3>${isVi ? 'Nhánh 1: Sàng tuyển' : 'Branch 1: Sorting (Screening)'}</h3>
-            <ul>
-              <li data-stage="feeding" style="font-size: 16px;">${isVi ? '1. Cấp liệu đều lên dây chuyền' : '1. Even feeding onto the line'}</li>
-              <li data-stage="bag-opening" style="font-size: 16px;">${isVi ? '2. Mở bao tách rời vật liệu' : '2. Bag opening to separate contents'}</li>
-              <li data-stage="rotary-screening" style="font-size: 16px;">${isVi ? '3. Lồng tuyển phân loại & thu từng dòng (Nilon, Mùn hữu cơ, RDF)' : '3. Rotary screening & stream collection (Plastic film, Organic humus, RDF)'}</li>
-            </ul>
-          </div>
-          <div class="card" data-branch="vpd">
-            <h3>${isVi ? 'Nhánh 2: Công nghệ VPD' : 'Branch 2: VPD Technology'}</h3>
-            <ul>
-              <li data-stage="pretreatment" style="font-size: 16px;">${isVi ? '1. Tiếp nhận, mở bao, ép tách nước & sấy giảm ẩm' : '1. Intake, bag opening, dewatering press & drying'}</li>
-              <li data-stage="thermal-decomposition" style="font-size: 16px;">${isVi ? '2. Phân huỷ nhiệt trong buồng kín thu than hoạt tính' : '2. Closed-chamber thermal decomposition recovering activated carbon'}</li>
-              <li data-stage="gas-cleaning-loop" style="font-size: 16px;">${isVi ? '3. Làm sạch tách dòng khí (dầu tái chế, syngas) & vòng hồi lưu nhiệt' : '3. Gas cleaning & separation (recycled oil, syngas) & thermal return loop'}</li>
-            </ul>
-          </div>
+    <section class="sec sec-mist" id="sang-tuyen" aria-labelledby="h-sort" data-testid="tech-sorting">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">${isVi ? 'Nhánh 1' : 'Branch 1'}</span>
+          <h2 id="h-sort">${isVi ? 'Sàng tuyển: tách đúng dòng trước khi xử lý' : 'Sorting: separating the right streams first'}</h2>
+        </div>
+        <div class="branch${drawingImg ? '' : ' no-fig'}">
+          <ol class="stages">
+            ${sortStagesHtml}
+          </ol>
+          ${drawingHtml}
         </div>
       </div>
-      ${customBody}
-      <p style="margin-top: 16px;">
-        <a href="${ROUTES.contact[locale]}?from=technology" class="btn" data-testid="cta-contact">${isVi ? 'Liên hệ trao đổi kỹ thuật' : 'Contact our technical team'}</a>
-      </p>
     </section>
 
-    ${drawingHtml}
-
-    <section class="section-block" aria-labelledby="vpd-title">
-      <p class="eyebrow">${isVi ? 'Công nghệ VPD' : 'VPD technology'}</p>
-      <h2 id="vpd-title">${isVi ? 'Quy trình chuyển hoá, từng bước' : 'The conversion process, step by step'}</h2>
-      <p>${isVi ? 'Bấm từng bước hoặc chọn “Tự chạy” để xem dòng nguyên liệu đi qua dây chuyền.' : 'Tap a step or choose “Auto play” to follow the feedstock through the line.'}</p>
-      <div class="step-controls">
-        <button type="button" class="btn btn-outline" id="step-prev">${icon('arrow-left', { size: 18 })}${isVi ? 'Bước trước' : 'Previous'}</button>
-        <button type="button" class="btn" id="step-play" aria-pressed="false" data-label-play="${isVi ? 'Tự chạy' : 'Auto play'}" data-label-stop="${isVi ? 'Dừng' : 'Stop'}">${isVi ? 'Tự chạy' : 'Auto play'}</button>
-        <button type="button" class="btn btn-outline" id="step-next">${isVi ? 'Bước sau' : 'Next'}${icon('arrow-right', { size: 18 })}</button>
+    <section class="sec sec-vpd" id="vpd" aria-labelledby="h-vpd" data-testid="tech-vpd">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">${isVi ? 'Nhánh 2' : 'Branch 2'}</span>
+          <h2 id="h-vpd">${isVi ? 'Công nghệ VPD: quy trình chuyển hoá' : 'VPD technology: the conversion process'}</h2>
+        </div>
+        <div class="branch no-fig">
+          <ol class="stages">
+            ${vpdStagesHtml}
+          </ol>
+        </div>
       </div>
-      <p class="sr-only" aria-live="polite" id="step-live"></p>
-      <ol class="steps" id="vpd-steps-list">
-        ${vpdStepsHtml}
-      </ol>
     </section>
 
-    <section class="section-block">
-      <p class="eyebrow">${isVi ? 'Chung tay vì môi trường xanh' : 'Partner for a greener future'}</p>
-      <h2>${isVi ? 'Trao đổi về công nghệ & hợp tác với GMS' : 'Discuss technology & partnership with GMS'}</h2>
-      <p><a href="${ROUTES.contact[locale]}?from=technology" class="btn" data-testid="cta-contact">${isVi ? 'Liên hệ với GMS' : 'Contact GMS'}</a></p>
-    </section>
-
-    <script>
-    (function() {
-      var list = document.getElementById('vpd-steps-list');
-      if (!list) return;
-      var steps = Array.prototype.slice.call(list.querySelectorAll('.step'));
-      var playBtn = document.getElementById('step-play');
-      var prevBtn = document.getElementById('step-prev');
-      var nextBtn = document.getElementById('step-next');
-      var live = document.getElementById('step-live');
-      var cur = 0;
-      var timer = null;
-
-      function go(idx, announce) {
-        cur = (idx + steps.length) % steps.length;
-        steps.forEach(function(s, k) {
-          s.classList.toggle('is-active', k === cur);
-          var h = s.querySelector('.step-head');
-          if (h) {
-            if (k === cur) h.setAttribute('aria-current', 'step');
-            else h.removeAttribute('aria-current');
-          }
-        });
-        if (announce && live) {
-          var t = steps[cur].querySelector('.step-title');
-          live.textContent = (cur + 1) + '/' + steps.length + ': ' + (t ? t.textContent : '');
-        }
-      }
-      function stop() {
-        if (timer) { clearInterval(timer); timer = null; }
-        if (playBtn) {
-          playBtn.setAttribute('aria-pressed', 'false');
-          playBtn.textContent = playBtn.getAttribute('data-label-play') || 'Play';
-        }
-      }
-      function start() {
-        stop();
-        if (playBtn) {
-          playBtn.setAttribute('aria-pressed', 'true');
-          playBtn.textContent = playBtn.getAttribute('data-label-stop') || 'Stop';
-        }
-        timer = setInterval(function() { go(cur + 1, false); }, 2400);
-      }
-      if (playBtn) playBtn.addEventListener('click', function() { if (timer) stop(); else start(); });
-      if (prevBtn) prevBtn.addEventListener('click', function() { stop(); go(cur - 1, true); });
-      if (nextBtn) nextBtn.addEventListener('click', function() { stop(); go(cur + 1, true); });
-      steps.forEach(function(s, k) {
-        var h = s.querySelector('.step-head');
-        if (h) h.addEventListener('click', function() { stop(); go(k, true); });
-      });
-    })();
-    </script>
+    ${ctaSection(content, locale)}
   `;
 }
 
@@ -1399,25 +1272,27 @@ function renderProductsPage(content: LoadedSiteContent, locale: Locale): string 
   const screeningLines = content.outputLines.filter((l) => l.group === 'sang-tuyen');
   const vpdLines = content.outputLines.filter((l) => l.group === 'vpd');
 
-  const renderGroup = (title: string, items: typeof screeningLines) => `
-    <section class="section-block" data-testid="output-group">
-      <h2>${escHtml(title)}</h2>
-      <div class="grid-cards">
-        ${items
-          .map(
-            (item) => `<article class="card" data-testid="output-row">
+  const renderGroup = (title: string, items: typeof screeningLines, mist: boolean) => `
+    <section class="sec${mist ? ' sec-mist' : ''}" data-testid="output-group">
+      <div class="wrap">
+        <div class="sec-head"><h2>${escHtml(title)}</h2></div>
+        <ul class="tgrid t3">
+          ${items
+            .map(
+              (item) => `<li><article class="tcard" data-testid="output-row">
               <h3>${escHtml(item.name[locale])}</h3>
-              <p><span class="badge">${item.state === 'da-co' ? (isVi ? 'Đã có' : 'Available') : isVi ? 'Định hướng' : 'Planned'}</span></p>
+              <p class="tag-line"><span class="st">${item.state === 'da-co' ? (isVi ? 'Đã có' : 'Available') : isVi ? 'Định hướng' : 'Planned'}</span></p>
               <p>${escHtml(item.desc[locale])}</p>
-            </article>`,
-          )
-          .join('')}
+            </article></li>`,
+            )
+            .join('')}
+        </ul>
       </div>
     </section>
   `;
 
   return `
-    <section class="section-block">
+    <section class="hero-banner on-dark">
       <p class="eyebrow">${isVi ? 'Đầu ra định hướng' : 'Planned outputs'}</p>
       <h1>${isVi ? 'Sản phẩm đầu ra' : 'Output Products'}</h1>
       <p>${
@@ -1426,9 +1301,68 @@ function renderProductsPage(content: LoadedSiteContent, locale: Locale): string 
           : 'Six recovered output lines from mechanical sorting and VPD pyrolysis technology.'
       }</p>
     </section>
-    ${renderGroup(isVi ? 'Nhóm Sàng tuyển' : 'Sorting Group (Sàng tuyển)', screeningLines)}
-    ${renderGroup(isVi ? 'Nhóm Công nghệ VPD' : 'VPD Technology Group (Công nghệ VPD)', vpdLines)}
+    ${renderGroup(isVi ? 'Nhóm Sàng tuyển' : 'Sorting Group (Sàng tuyển)', screeningLines, false)}
+    ${renderGroup(isVi ? 'Nhóm Công nghệ VPD' : 'VPD Technology Group (Công nghệ VPD)', vpdLines, true)}
+    ${ctaSection(content, locale)}
   `;
+}
+
+/**
+ * Trang chi tiết (tin, dự án, tuyển dụng) theo news-detail.html: hero có breadcrumb + h1 + hàng thông tin, cột bài
+ * ≤ 760px (ảnh đầu, thân `.prose`, nút quay lại), khối mời liên hệ. Thân bài do loader dựng từ Markdown.
+ */
+function detailPage(
+  content: LoadedSiteContent,
+  locale: Locale,
+  o: {
+    listLabel: string;
+    listHref: string;
+    title: string;
+    metaHtml: string;
+    leadFigureHtml?: string;
+    bodyHtml: string;
+    backLabel: string;
+  },
+): string {
+  const isVi = locale === 'vi';
+  const chev = icon('chevron-right', { size: 16, className: 'ico' });
+  return `<!--bleed-->
+    <article aria-labelledby="h1">
+      <header class="hero hero-sub hero-detail on-dark">
+        ${HERO_STREAKS}
+        <div class="wrap">
+          <div class="col">
+            <nav class="crumb" aria-label="${isVi ? 'Đường dẫn trang' : 'Breadcrumb'}" data-testid="breadcrumb">
+              <ol>
+                <li><a href="${ROUTES.home[locale]}">${isVi ? 'Trang chủ' : 'Home'}</a>${chev}</li>
+                <li><a href="${o.listHref}">${escHtml(o.listLabel)}</a>${chev}</li>
+                <li><span aria-current="page">${escHtml(o.title)}</span></li>
+              </ol>
+            </nav>
+            <div class="fade">
+              <h1 id="h1">${escHtml(o.title)}</h1>
+              <div class="meta">${o.metaHtml}</div>
+            </div>
+          </div>
+        </div>
+      </header>
+      <div class="art">
+        <div class="wrap">
+          <div class="col">
+            ${o.leadFigureHtml ?? ''}
+            <div class="prose">${o.bodyHtml}</div>
+            <div class="art-end"><a class="btn-sec" href="${o.listHref}">${icon('arrow-left', { size: 18, className: 'ico' })}${escHtml(o.backLabel)}</a></div>
+          </div>
+        </div>
+      </div>
+    </article>
+    ${ctaSection(content, locale)}`;
+}
+
+/** Trạng thái rỗng U08 (wireframe `.empty`): biểu tượng, câu nói cần làm gì, nút liên hệ. */
+function emptyBlock(locale: Locale, iconName: IconName, text: string): string {
+  const isVi = locale === 'vi';
+  return `<div class="empty" role="status" data-testid="empty-state">${icon(iconName, { size: 40, className: 'ico' })}<p>${escHtml(text)}</p><a class="btn" href="${ROUTES.contact[locale]}">${isVi ? 'Liên hệ' : 'Contact'}${icon('arrow-right', { size: 18, className: 'ico' })}</a></div>`;
 }
 
 function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum: number): string {
@@ -1478,58 +1412,74 @@ function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum:
 
   const listHtml =
     pageItems.length > 0
-      ? `<div class="grid-cards">
+      ? `<ul class="news-grid">
           ${pageItems
             .map(
-              (n) => `<article class="card" data-testid="news-item">
-                <h2><a href="${ROUTES.news[locale]}/${n.slug}">${escHtml(n.title)}</a></h2>
-                <p><small>${escHtml(formatDateLocale(n.date, locale))}</small></p>
-                <p>${escHtml(n.summary)}</p>
-              </article>`,
+              (n) => `<li><article class="news" data-testid="news-item">
+                <div class="thumb">${icon('image', { className: 'ico' })}</div>
+                <div class="news-body"><time class="date" datetime="${escHtml(n.date)}">${escHtml(formatDateLocale(n.date, locale))}</time><h3><a href="${ROUTES.news[locale]}/${n.slug}">${escHtml(n.title)}</a></h3><p class="sum">${escHtml(n.summary)}</p></div>
+              </article></li>`,
             )
             .join('')}
-        </div>`
-      : `<div data-testid="empty-state"><p>${
+        </ul>`
+      : emptyBlock(
+          locale,
+          'newspaper',
           isVi
             ? 'Chưa có bài viết nào. Mời bạn quay lại sau, hoặc liên hệ để biết thêm về GMS.'
-            : 'There are no articles yet. Please check back later, or contact us to learn more about GMS.'
-        }</p></div>`;
+            : 'There are no articles yet. Please check back later, or contact us to learn more about GMS.',
+        );
 
   let paginationHtml = '';
   if (totalPages > 1) {
-    const links: string[] = [];
-    for (let p = 1; p <= totalPages; p++) {
-      const href = p === 1 ? ROUTES.news[locale] : `${ROUTES.news[locale]}/${isVi ? 'trang' : 'page'}/${p}`;
-      links.push(
-        `<a href="${href}"${p === pageNum ? ' aria-current="page"' : ''}>${isVi ? `Trang ${p}` : `Page ${p}`}</a>`,
-      );
-    }
-    paginationHtml = `<nav aria-label="${isVi ? 'Phân trang tin tức' : 'News pagination'}">${links.join(' · ')}</nav>`;
+    const pageHref = (p: number) =>
+      p === 1 ? ROUTES.news[locale] : `${ROUTES.news[locale]}/${isVi ? 'trang' : 'page'}/${p}`;
+    const prev =
+      pageNum > 1
+        ? `<a class="pg" href="${pageHref(pageNum - 1)}" rel="prev">${icon('arrow-left', { size: 18, className: 'ico' })}${isVi ? 'Trang trước' : 'Previous page'}</a>`
+        : '';
+    const next =
+      pageNum < totalPages
+        ? `<a class="pg" href="${pageHref(pageNum + 1)}" rel="next">${isVi ? 'Trang sau' : 'Next page'}${icon('arrow-right', { size: 18, className: 'ico' })}</a>`
+        : '';
+    paginationHtml = `<nav class="pager" aria-label="${isVi ? 'Phân trang tin tức' : 'News pagination'}">${prev}<span class="pos" aria-current="page">${isVi ? `Trang ${pageNum} / ${totalPages}` : `Page ${pageNum} of ${totalPages}`}</span>${next}</nav>`;
   }
 
   return `
-    <section class="section-block">
+    <section class="hero-banner on-dark">
       <p class="eyebrow">${isVi ? 'Hành trình chuyển đổi' : 'Transformation journey'}</p>
       <h1>${isVi ? 'Tin tức & Hành trình chuyển đổi' : 'News & Transformation Journey'}</h1>
-      <h2>${isVi ? 'Lộ trình chuyển đổi 5 bước' : '5-Step Transformation Roadmap'}</h2>
-      <ol class="grid-cards">
+    </section>
+    <section class="sec sec-journey on-dark" id="lo-trinh" aria-labelledby="h-journey">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 id="h-journey">${isVi ? 'Lộ trình chuyển đổi 5 bước' : '5-Step Transformation Roadmap'}</h2>
+        </div>
+        <ol class="j-steps">
         ${stepRows
           .map((s, idx) => {
             const label = statusLabel(s.status);
             const key = s.status ? STATUS_KEY[s.status] : undefined;
             const badge = label
-              ? `<div class="journey-status"><span class="badge badge-status${key ? ` badge-status--${key}` : ''}" data-status="${escHtml(s.status ?? '')}">${key ? STATUS_ICON[key] : ''}${escHtml(label)}</span></div>`
+              ? `<span class="badge badge-status${key ? ` badge-status--${key}` : ''}" data-status="${escHtml(s.status ?? '')}">${key ? STATUS_ICON[key] : ''}${escHtml(label)}</span>`
               : '';
-            return `<li class="card" data-testid="journey-step"><strong>${idx + 1}. ${escHtml(s.name)}</strong>${badge}</li>`;
+            return `<li class="j-step now" data-testid="journey-step" data-status="${escHtml(s.status ?? '')}"><span class="step-n">${isVi ? 'Bước' : 'Step'} ${String(idx + 1).padStart(2, '0')}</span><h3>${escHtml(s.name)}</h3>${badge}</li>`;
           })
           .join('')}
-      </ol>
+        </ol>
+      </div>
     </section>
-    <section class="section-block">
-      <h2>${isVi ? 'Danh sách bài viết' : 'Articles'}</h2>
-      ${listHtml}
-      ${paginationHtml}
+    <section class="sec" id="danh-sach" aria-labelledby="h-list">
+      <div class="wrap">
+        <div class="news-head">
+          <h2 id="h-list">${isVi ? 'Danh sách bài viết' : 'Articles'}</h2>
+          ${totalPages > 1 ? `<p class="count">${isVi ? `Trang ${pageNum} / ${totalPages}` : `Page ${pageNum} of ${totalPages}`}</p>` : ''}
+        </div>
+        ${listHtml}
+        ${paginationHtml}
+      </div>
     </section>
+    ${ctaSection(content, locale)}
   `;
 }
 
@@ -1538,29 +1488,35 @@ function renderProjectsListPage(content: LoadedSiteContent, locale: Locale): str
   const items = content.projects[locale];
   const body =
     items.length > 0
-      ? `<div class="grid-cards">
+      ? `<ul class="news-grid">
           ${items
             .map(
-              (p) => `<article class="card" data-testid="list-item">
-                <h2><a href="${ROUTES.projects[locale]}/${p.slug}">${escHtml(p.title)}</a></h2>
-                <p><small>${escHtml(formatDateLocale(p.date, locale))} · ${escHtml(p.category)}</small></p>
-                <p>${escHtml(p.summary)}</p>
-              </article>`,
+              (p) => `<li><article class="news" data-testid="list-item">
+                <div class="thumb">${icon('image', { className: 'ico' })}</div>
+                <div class="news-body"><time class="date" datetime="${escHtml(p.date)}">${escHtml(formatDateLocale(p.date, locale))}</time><p class="il">${escHtml(p.category)}</p><h3><a href="${ROUTES.projects[locale]}/${p.slug}">${escHtml(p.title)}</a></h3><p class="sum">${escHtml(p.summary)}</p></div>
+              </article></li>`,
             )
             .join('')}
-        </div>`
-      : `<div data-testid="empty-state"><p>${
+        </ul>`
+      : emptyBlock(
+          locale,
+          'image',
           isVi
             ? 'Thư viện dự án đang được cập nhật. Mời bạn quay lại sau.'
-            : 'The project gallery is being updated. Please check back later.'
-        }</p></div>`;
+            : 'The project gallery is being updated. Please check back later.',
+        );
 
   return `
-    <section class="section-block">
+    <section class="hero-banner on-dark">
       <p class="eyebrow">${isVi ? 'Dự án / Thư viện' : 'Projects / Gallery'}</p>
       <h1>${isVi ? 'Dự án & Thư viện hình ảnh' : 'Projects & Visual Gallery'}</h1>
-      ${body}
     </section>
+    <section class="sec">
+      <div class="wrap">
+      ${body}
+      </div>
+    </section>
+    ${ctaSection(content, locale)}
   `;
 }
 
@@ -1571,29 +1527,36 @@ function renderCareersListPage(content: LoadedSiteContent, locale: Locale): stri
   const place = content.company.address?.[locale]?.trim() || content.company.address?.vi?.trim() || '';
   const body =
     items.length > 0
-      ? `<div class="grid-cards">
+      ? `<ul class="news-grid">
           ${items
             .map(
-              (j) => `<article class="card" data-testid="list-item">
-                <h3><a href="${ROUTES.careers[locale]}/${j.slug}">${escHtml(j.title)}</a></h3>
-                ${place ? `<p class="il">${icon('map-pin')}<span><span class="sr-only">${isVi ? 'Địa điểm' : 'Location'}: </span>${escHtml(place)}</span></p>` : ''}
-                <p class="il">${icon('circle-alert')}<span><span class="sr-only">${isVi ? 'Hạn nộp' : 'Deadline'}: </span>${escHtml(formatDateLocale(j.validThrough, locale))}</span></p>
-              </article>`,
+              (j) => `<li><article class="news" data-testid="list-item">
+                <div class="news-body"><h3><a href="${ROUTES.careers[locale]}/${j.slug}">${escHtml(j.title)}</a></h3>
+                ${place ? `<p class="il">${icon('map-pin', { className: 'ico' })}<span><span class="sr-only">${isVi ? 'Địa điểm' : 'Location'}: </span>${escHtml(place)}</span></p>` : ''}
+                <p class="il">${icon('circle-alert', { className: 'ico' })}<span><span class="sr-only">${isVi ? 'Hạn nộp' : 'Deadline'}: </span>${escHtml(formatDateLocale(j.validThrough, locale))}</span></p></div>
+              </article></li>`,
             )
             .join('')}
-        </div>`
-      : `<div data-testid="empty-state"><p>${
+        </ul>`
+      : emptyBlock(
+          locale,
+          'file-text',
           isVi
             ? 'Hiện chưa có vị trí tuyển dụng. Mời bạn theo dõi trang này hoặc liên hệ với chúng tôi.'
-            : 'There are no open positions at the moment. Please check this page again or contact us.'
-        }</p></div>`;
+            : 'There are no open positions at the moment. Please check this page again or contact us.',
+        );
 
   return `
-    <section class="section-block">
+    <section class="hero-banner on-dark">
       <p class="eyebrow">${isVi ? 'Cơ hội nghề nghiệp' : 'Career opportunities'}</p>
       <h1>${isVi ? 'Tuyển dụng' : 'Careers'}</h1>
-      ${body}
     </section>
+    <section class="sec">
+      <div class="wrap">
+      ${body}
+      </div>
+    </section>
+    ${ctaSection(content, locale)}
   `;
 }
 
@@ -1602,28 +1565,35 @@ function renderFaqPage(content: LoadedSiteContent, locale: Locale): string {
   const items = content.faq[locale];
   const body =
     items.length > 0
-      ? `<div class="grid-cards">
+      ? `<ul class="tgrid">
           ${items
             .map(
-              (f) => `<article class="card" data-testid="list-item">
+              (f) => `<li><article class="tcard" data-testid="list-item">
                 <h2 data-testid="faq-question">${escHtml(f.question)}</h2>
                 <p>${escHtml(f.answer)}</p>
-              </article>`,
+              </article></li>`,
             )
             .join('')}
-        </div>`
-      : `<div data-testid="empty-state"><p>${
+        </ul>`
+      : emptyBlock(
+          locale,
+          'file-question',
           isVi
             ? 'Chưa có câu hỏi thường gặp. Nếu cần hỗ trợ, mời bạn liên hệ với chúng tôi.'
-            : 'No frequently asked questions yet. If you need help, please contact us.'
-        }</p></div>`;
+            : 'No frequently asked questions yet. If you need help, please contact us.',
+        );
 
   return `
-    <section class="section-block">
+    <section class="hero-banner on-dark">
       <p class="eyebrow">FAQ</p>
       <h1>${isVi ? 'Câu hỏi thường gặp (FAQ)' : 'Frequently Asked Questions (FAQ)'}</h1>
-      ${body}
     </section>
+    <section class="sec">
+      <div class="wrap">
+      ${body}
+      </div>
+    </section>
+    ${ctaSection(content, locale)}
   `;
 }
 
@@ -1652,11 +1622,17 @@ function renderPrivacyPage(content: LoadedSiteContent, locale: Locale): string {
        <p><strong>Your rights:</strong> You have the right to access, rectify or request deletion / erasure of your personal data, or withdraw your consent at any time by ${reqEmailLink ? `contacting: ${reqEmailLink}.` : 'contacting the data controller through the channels listed on the Contact page.'}</p>`;
 
   return `
-    <section class="section-block">
+    <section class="hero-banner on-dark">
       <p class="eyebrow">${isVi ? 'Bảo vệ dữ liệu cá nhân' : 'Personal data protection'}</p>
       <h1>${isVi ? 'Chính sách bảo mật dữ liệu cá nhân' : 'Personal Data Privacy Policy'}</h1>
+    </section>
+    <section class="sec">
+      <div class="wrap">
+        <div class="art-col prose">
       ${standardNotice}
       <div>${pol?.bodyHtml ?? ''}</div>
+        </div>
+      </div>
     </section>
   `;
 }
@@ -2028,21 +2004,24 @@ function renderContactPage(
 
   const channelsHtml = `
     <div data-testid="contact-channels">
+      <h2>${isVi ? 'Kênh liên hệ khác' : 'Other contact channels'}</h2>
+      <ul class="ch-list">
       ${
         company.address?.[locale]
-          ? `<p class="il">${icon('map-pin')}<span><strong>${isVi ? 'Địa chỉ' : 'Address'}:</strong> ${escHtml(company.address[locale])}</span></p>`
+          ? `<li><div class="ch"><span class="ch-ico">${icon('map-pin')}</span><span class="ch-txt"><span class="ch-lbl">${isVi ? 'Địa chỉ' : 'Address'}</span><span class="ch-val">${escHtml(company.address[locale])}</span></span></div></li>`
           : ''
       }
       ${
         phoneRaw
-          ? `<p class="il">${icon('phone')}<span><strong>${isVi ? 'Điện thoại' : 'Phone'}:</strong> <a href="tel:${escHtml(phoneRaw)}">${escHtml(phoneShown)}</a></span></p>`
+          ? `<li><a class="ch" href="tel:${escHtml(phoneRaw)}"><span class="ch-ico">${icon('phone')}</span><span class="ch-txt"><span class="ch-lbl">${isVi ? 'Điện thoại' : 'Phone'}</span><span class="ch-val">${escHtml(phoneShown)}</span></span></a></li>`
           : ''
       }
       ${
         zaloRaw
-          ? `<p class="il">${zaloLogo({ size: 20, className: 'il-zalo' })}<span><strong>Zalo:</strong> <a href="${escHtml(zaloRaw)}" rel="noopener noreferrer">${escHtml(zaloRaw)}</a></span></p>`
+          ? `<li><a class="ch" href="${escHtml(zaloRaw)}" rel="noopener noreferrer"><span class="ch-ico">${zaloLogo({ size: 24, className: 'il-zalo' })}</span><span class="ch-txt"><span class="ch-lbl">Zalo</span><span class="ch-val">${escHtml(zaloRaw)}</span></span></a></li>`
           : ''
       }
+      </ul>
     </div>
   `;
 
@@ -2053,7 +2032,7 @@ function renderContactPage(
   const hasMap = Boolean(mapPoint);
   const mapTitle = isVi ? 'Bản đồ vị trí nhà máy' : 'Plant Location Map';
   const mapLinkHtml = mapLinkUrl
-    ? `<a href="${escHtml(mapLinkUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="min-height: 36px; padding: 6px 14px; font-size: 0.85rem;">${isVi ? 'Mở trên Google Maps' : 'Open in Google Maps'}<span class="sr-only"> ${isVi ? '(mở tab mới)' : '(opens in a new tab)'}</span>${icon('external-link', { size: 18 })}</a>`
+    ? `<a href="${escHtml(mapLinkUrl)}" target="_blank" rel="noopener noreferrer" class="btn-sec">${isVi ? 'Mở trên Google Maps' : 'Open in Google Maps'}<span class="sr-only"> ${isVi ? '(mở tab mới)' : '(opens in a new tab)'}</span>${icon('external-link', { size: 18 })}</a>`
     : '';
   const mapAddress = isVi
     ? 'Quốc lộ 39, Bần Yên Nhân, Mỹ Hào, Hưng Yên'
@@ -2061,27 +2040,27 @@ function renderContactPage(
   const mapBlockHtml = !hasMap
     ? ''
     : !mapPoint
-      ? `<section class="section-block" data-testid="map-block">
-        <h2>${mapTitle}</h2>
-        <p>${mapLinkHtml}</p>
-      </section>`
-      : `<section class="section-block" data-testid="map-block">
-        <h2>${mapTitle}</h2>
+      ? `<div class="map" data-testid="map-block">
+        <h3>${mapTitle}</h3>
+        <div class="map-act">${mapLinkHtml}</div>
+      </div>`
+      : `<div class="map" data-testid="map-block">
+        <h3>${mapTitle}</h3>
         <p>${isVi ? 'Toạ độ:' : 'Coordinates:'} ${escHtml(mapPoint)} (${mapAddress})</p>
-        <button type="button" class="btn btn-secondary" data-testid="map-open" id="btn-map-open">
-          ${isVi ? 'Hiện bản đồ tương tác' : 'Show interactive map'}
-        </button>
-        <div data-testid="map-view" id="map-view-container" data-point="${escHtml(mapPoint)}" hidden style="margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
-          <div style="padding: 14px 16px; background: #f8faf7; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;">
-            <div>
-              <p style="margin: 0; font-weight: 700; color: var(--g900); font-size: 1rem;">${isVi ? 'Nhà máy Xử lý & Tái tạo Tài nguyên GMS Hưng Yên' : 'GMS Hung Yen Waste-to-Resource Plant'}</p>
-              <p style="margin: 4px 0 0; font-size: 0.875rem; color: #555;"><strong>${isVi ? 'Toạ độ:' : 'Coordinates:'}</strong> ${escHtml(mapPoint)} (${mapAddress})</p>
-            </div>
-            <p style="margin: 0;">${mapLinkHtml}</p>
-          </div>
-          <iframe id="map-iframe" title="${mapTitle}" width="100%" height="380" style="border:0; display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" data-src="https://maps.google.com/maps?q=${mapQuery}&hl=${locale}&z=15&output=embed"></iframe>
+        <div class="map-act">
+          <button type="button" class="btn-sec" data-testid="map-open" id="btn-map-open">
+            ${isVi ? 'Hiện bản đồ tương tác' : 'Show interactive map'}
+          </button>
         </div>
-      </section>`;
+        <div class="map-frame" data-testid="map-view" id="map-view-container" data-point="${escHtml(mapPoint)}" hidden style="margin-top: 14px;">
+          <div class="map-head">
+            <p><strong>${isVi ? 'Nhà máy Xử lý & Tái tạo Tài nguyên GMS Hưng Yên' : 'GMS Hung Yen Waste-to-Resource Plant'}</strong></p>
+            <p>${isVi ? 'Toạ độ:' : 'Coordinates:'} ${escHtml(mapPoint)} (${mapAddress})</p>
+            <div class="map-act">${mapLinkHtml}</div>
+          </div>
+          <iframe id="map-iframe" title="${mapTitle}" width="100%" height="380" loading="lazy" referrerpolicy="no-referrer-when-downgrade" data-src="https://maps.google.com/maps?q=${mapQuery}&hl=${locale}&z=15&output=embed"></iframe>
+        </div>
+      </div>`;
 
   const consentText = isVi
     ? `Tôi đồng ý để ${escHtml(company.legalName ?? '')} thu thập và dùng họ tên, email hoặc số điện thoại, công ty và nội dung tôi nhập với mục đích trả lời liên hệ này. Xem <a href="${ROUTES.privacy.vi}" tabindex="-1">Chính sách bảo mật</a>.`
@@ -2143,12 +2122,17 @@ function renderContactPage(
             : 'The contact form needs JavaScript. You can reach GMS through the channels below.'
         }</p>
       </noscript>`
-    : `<div class="card" data-testid="contact-form-disabled">
-        <p>${
+    : `<div class="f-off" data-testid="contact-form-disabled">
+        <p class="f-msg info" role="status">${icon('info', { size: 18 })}<span>${
           isVi
             ? 'Form liên hệ tạm thời chưa mở. Bạn có thể liên hệ GMS qua các kênh dưới đây.'
             : 'The contact form is temporarily unavailable. You can reach GMS through the channels below.'
-        }</p>
+        }</span></p>
+        ${
+          phoneRaw || zaloRaw
+            ? `<ul class="f-alt-l">${phoneRaw ? `<li><a class="btn-sec" href="tel:${escHtml(phoneRaw)}">${icon('phone', { className: 'ico' })}${escHtml(phoneShown)}</a></li>` : ''}${zaloRaw ? `<li><a class="btn-sec" href="${escHtml(zaloRaw)}" rel="noopener noreferrer">${zaloLogo({ size: 20, className: 'il-zalo' })}Zalo</a></li>` : ''}</ul>`
+            : ''
+        }
       </div>`;
 
   // Form đóng: không sinh mã nào nhắc tới form (HTML không chứa `contact-form`).
@@ -2179,13 +2163,24 @@ function renderContactPage(
   `;
 
   return `
-    <section class="section-block">
+    <section class="hero-banner on-dark">
       <p class="eyebrow">${isVi ? 'Liên hệ hợp tác' : 'Partner with us'}</p>
       <h1>${isVi ? 'Liên hệ với GMS Hưng Yên' : 'Contact GMS Hung Yen'}</h1>
-      ${formHtml}
-      ${channelsHtml}
     </section>
-    ${mapBlockHtml}
+    <section class="sec sec-mist c-sec">
+      <div class="wrap">
+        <div class="c-grid">
+          <div class="c-card">
+            <h2>${isVi ? 'Gửi liên hệ cho GMS' : 'Contact GMS'}</h2>
+            ${formHtml}
+          </div>
+          <aside class="nap">
+            ${channelsHtml}
+            ${mapBlockHtml}
+          </aside>
+        </div>
+      </div>
+    </section>
     ${clientScript}
   `;
 }
@@ -2410,18 +2405,19 @@ export async function runBuildSite(options?: {
             imgObj.kind === 'anh-dung-ai'
               ? `<figcaption class="photo-label" data-testid="photo-label">${locale === 'vi' ? 'Phối cảnh dự kiến' : "Artist's impression"}</figcaption>`
               : '';
-          heroHtml = `<figure style="position:relative; margin:0 0 16px;"><img src="/${publicImg}" alt="${escHtml(imgObj.alt[locale])}" width="1200" height="675" />${caption}</figure>`;
+          heroHtml = `<figure class="fig lead-fig"><div class="frame-wf r169"><img src="/${publicImg}" alt="${escHtml(imgObj.alt[locale])}" width="1200" height="675" />${caption}</div></figure>`;
         }
       }
 
-      const bodyHtml = `
-        <article class="section-block">
-          <h1>${escHtml(n.title)}</h1>
-          <p><small>${escHtml(formatDateLocale(n.date, locale))}</small></p>
-          ${heroHtml}
-          <div>${n.bodyHtml}</div>
-        </article>
-      `;
+      const bodyHtml = detailPage(loaded, locale, {
+        listLabel: locale === 'vi' ? 'Tin tức / Hành trình' : 'News / Journey',
+        listHref: ROUTES.news[locale],
+        title: n.title,
+        metaHtml: `<time datetime="${escHtml(n.date)}">${escHtml(formatDateLocale(n.date, locale))}</time>`,
+        leadFigureHtml: heroHtml,
+        bodyHtml: n.bodyHtml,
+        backLabel: locale === 'vi' ? 'Tất cả tin tức' : 'All news',
+      });
 
       const fullHtml = renderLayout({
         locale,
@@ -2448,13 +2444,14 @@ export async function runBuildSite(options?: {
       const enPath = `${ROUTES.projects.en}/${enSlug}`;
       const canonicalPath = locale === 'vi' ? viPath : enPath;
 
-      const bodyHtml = `
-        <article class="section-block">
-          <h1>${escHtml(p.title)}</h1>
-          <p><small>${escHtml(formatDateLocale(p.date, locale))} · ${escHtml(p.category)}</small></p>
-          <div>${p.bodyHtml}</div>
-        </article>
-      `;
+      const bodyHtml = detailPage(loaded, locale, {
+        listLabel: locale === 'vi' ? 'Dự án / Thư viện' : 'Projects / Gallery',
+        listHref: ROUTES.projects[locale],
+        title: p.title,
+        metaHtml: `<time datetime="${escHtml(p.date)}">${escHtml(formatDateLocale(p.date, locale))}</time><span>${escHtml(p.category)}</span>`,
+        bodyHtml: p.bodyHtml,
+        backLabel: locale === 'vi' ? 'Tất cả dự án' : 'All projects',
+      });
 
       const fullHtml = renderLayout({
         locale,
@@ -2484,13 +2481,14 @@ export async function runBuildSite(options?: {
           ? `Hạn nộp: ${formatDateLocale(j.validThrough, 'vi')}`
           : `Deadline: ${formatDateLocale(j.validThrough, 'en')}`;
 
-      const bodyHtml = `
-        <article class="section-block">
-          <h1>${escHtml(j.title)}</h1>
-          <p class="il">${icon('circle-alert')}<strong>${escHtml(deadlineLabel)}</strong></p>
-          <div>${j.bodyHtml}</div>
-        </article>
-      `;
+      const bodyHtml = detailPage(loaded, locale, {
+        listLabel: locale === 'vi' ? 'Tuyển dụng' : 'Careers',
+        listHref: ROUTES.careers[locale],
+        title: j.title,
+        metaHtml: `<p class="il">${icon('circle-alert', { className: 'ico' })}<strong>${escHtml(deadlineLabel)}</strong></p>`,
+        bodyHtml: j.bodyHtml,
+        backLabel: locale === 'vi' ? 'Tất cả vị trí tuyển dụng' : 'All open positions',
+      });
 
       const fullHtml = renderLayout({
         locale,
@@ -2524,21 +2522,57 @@ export async function runBuildSite(options?: {
       noindex: true,
       siteUrl,
       company: siteCompany,
-      bodyHtml: `<section class="section-block">
-        <h1>${isVi ? 'Không tìm thấy trang (404)' : 'Page not found (404)'}</h1>
-        <p>${
-          isVi
-            ? 'Không tìm thấy trang này. Trang có thể đã được gỡ hoặc đường dẫn chưa đúng.'
-            : "We couldn't find this page. It may have been removed or the link may be wrong."
-        }</p>
-        <p><a href="${ROUTES.home[locale]}" class="btn">${isVi ? 'Về trang chủ' : 'Back to home'}</a></p>
+      bodyHtml: `<!--bleed-->
+      <section class="err err-404" aria-labelledby="h1" data-testid="error-404">
+        <div class="wrap">
+          <div class="col">
+            ${icon('file-question', { size: 48, className: 'ico ico-lg' })}
+            <h1 class="err-title" id="h1">${isVi ? 'Không tìm thấy trang này.' : "We couldn't find this page."}</h1>
+            <p>${
+              isVi
+                ? 'Trang có thể đã được gỡ hoặc đường dẫn chưa đúng.'
+                : 'It may have been removed or the link may be wrong.'
+            }</p>
+            <div class="err-act">
+              <a class="btn btn-primary" href="${ROUTES.home[locale]}">${isVi ? 'Về trang chủ' : 'Back to home'}${icon('arrow-right', { size: 18, className: 'ico' })}</a>
+              <a class="btn btn-outline" href="${ROUTES.news[locale]}">${isVi ? 'Tin tức / Hành trình' : 'News / Journey'}</a>
+            </div>
+          </div>
+        </div>
+      </section>`,
+    });
+    // M13 (5xx): trang tự chứa, cùng khung. Chưa nối vào worker (xem báo cáo [cần hỏi]).
+    const html500 = renderLayout({
+      locale,
+      title: isVi ? 'Có lỗi ở phía chúng tôi — GMS Hưng Yên' : 'Something went wrong — GMS Hung Yen',
+      description: isVi ? 'Mời bạn thử lại sau ít phút.' : 'Please try again in a few minutes.',
+      canonicalPath: isVi ? '/500' : '/en/500',
+      viPath: '/500',
+      enPath: '/en/500',
+      noindex: true,
+      siteUrl,
+      company: siteCompany,
+      bodyHtml: `<!--bleed-->
+      <section class="err err-500" aria-labelledby="h1" data-testid="error-500">
+        <div class="wrap">
+          <div class="col">
+            ${icon('server-crash', { size: 48, className: 'ico ico-lg' })}
+            <h1 class="err-title" id="h1">${isVi ? 'Có lỗi ở phía chúng tôi.' : 'Something went wrong on our side.'}</h1>
+            <p>${isVi ? 'Mời bạn thử lại sau ít phút.' : 'Please try again in a few minutes.'}</p>
+            <div class="err-act">
+              <a class="btn btn-primary" href="${ROUTES.home[locale]}">${isVi ? 'Về trang chủ' : 'Back to home'}${icon('arrow-right', { size: 18, className: 'ico' })}</a>
+            </div>
+          </div>
+        </div>
       </section>`,
     });
     if (isVi) {
       writeFileSync(join(outDir, '404.html'), html404);
+      writeFileSync(join(outDir, '500.html'), html500);
     } else {
       mkdirSync(join(outDir, 'en'), { recursive: true });
       writeFileSync(join(outDir, 'en', '404.html'), html404);
+      writeFileSync(join(outDir, 'en', '500.html'), html500);
     }
   }
 
