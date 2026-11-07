@@ -148,19 +148,6 @@ export function ContactPage({
               <div data-testid="contact-channels">
                 <h2>{L('Kênh liên hệ khác', 'Other contact channels')}</h2>
                 <ul className="ch-list">
-                  {company.address?.[locale] ? (
-                    <li>
-                      <div className="ch">
-                        <span className="ch-ico">
-                          <Icon name="map-pin" />
-                        </span>
-                        <span className="ch-txt">
-                          <span className="ch-lbl">{L('Địa chỉ', 'Address')}</span>
-                          <span className="ch-val">{company.address[locale]}</span>
-                        </span>
-                      </div>
-                    </li>
-                  ) : null}
                   {phoneRaw ? (
                     <li>
                       <a className="ch" href={`tel:${phoneRaw}`}>
@@ -199,6 +186,19 @@ export function ContactPage({
                         </span>
                         <span className="sr-only">{newTab}</span>
                       </a>
+                    </li>
+                  ) : null}
+                  {company.address?.[locale] ? (
+                    <li>
+                      <div className="ch">
+                        <span className="ch-ico">
+                          <Icon name="map-pin" />
+                        </span>
+                        <span className="ch-txt">
+                          <span className="ch-lbl">{L('Địa chỉ', 'Address')}</span>
+                          <span className="ch-val">{company.address[locale]}</span>
+                        </span>
+                      </div>
                     </li>
                   ) : null}
                 </ul>

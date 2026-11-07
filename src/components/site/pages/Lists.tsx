@@ -41,11 +41,7 @@ export function NewsListPage({
               ]
         }
         eyebrow={L('Hành trình chuyển đổi', 'Transformation journey')}
-        title={
-          first
-            ? L('Tin tức & Hành trình chuyển đổi', 'News & Transformation Journey')
-            : `${L('Tin tức & Hành trình chuyển đổi', 'News & Transformation Journey')} — ${pos}`
-        }
+        title={first ? newsLabel : `${newsLabel} — ${pos}`}
         lead={
           first
             ? L(
@@ -70,12 +66,16 @@ export function NewsListPage({
         content={content}
         locale={locale}
         sectionId="lo-trinh"
-        title={L('Lộ trình chuyển đổi 5 bước', '5-Step Transformation Roadmap')}
+        title={L('Hành trình chuyển đổi', 'Transformation journey')}
+        lead={L(
+          'Năm bước GMS đã đi qua, từ đánh giá hiện trạng tới hệ thống vận hành hoàn chỉnh. Nhà máy đã đi vào hoạt động.',
+          'Five steps GMS has completed, from assessing the current state to a fully operating system. The plant is in operation.',
+        )}
       />
       <section className="sec" id="danh-sach" aria-labelledby="h-list">
         <div className="wrap">
           <div className="news-head">
-            <h2 id="h-list">{L('Danh sách bài viết', 'Articles')}</h2>
+            <h2 id="h-list">{L('Bài viết', 'Articles')}</h2>
             {totalPages > 1 ? <p className="count">{pos}</p> : null}
           </div>
           {items.length > 0 ? (
