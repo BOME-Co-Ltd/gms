@@ -1,0 +1,203 @@
+// Bước hậu kỳ + kiểm sau `next build` (output: export ⇒ out/). Thay phần ghép HTML cũ của build-site.ts.
+//  1. `<html lang>` của trang en (root layout Next dùng chung một lang; shortcut: sửa ở đây, nâng cấp khi tách root layout theo locale);
+//  2. mỗi `X.html` có bản `X/index.html` (giữ cả hai dạng URL như out/ trước đây);
+//  3. ảnh: dựng lại out/img từ content/images (bỏ EXIF, nén) + ảnh tĩnh public/img (PERF-01); og/default.png; form-status.json;
+//  4. sitemap.xml/robots.txt/_headers suy từ HTML đã dựng (canonical + robots meta), không từ danh sách riêng;
+//  5. kiểm: ảnh thiếu, hreflang/canonical, lang, sitemap, srcset, og, tên cấm (FORBIDDEN_NAME_IN_OUTPUT), denylist.
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
+import type { LoadedSiteContent } from '../../../content/loader.ts';
+import { loadDenylist, scanOutputForForbiddenNames } from '../../../content/rules/names.ts';
+import { type SiteConfig, currentFormStatus } from './config.ts';
+import {
+  HERO_IMG_REL,
+  SOLUTION_IMG_FILES,
+  STATIC_IMG_MAX_WIDTH,
+  copyStaticImages,
+  optimizeStaticImages,
+  processAndWriteImage,
+  solutionImgMidName,
+  solutionImgSmallName,
+} from './images.ts';
+
+// Tài sản tĩnh (public/) theo vị trí script, không theo cwd: bản build ở thư mục tạm/fixture vẫn có ảnh.
+const PUBLIC_DIR = join(resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..'), 'public');
+
+const escXml = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function listHtmlFiles(dir: string): string[] {
+  const found: string[] = [];
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) found.push(...listHtmlFiles(p));
+    else if (e.name.endsWith('.html')) found.push(p);
+  }
+  return found;
+}
+
+/** `<img src="/...">` trỏ tới file không có trong outDir → "trang: /src". */
+export function findBrokenImgRefs(outDir: string): string[] {
+  const broken: string[] = [];
+  for (const file of listHtmlFiles(outDir)) {
+    const html = readFileSync(file, 'utf8');
+    for (const m of html.matchAll(/<img\b[^>]*?\ssrc="(\/[^"/][^"]*)"/g)) {
+      const src = decodeURI(m[1].split(/[?#]/)[0]);
+      if (!existsSync(join(outDir, src))) broken.push(`${file.slice(outDir.length)}: ${m[1]}`);
+    }
+  }
+  return broken;
+}
+
+type PageInfo = { rel: string; html: string; canonical: string | null; noindex: boolean; lang: string | null };
+
+function readPages(outDir: string): PageInfo[] {
+  return listHtmlFiles(outDir)
+    .filter((f) => !f.slice(outDir.length).startsWith('/_next/'))
+    .sort()
+    .map((f) => {
+      const html = readFileSync(f, 'utf8');
+      const canonical = html.match(/<link[^>]*\srel="canonical"[^>]*\shref="([^"]*)"/i)?.[1] ?? null;
+      const robots = html.match(/<meta[^>]*\sname="robots"[^>]*\scontent="([^"]*)"/i)?.[1] ?? '';
+      const lang = html.match(/<html[^>]*\slang="([^"]*)"/i)?.[1] ?? null;
+      return { rel: f.slice(outDir.length), html, canonical, noindex: /noindex/i.test(robots), lang };
+    });
+}
+
+export async function postBuild(
+  outDir: string,
+  cfg: SiteConfig,
+  loaded: LoadedSiteContent,
+): Promise<{ ok: boolean; errors: string[] }> {
+  const errors: string[] = [];
+  const isStaging = cfg.siteEnv === 'staging';
+
+  // 0. bỏ trang giữ chỗ `_` của tuyến động rỗng (Next export cấm generateStaticParams rỗng)
+  for (const f of listHtmlFiles(outDir)) {
+    if (!f.slice(outDir.length).startsWith('/_next/') && basename(f) === '_.html') rmSync(f);
+  }
+
+  // 1. lang của trang en
+  for (const p of readPages(outDir)) {
+    const isEn = p.rel === '/en.html' || p.rel.startsWith('/en/');
+    if (isEn && p.lang === 'vi') {
+      writeFileSync(join(outDir, p.rel), p.html.replace(/(<html[^>]*\slang=")vi(")/i, '$1en$2'));
+    }
+  }
+
+  // 2. X.html ⇒ X/index.html (404/500 và index gốc thì không)
+  for (const f of listHtmlFiles(outDir)) {
+    const rel = f.slice(outDir.length + 1);
+    if (rel.startsWith('_next/') || basename(rel) === 'index.html') continue;
+    if (/(^|\/)(404|500)\.html$/.test(rel)) continue;
+    const dest = join(outDir, rel.replace(/\.html$/, ''), 'index.html');
+    mkdirSync(dirname(dest), { recursive: true });
+    copyFileSync(f, dest);
+  }
+
+  // 3. ảnh + tài sản tĩnh. Next đã chép nguyên public/; dựng lại out/img để chỉ còn bản đã xử lý và được phép (allowedInBuild).
+  rmSync(join(outDir, 'img'), { recursive: true, force: true });
+  mkdirSync(join(outDir, 'og'), { recursive: true });
+  writeFileSync(
+    join(outDir, 'og', 'default.png'),
+    await sharp({ create: { width: 1200, height: 630, channels: 3, background: { r: 15, g: 88, b: 56 } } })
+      .png()
+      .toBuffer(),
+  );
+  for (const img of loaded.images.values()) {
+    await processAndWriteImage(img, outDir);
+  }
+  const copiedStatic = copyStaticImages(join(PUBLIC_DIR, 'img'), join(outDir, 'img'), new Set(loaded.images.keys()));
+  await optimizeStaticImages(join(outDir, 'img'), copiedStatic);
+
+  const formStatus = currentFormStatus(loaded.company);
+  writeFileSync(join(outDir, 'form-status.json'), `${JSON.stringify(formStatus)}\n`);
+
+  // 4. sitemap / robots / _headers
+  const pages = readPages(outDir);
+  const urls = new Set<string>();
+  for (const p of pages) {
+    if (!isStaging && !p.noindex && p.canonical) urls.add(p.canonical);
+  }
+  writeFileSync(
+    join(outDir, 'sitemap.xml'),
+    `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${[...urls].map((u) => `  <url><loc>${escXml(u)}</loc></url>`).join('\n')}
+</urlset>
+`,
+  );
+  writeFileSync(
+    join(outDir, 'robots.txt'),
+    isStaging ? `User-agent: *\nDisallow: /\n` : `User-agent: *\nDisallow: /api/\nSitemap: ${cfg.siteUrl}/sitemap.xml\n`,
+  );
+  // CSP: site tĩnh chưa có CSP ở tầng này (chỉ worker /api/* có, contracts/api.ts). Next chèn script inline (dữ liệu RSC) nên
+  // CSP `script-src 'self'` sẽ làm hỏng trang; thêm CSP cho trang là quyết định của appsec/devops [cần hỏi appsec].
+  writeFileSync(
+    join(outDir, '_headers'),
+    isStaging
+      ? `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Robots-Tag: noindex\n`
+      : `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/api/*\n  X-Robots-Tag: noindex\n  # /api/*\n`,
+  );
+
+  // 5. kiểm
+  for (const b of findBrokenImgRefs(outDir)) errors.push(`[IMG_NOT_IN_OUT] ${b}`);
+  for (const p of pages) {
+    const m = p.html.match(/<img\b[^>]*?\ssrcset="([^"]*)"/gi) ?? [];
+    for (const tag of m) {
+      for (const part of tag.replace(/^[\s\S]*?srcset="/i, '').replace(/"$/, '').split(',')) {
+        const u = part.trim().split(/\s+/)[0];
+        if (u?.startsWith('/') && !existsSync(join(outDir, decodeURI(u.split(/[?#]/)[0])))) {
+          errors.push(`[SRCSET_NOT_IN_OUT] ${p.rel}: ${u}`);
+        }
+      }
+    }
+    const isErr = /^\/(en\/)?(404|500)\.html$/.test(p.rel);
+    if (!p.canonical) errors.push(`[CANONICAL_MISSING] ${p.rel}`);
+    if (!isErr) {
+      for (const hl of ['vi', 'en', 'x-default']) {
+        if (!new RegExp(`<link[^>]*\\shreflang="${hl}"`, 'i').test(p.html)) {
+          errors.push(`[HREFLANG_MISSING] ${p.rel}: ${hl}`);
+        }
+      }
+    }
+    const expectLang = p.rel === '/en.html' || p.rel.startsWith('/en/') ? 'en' : 'vi';
+    if (p.lang !== expectLang) errors.push(`[HTML_LANG] ${p.rel}: lang=${p.lang}, cần ${expectLang}`);
+    if (isStaging && !p.noindex) errors.push(`[STAGING_INDEXABLE] ${p.rel}`);
+    const og = p.html.match(/<meta[^>]*\sproperty="og:image"[^>]*\scontent="([^"]*)"/i)?.[1];
+    if (!og) errors.push(`[OG_MISSING] ${p.rel}`);
+    else if (og.startsWith(cfg.siteUrl) && !existsSync(join(outDir, decodeURI(og.slice(cfg.siteUrl.length))))) {
+      errors.push(`[OG_NOT_IN_OUT] ${p.rel}: ${og}`);
+    }
+  }
+  if (!isStaging && urls.size === 0) errors.push('[SITEMAP_EMPTY] sitemap.xml không có URL nào');
+  const hero = pages.find((p) => p.rel === '/index.html');
+  if (hero && existsSync(join(outDir, HERO_IMG_REL)) && !/srcset="[^"]*hero-plant-512\.jpg/i.test(hero.html)) {
+    errors.push('[PERF01_HERO_SRCSET] trang chủ thiếu srcset ảnh hero 512w');
+  }
+  for (const f of copiedStatic) {
+    if (!/\.(jpe?g|png)$/i.test(f)) continue;
+    try {
+      const w = (await sharp(join(outDir, 'img', f)).metadata()).width ?? 0;
+      if (w > STATIC_IMG_MAX_WIDTH) errors.push(`[PERF01_IMG_TOO_WIDE] img/${f}: ${w}px > ${STATIC_IMG_MAX_WIDTH}px`);
+    } catch {}
+    if (SOLUTION_IMG_FILES.has(f)) {
+      for (const v of [solutionImgSmallName(f), solutionImgMidName(f)]) {
+        if (!existsSync(join(outDir, 'img', v))) errors.push(`[PERF01_VARIANT_MISSING] img/${v}`);
+      }
+    }
+  }
+  const headers = readFileSync(join(outDir, '_headers'), 'utf8');
+  if (!/X-Content-Type-Options:\s*nosniff/.test(headers)) errors.push('[HEADERS] _headers thiếu X-Content-Type-Options');
+  if (typeof formStatus.open !== 'boolean') errors.push('[FORM_STATUS] form-status.json thiếu open');
+
+  // Quét đầu ra theo content/denylist.yaml (build.ts §8 luật 6): có tên cấm ⇒ build đỏ. Quét cả _next/.
+  const denylist = loadDenylist(cfg.contentDir);
+  if ('error' in denylist) {
+    errors.push(`[${denylist.error.code}] ${denylist.error.message}`);
+  } else {
+    for (const e of scanOutputForForbiddenNames(outDir, denylist.names)) errors.push(`[${e.code}] ${e.message}`);
+  }
+  return { ok: errors.length === 0, errors };
+}
