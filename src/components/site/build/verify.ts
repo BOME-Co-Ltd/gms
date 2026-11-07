@@ -4,6 +4,7 @@
 //  3. ảnh: dựng lại out/img từ content/images (bỏ EXIF, nén) + ảnh tĩnh public/img (PERF-01); og/default.png; form-status.json;
 //  4. sitemap.xml/robots.txt/_headers suy từ HTML đã dựng (canonical + robots meta), không từ danh sách riêng;
 //  5. kiểm: ảnh thiếu, hreflang/canonical, lang, sitemap, srcset, og, tên cấm (FORBIDDEN_NAME_IN_OUTPUT), denylist.
+import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -64,6 +65,49 @@ function readPages(outDir: string): PageInfo[] {
       const lang = html.match(/<html[^>]*\slang="([^"]*)"/i)?.[1] ?? null;
       return { rel: f.slice(outDir.length), html, canonical, noindex: /noindex/i.test(robots), lang };
     });
+}
+
+/** sha256 (base64) của từng `<script>` inline chạy được (bỏ script có src và khối dữ liệu JSON-LD). */
+export function inlineScriptHashes(html: string): string[] {
+  const hashes = new Set<string>();
+  for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
+    const attrs = m[1];
+    if (/\ssrc\s*=/i.test(attrs) || /\stype\s*=\s*"?application\/(ld\+)?json/i.test(attrs)) continue;
+    if (m[2].trim() === '') continue;
+    hashes.add(`'sha256-${createHash('sha256').update(m[2], 'utf8').digest('base64')}'`);
+  }
+  return [...hashes];
+}
+
+const CONTACT_PAGE = /^\/(lien-he|en\/contact)$/;
+
+export function cspFor(urlPath: string, hashes: string[]): string {
+  const turnstile = CONTACT_PAGE.test(urlPath.replace(/\/$/, ''));
+  const cf = 'https://challenges.cloudflare.com';
+  const frames = ['https://maps.google.com', 'https://www.google.com', ...(turnstile ? [cf] : [])];
+  return [
+    "default-src 'self'",
+    ["script-src 'self'", ...hashes, ...(turnstile ? [cf] : [])].join(' '),
+    "style-src 'self'",
+    "style-src-attr 'unsafe-inline'",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    `frame-src ${frames.join(' ')}`,
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ');
+}
+
+/** Khối `_headers` Content-Security-Policy theo từng đường dẫn trang (cả dạng /X và /X/). */
+export function cspHeaderBlocks(pages: PageInfo[]): string {
+  const blocks: string[] = [];
+  for (const p of pages) {
+    if (p.rel.startsWith('/_not-found')) continue; // không phải URL thật; trang 404 phục vụ qua /404
+    const urlPath = p.rel === '/index.html' ? '/' : p.rel.replace(/\/index\.html$/, '/').replace(/\.html$/, '');
+    blocks.push(`${urlPath}\n  Content-Security-Policy: ${cspFor(urlPath, inlineScriptHashes(p.html))}\n`);
+  }
+  return blocks.join('');
 }
 
 export async function postBuild(
@@ -135,13 +179,15 @@ ${[...urls].map((u) => `  <url><loc>${escXml(u)}</loc></url>`).join('\n')}
       ? `User-agent: *\nDisallow: /\n`
       : `User-agent: *\nDisallow: /api/\nSitemap: ${cfg.siteUrl}/sitemap.xml\n`,
   );
-  // CSP: site tĩnh chưa có CSP ở tầng này (chỉ worker /api/* có, contracts/api.ts). Next chèn script inline (dữ liệu RSC) nên
-  // CSP `script-src 'self'` sẽ làm hỏng trang; thêm CSP cho trang là quyết định của appsec/devops [cần hỏi appsec].
+  // CSP theo từng đường dẫn: Next chèn script inline (dữ liệu RSC) khác nhau mỗi trang ⇒ tính sha256 từng script inline,
+  // không dùng 'unsafe-inline'. Khối `/*` không chứa CSP vì các khối cùng khớp một URL được cộng dồn (hai CSP ⇒ giao nhau).
   writeFileSync(
     join(outDir, '_headers'),
-    isStaging
-      ? `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Robots-Tag: noindex\n`
-      : `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/api/*\n  X-Robots-Tag: noindex\n  # /api/*\n`,
+    `${
+      isStaging
+        ? `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Robots-Tag: noindex\n`
+        : `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/api/*\n  X-Robots-Tag: noindex\n  # /api/*\n`
+    }${cspHeaderBlocks(pages)}`,
   );
 
   // 5. kiểm
