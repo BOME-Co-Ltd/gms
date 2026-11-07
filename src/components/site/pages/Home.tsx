@@ -116,27 +116,6 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
         </div>
       </section>
 
-      {content.figures.length > 0 ? (
-        <section className="sec sec-stats" data-testid="figures-strip" aria-label={L('Số liệu chính', 'Key figures')}>
-          <div className="wrap stats">
-            <div className="sec-head">
-              <h2>{L('Năng lực nhà máy', 'Plant capacity')}</h2>
-            </div>
-            <dl className="stat-list">
-              {content.figures.map((f) => (
-                <div className="stat" key={f.label[locale]}>
-                  <dt>{f.label[locale]}</dt>
-                  <dd>
-                    {f.value} {f.unit[locale]}
-                    <small className="stat-src">({f.source})</small>
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </section>
-      ) : null}
-
       <section className="sec" id="hai-nhanh" aria-labelledby="h-flow">
         <div className="wrap">
           <div className="sec-head">
@@ -171,6 +150,27 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
           'Five steps GMS has completed, from assessing the current state to a fully operating system. The plant is in operation.',
         )}
       />
+
+      {content.figures.length > 0 ? (
+        <section className="sec sec-stats" data-testid="figures-strip" aria-label={L('Số liệu chính', 'Key figures')}>
+          <div className="wrap stats">
+            <div className="sec-head">
+              <h2>{L('Năng lực nhà máy', 'Plant capacity')}</h2>
+            </div>
+            <dl className="stat-list">
+              {content.figures.map((f) => (
+                <div className="stat" key={f.label[locale]}>
+                  <dt>{f.label[locale]}</dt>
+                  <dd>
+                    {f.value} {f.unit[locale]}
+                    <small className="stat-src">({f.source})</small>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+      ) : null}
 
       <section className="sec sec-values on-dark" aria-labelledby="h-values">
         <div className="wrap">

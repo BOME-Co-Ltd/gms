@@ -101,6 +101,25 @@ export function ShellBehavior(): null {
       }
     }
 
+    // Sơ đồ dòng chảy (.board): vẽ đường nối + hiện nhãn khi cuộn tới (như wireframe). Không IO ⇒ hiện luôn.
+    for (const board of d.querySelectorAll<HTMLElement>('.board')) {
+      if (!('IntersectionObserver' in window)) {
+        board.classList.add('live');
+        continue;
+      }
+      const io = new IntersectionObserver(
+        (es) => {
+          if (es.some((e) => e.isIntersecting)) {
+            board.classList.add('live');
+            io.disconnect();
+          }
+        },
+        { threshold: 0.2 },
+      );
+      io.observe(board);
+      cleanups.push(() => io.disconnect());
+    }
+
     const nav = d.querySelector<HTMLElement>('nav.lang');
     const pill = nav?.querySelector<HTMLElement>('.lang-pill');
     if (nav && pill) {
