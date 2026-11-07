@@ -10,14 +10,14 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import type { LoadedSiteContent } from '../../../content/loader.ts';
 import { loadDenylist, scanOutputForForbiddenNames } from '../../../content/rules/names.ts';
-import { type SiteConfig, currentFormStatus } from './config.ts';
+import { currentFormStatus, type SiteConfig } from './config.ts';
 import {
-  HERO_IMG_REL,
-  SOLUTION_IMG_FILES,
-  STATIC_IMG_MAX_WIDTH,
   copyStaticImages,
+  HERO_IMG_REL,
   optimizeStaticImages,
   processAndWriteImage,
+  SOLUTION_IMG_FILES,
+  STATIC_IMG_MAX_WIDTH,
   solutionImgMidName,
   solutionImgSmallName,
 } from './images.ts';
@@ -25,7 +25,8 @@ import {
 // Tài sản tĩnh (public/) theo vị trí script, không theo cwd: bản build ở thư mục tạm/fixture vẫn có ảnh.
 const PUBLIC_DIR = join(resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..'), 'public');
 
-const escXml = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const escXml = (s: string): string =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 function listHtmlFiles(dir: string): string[] {
   const found: string[] = [];
@@ -130,7 +131,9 @@ ${[...urls].map((u) => `  <url><loc>${escXml(u)}</loc></url>`).join('\n')}
   );
   writeFileSync(
     join(outDir, 'robots.txt'),
-    isStaging ? `User-agent: *\nDisallow: /\n` : `User-agent: *\nDisallow: /api/\nSitemap: ${cfg.siteUrl}/sitemap.xml\n`,
+    isStaging
+      ? `User-agent: *\nDisallow: /\n`
+      : `User-agent: *\nDisallow: /api/\nSitemap: ${cfg.siteUrl}/sitemap.xml\n`,
   );
   // CSP: site tĩnh chưa có CSP ở tầng này (chỉ worker /api/* có, contracts/api.ts). Next chèn script inline (dữ liệu RSC) nên
   // CSP `script-src 'self'` sẽ làm hỏng trang; thêm CSP cho trang là quyết định của appsec/devops [cần hỏi appsec].
@@ -146,7 +149,10 @@ ${[...urls].map((u) => `  <url><loc>${escXml(u)}</loc></url>`).join('\n')}
   for (const p of pages) {
     const m = p.html.match(/<img\b[^>]*?\ssrcset="([^"]*)"/gi) ?? [];
     for (const tag of m) {
-      for (const part of tag.replace(/^[\s\S]*?srcset="/i, '').replace(/"$/, '').split(',')) {
+      for (const part of tag
+        .replace(/^[\s\S]*?srcset="/i, '')
+        .replace(/"$/, '')
+        .split(',')) {
         const u = part.trim().split(/\s+/)[0];
         if (u?.startsWith('/') && !existsSync(join(outDir, decodeURI(u.split(/[?#]/)[0])))) {
           errors.push(`[SRCSET_NOT_IN_OUT] ${p.rel}: ${u}`);
@@ -189,7 +195,8 @@ ${[...urls].map((u) => `  <url><loc>${escXml(u)}</loc></url>`).join('\n')}
     }
   }
   const headers = readFileSync(join(outDir, '_headers'), 'utf8');
-  if (!/X-Content-Type-Options:\s*nosniff/.test(headers)) errors.push('[HEADERS] _headers thiếu X-Content-Type-Options');
+  if (!/X-Content-Type-Options:\s*nosniff/.test(headers))
+    errors.push('[HEADERS] _headers thiếu X-Content-Type-Options');
   if (typeof formStatus.open !== 'boolean') errors.push('[FORM_STATUS] form-status.json thiếu open');
 
   // Quét đầu ra theo content/denylist.yaml (build.ts §8 luật 6): có tên cấm ⇒ build đỏ. Quét cả _next/.

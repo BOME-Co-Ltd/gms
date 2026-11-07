@@ -52,9 +52,12 @@ export function ShellBehavior(): null {
         btn.setAttribute('aria-expanded', 'false');
         d.body.style.overflow = '';
         d.removeEventListener('keydown', onKey);
-        timer = setTimeout(() => {
-          dr.hidden = true;
-        }, rm.matches ? 0 : 200);
+        timer = setTimeout(
+          () => {
+            dr.hidden = true;
+          },
+          rm.matches ? 0 : 200,
+        );
         if (refocus) btn.focus();
       };
       const onOpen = () => open();
@@ -115,9 +118,10 @@ export function ShellBehavior(): null {
         const href = a.href;
         put(a);
         if (matchMedia('(prefers-reduced-motion: reduce)').matches) location.href = href;
-        else setTimeout(() => {
-          location.href = href;
-        }, 320);
+        else
+          setTimeout(() => {
+            location.href = href;
+          }, 320);
       };
       nav.addEventListener('click', onLang);
       cleanups.push(() => nav.removeEventListener('click', onLang));

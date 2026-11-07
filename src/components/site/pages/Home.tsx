@@ -13,8 +13,12 @@ const HERO_IMG_SMALL = '/img/hero-plant-512.jpg';
 export function HomePage({ content, locale }: { content: LoadedSiteContent; locale: Locale }): React.ReactElement {
   const isVi = locale === 'vi';
   const L = (vi: string, en: string) => pick(locale, vi, en);
-  const sloganLines = isVi ? ['Giải pháp thông minh –', 'Kiến tạo giá trị xanh'] : ['Smart solutions –', 'Creating green value'];
-  const pillars = isVi ? ['Công nghệ VPD', 'Sàng tuyển', 'Tái tạo tài nguyên'] : ['VPD technology', 'Sorting', 'Resource recovery'];
+  const sloganLines = isVi
+    ? ['Giải pháp thông minh –', 'Kiến tạo giá trị xanh']
+    : ['Smart solutions –', 'Creating green value'];
+  const pillars = isVi
+    ? ['Công nghệ VPD', 'Sàng tuyển', 'Tái tạo tài nguyên']
+    : ['VPD technology', 'Sorting', 'Resource recovery'];
 
   const coverImg = content.images.get('images/hero-plant.jpg');
   // Ảnh dựng/AI (hoặc ảnh thay thế chưa phải ảnh thật) luôn có nhãn nhìn thấy trên ảnh (S17, ux-spec §7)
@@ -34,9 +38,33 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
   );
 
   const values = [
-    { cls: 'v1', icon: 'cpu', h: L('Công nghệ tiên tiến', 'Advanced technology'), p: L('Kết hợp Sàng tuyển và công nghệ VPD để thu hồi tối đa các dòng tài nguyên từ chất thải.', 'Combining Sorting and VPD technology to recover as many resource streams from waste as possible.') },
-    { cls: 'v2', icon: 'recycle', h: L('Tái tạo tài nguyên', 'Resource recovery'), p: L('Chuyển từ tư duy “xử lý chất thải” sang “thu hồi và tái tạo giá trị tài nguyên”.', 'Shifting from “waste treatment” to “recovering and regenerating the value of resources”.') },
-    { cls: 'v3', icon: 'sprout', h: L('Phát triển bền vững', 'Sustainable development'), p: L('Từng bước đưa những nguồn tài nguyên có thể tái sử dụng trở lại chu trình sản xuất.', 'Step by step returning reusable resources to the production cycle.') },
+    {
+      cls: 'v1',
+      icon: 'cpu',
+      h: L('Công nghệ tiên tiến', 'Advanced technology'),
+      p: L(
+        'Kết hợp Sàng tuyển và công nghệ VPD để thu hồi tối đa các dòng tài nguyên từ chất thải.',
+        'Combining Sorting and VPD technology to recover as many resource streams from waste as possible.',
+      ),
+    },
+    {
+      cls: 'v2',
+      icon: 'recycle',
+      h: L('Tái tạo tài nguyên', 'Resource recovery'),
+      p: L(
+        'Chuyển từ tư duy “xử lý chất thải” sang “thu hồi và tái tạo giá trị tài nguyên”.',
+        'Shifting from “waste treatment” to “recovering and regenerating the value of resources”.',
+      ),
+    },
+    {
+      cls: 'v3',
+      icon: 'sprout',
+      h: L('Phát triển bền vững', 'Sustainable development'),
+      p: L(
+        'Từng bước đưa những nguồn tài nguyên có thể tái sử dụng trở lại chu trình sản xuất.',
+        'Step by step returning reusable resources to the production cycle.',
+      ),
+    },
     { cls: 'v4', icon: 'heart-handshake', h: L('Vì cộng đồng xanh', 'For a green community'), p: '' },
   ] as const;
 
@@ -72,7 +100,9 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
                 alt={coverAlt}
                 width={1024}
                 height={1024}
-                {...(coverSrc === HERO_IMG ? { srcSet: `${HERO_IMG_SMALL} 512w, ${HERO_IMG} 1024w`, sizes: '(min-width: 1024px) 520px, 100vw' } : {})}
+                {...(coverSrc === HERO_IMG
+                  ? { srcSet: `${HERO_IMG_SMALL} 512w, ${HERO_IMG} 1024w`, sizes: '(min-width: 1024px) 520px, 100vw' }
+                  : {})}
                 fetchPriority="high"
                 decoding="async"
               />
@@ -109,7 +139,9 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
       <section className="sec" id="hai-nhanh" aria-labelledby="h-flow">
         <div className="wrap">
           <div className="sec-head">
-            <h2 id="h-flow">{L('Hai nhánh xử lý, sáu dòng tài nguyên', 'Two processing branches, six resource streams')}</h2>
+            <h2 id="h-flow">
+              {L('Hai nhánh xử lý, sáu dòng tài nguyên', 'Two processing branches, six resource streams')}
+            </h2>
             <p>
               {L(
                 'Chất thải rắn đầu vào được chia thành hai nhánh. Mỗi nhánh hướng tới ba dòng đầu ra, thay vì chỉ chôn lấp hay đốt.',
@@ -117,7 +149,13 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
               )}
             </p>
           </div>
-          <BoardFigure content={content} locale={locale} outputsId="home-outputs" branchesId="home-branches" anchors={false} />
+          <BoardFigure
+            content={content}
+            locale={locale}
+            outputsId="home-outputs"
+            branchesId="home-branches"
+            anchors={false}
+          />
         </div>
       </section>
 

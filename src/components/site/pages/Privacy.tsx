@@ -29,20 +29,28 @@ export function PrivacyPage({ content, locale }: { content: LoadedSiteContent; l
                   <strong>Phiên bản:</strong> {ver} — <strong>Ngày hiệu lực:</strong> {eff}
                 </p>
                 <p>
-                  <strong>Căn cứ pháp lý:</strong> Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 và Nghị định 356/2025/NĐ-CP.
+                  <strong>Căn cứ pháp lý:</strong> Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 và Nghị định
+                  356/2025/NĐ-CP.
                 </p>
                 <p>
                   <strong>Bên kiểm soát dữ liệu:</strong> {ctrl}.
                 </p>
                 <p>
-                  <strong>Mục đích xử lý:</strong> Tiếp nhận, liên hệ lại và trả lời yêu cầu của người gửi từ biểu mẫu liên hệ.
+                  <strong>Mục đích xử lý:</strong> Tiếp nhận, liên hệ lại và trả lời yêu cầu của người gửi từ biểu mẫu
+                  liên hệ.
                 </p>
                 <p>
-                  <strong>Ai được xem / truy cập:</strong> Bộ phận phụ trách liên hệ của {ctrl} và nhà cung cấp hạ tầng kỹ thuật Cloudflare.
+                  <strong>Ai được xem / truy cập:</strong> Bộ phận phụ trách liên hệ của {ctrl} và nhà cung cấp hạ tầng
+                  kỹ thuật Cloudflare.
                 </p>
                 <p>
-                  <strong>Quyền của chủ thể dữ liệu:</strong> Bạn có quyền yêu cầu xem, sửa, xoá dữ liệu cá nhân hoặc rút lại đồng ý bất cứ lúc nào{' '}
-                  {mail ? <>bằng cách gửi yêu cầu tới địa chỉ email nhận yêu cầu về dữ liệu: {mail}.</> : 'bằng cách liên hệ với bên kiểm soát dữ liệu qua các kênh nêu ở trang Liên hệ.'}
+                  <strong>Quyền của chủ thể dữ liệu:</strong> Bạn có quyền yêu cầu xem, sửa, xoá dữ liệu cá nhân hoặc
+                  rút lại đồng ý bất cứ lúc nào{' '}
+                  {mail ? (
+                    <>bằng cách gửi yêu cầu tới địa chỉ email nhận yêu cầu về dữ liệu: {mail}.</>
+                  ) : (
+                    'bằng cách liên hệ với bên kiểm soát dữ liệu qua các kênh nêu ở trang Liên hệ.'
+                  )}
                 </p>
               </>
             ) : (
@@ -57,14 +65,20 @@ export function PrivacyPage({ content, locale }: { content: LoadedSiteContent; l
                   <strong>Data controller:</strong> {ctrl}.
                 </p>
                 <p>
-                  <strong>Purpose of processing:</strong> Receiving, contacting and responding to inquiries submitted via the contact form.
+                  <strong>Purpose of processing:</strong> Receiving, contacting and responding to inquiries submitted
+                  via the contact form.
                 </p>
                 <p>
                   <strong>Who can access:</strong> Authorized staff at {ctrl} and technical processor Cloudflare.
                 </p>
                 <p>
-                  <strong>Your rights:</strong> You have the right to access, rectify or request deletion / erasure of your personal data, or withdraw your consent at any time by{' '}
-                  {mail ? <>contacting: {mail}.</> : 'contacting the data controller through the channels listed on the Contact page.'}
+                  <strong>Your rights:</strong> You have the right to access, rectify or request deletion / erasure of
+                  your personal data, or withdraw your consent at any time by{' '}
+                  {mail ? (
+                    <>contacting: {mail}.</>
+                  ) : (
+                    'contacting the data controller through the channels listed on the Contact page.'
+                  )}
                 </p>
               </>
             )}

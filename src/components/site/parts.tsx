@@ -23,7 +23,13 @@ export function Html({
 export function Streaks({ variant }: { variant: 'home' | 'sub' | 'cta' }): React.ReactElement {
   if (variant === 'cta') {
     return (
-      <svg className="hero-streaks" viewBox="0 0 1280 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+      <svg
+        className="hero-streaks"
+        viewBox="0 0 1280 420"
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden="true"
+        focusable="false"
+      >
         <g fill="none" stroke="#9FB43B" strokeLinecap="round">
           <path d="M900 460L1140 -40" strokeOpacity=".22" strokeWidth="2" />
           <path d="M1010 460L1250 -40" strokeOpacity=".14" strokeWidth="2" />
@@ -33,18 +39,36 @@ export function Streaks({ variant }: { variant: 'home' | 'sub' | 'cta' }): React
   }
   if (variant === 'home') {
     return (
-      <svg className="hero-streaks" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+      <svg
+        className="hero-streaks"
+        viewBox="0 0 1280 720"
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden="true"
+        focusable="false"
+      >
         <g fill="none" stroke="#9FB43B" strokeLinecap="round">
           <path d="M640 760L1060 -40" strokeOpacity=".22" strokeWidth="2" />
           <path d="M760 760L1180 -40" strokeOpacity=".16" strokeWidth="2" />
           <path d="M880 760L1300 -40" strokeOpacity=".1" strokeWidth="2" />
-          <path d="M-40 640C260 600 520 560 760 470" stroke="#A4B93A" strokeOpacity=".28" strokeWidth="2" strokeDasharray="2 14" />
+          <path
+            d="M-40 640C260 600 520 560 760 470"
+            stroke="#A4B93A"
+            strokeOpacity=".28"
+            strokeWidth="2"
+            strokeDasharray="2 14"
+          />
         </g>
       </svg>
     );
   }
   return (
-    <svg className="hero-streaks" viewBox="0 0 1280 480" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+    <svg
+      className="hero-streaks"
+      viewBox="0 0 1280 480"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+      focusable="false"
+    >
       <g fill="none" stroke="#9FB43B" strokeLinecap="round">
         <path d="M760 520L1060 -40" strokeOpacity=".22" strokeWidth="2" />
         <path d="M880 520L1180 -40" strokeOpacity=".16" strokeWidth="2" />
@@ -111,7 +135,13 @@ export function SubHero({
 }
 
 /** Đường dẫn trang (breadcrumb, C11): mục cuối là trang hiện tại. */
-export function Crumb({ items, label }: { items: Array<{ label: string; href?: string }>; label: string }): React.ReactElement {
+export function Crumb({
+  items,
+  label,
+}: {
+  items: Array<{ label: string; href?: string }>;
+  label: string;
+}): React.ReactElement {
   return (
     <nav className="crumb" aria-label={label} data-testid="breadcrumb">
       <ol>
@@ -151,10 +181,20 @@ export function CtaSection({
       <div className="wrap">
         <div>
           <h2 id={id}>{pick(locale, 'Bạn muốn hợp tác hoặc cần tư vấn?', 'Looking to partner or need advice?')}</h2>
-          <p>{pick(locale, 'Hãy để lại thông tin, chúng tôi sẽ liên hệ lại.', 'Leave your details and we will get back to you.')}</p>
+          <p>
+            {pick(
+              locale,
+              'Hãy để lại thông tin, chúng tôi sẽ liên hệ lại.',
+              'Leave your details and we will get back to you.',
+            )}
+          </p>
         </div>
         <div className="cta-act">
-          <a className="btn btn-light" href={ROUTES.contact[locale]} data-testid={sectionId ? undefined : 'cta-contact'}>
+          <a
+            className="btn btn-light"
+            href={ROUTES.contact[locale]}
+            data-testid={sectionId ? undefined : 'cta-contact'}
+          >
             {pick(locale, 'Liên hệ hợp tác', 'Partner with us')}
             <Icon name="arrow-right" className="ico" />
           </a>
@@ -170,7 +210,15 @@ export function CtaSection({
   );
 }
 
-export function EmptyBlock({ locale, icon, text }: { locale: Locale; icon: IconName; text: string }): React.ReactElement {
+export function EmptyBlock({
+  locale,
+  icon,
+  text,
+}: {
+  locale: Locale;
+  icon: IconName;
+  text: string;
+}): React.ReactElement {
   return (
     <div className="empty" role="status" data-testid="empty-state">
       <Icon name={icon} size={40} className="ico" />
@@ -201,7 +249,9 @@ export function BoardFigure({
   const outputItem = (o: LoadedSiteContent['outputLines'][number]) => (
     <li className="o" data-testid="output-row" key={o.name[locale]}>
       <span className="o-name">{o.name[locale]}</span>
-      <span className="tag">{o.state === 'da-co' ? pick(locale, 'Đã có', 'Available') : pick(locale, 'Định hướng', 'Planned')}</span>
+      <span className="tag">
+        {o.state === 'da-co' ? pick(locale, 'Đã có', 'Available') : pick(locale, 'Định hướng', 'Planned')}
+      </span>
     </li>
   );
   const ariaText = pick(
@@ -233,7 +283,13 @@ export function BoardFigure({
             <strong>{pick(locale, 'Chất thải rắn đầu vào', 'Incoming solid waste')}</strong>
             <span>{pick(locale, 'Tiếp nhận và phân loại', 'Reception and classification')}</span>
           </div>
-          <svg className="dg-conn conn-a" viewBox="0 0 80 632" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <svg
+            className="dg-conn conn-a"
+            viewBox="0 0 80 632"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+            focusable="false"
+          >
             {railsA.map((d) => (
               <path key={`r${d}`} className="rail" pathLength={1} d={d} />
             ))}
@@ -255,7 +311,13 @@ export function BoardFigure({
             </div>
             <ul className="o-list o2">{content.outputLines.filter((o) => o.group === 'vpd').map(outputItem)}</ul>
           </div>
-          <svg className="dg-conn conn-b" viewBox="0 0 96 632" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <svg
+            className="dg-conn conn-b"
+            viewBox="0 0 96 632"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+            focusable="false"
+          >
             {railsB.map((d) => (
               <path key={`r${d}`} className="rail" pathLength={1} d={d} />
             ))}
@@ -273,17 +335,35 @@ export function BoardFigure({
       <figcaption className="dg-notes">
         <div>
           <h3>{pick(locale, 'Sàng tuyển', 'Sorting')}</h3>
-          <p>{pick(locale, 'Phân tách các dòng vật chất phù hợp để tiếp tục xử lý hoặc khai thác giá trị.', 'Separates suitable material streams for further processing or value recovery.')}</p>
+          <p>
+            {pick(
+              locale,
+              'Phân tách các dòng vật chất phù hợp để tiếp tục xử lý hoặc khai thác giá trị.',
+              'Separates suitable material streams for further processing or value recovery.',
+            )}
+          </p>
           {down('#sang-tuyen', pick(locale, 'Xem công đoạn sàng tuyển', 'See the sorting stages'))}
         </div>
         <div>
           <h3>{pick(locale, 'Công nghệ VPD', 'VPD technology')}</h3>
-          <p>{pick(locale, 'Định hướng chuyển hoá một số dòng nguyên liệu phù hợp thành các sản phẩm đầu ra mới.', 'Aims to convert suitable feedstock streams into new output products.')}</p>
+          <p>
+            {pick(
+              locale,
+              'Định hướng chuyển hoá một số dòng nguyên liệu phù hợp thành các sản phẩm đầu ra mới.',
+              'Aims to convert suitable feedstock streams into new output products.',
+            )}
+          </p>
           {down('#vpd', pick(locale, 'Xem công đoạn VPD', 'See the VPD stages'))}
         </div>
         <div>
           <h3>{pick(locale, 'Sáu dòng ở mức định hướng', 'Six streams, planned direction')}</h3>
-          <p>{pick(locale, 'Nhà máy đã đi vào hoạt động; các dòng đầu ra vẫn ở mức định hướng, chưa phải sản phẩm đang cung cấp.', 'The plant is in operation; the output streams remain a planned direction, not products currently supplied.')}</p>
+          <p>
+            {pick(
+              locale,
+              'Nhà máy đã đi vào hoạt động; các dòng đầu ra vẫn ở mức định hướng, chưa phải sản phẩm đang cung cấp.',
+              'The plant is in operation; the output streams remain a planned direction, not products currently supplied.',
+            )}
+          </p>
           <a href={ROUTES.products[locale]}>
             {pick(locale, 'Xem sản phẩm đầu ra', 'See output products')}
             <Icon name="arrow-right" className="ico" />

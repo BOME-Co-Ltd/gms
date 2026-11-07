@@ -1,8 +1,8 @@
 // Khung trang theo wireframe green v0.3.8 (ux-spec V26/V27/V31–V34): thanh trên, header logo, cờ ngôn ngữ, ngăn kéo,
 // chân trang trắng, cụm nút nổi. Thứ tự DOM = tab = đọc.
 import type React from 'react';
-import { safeHref } from '../../../contracts/safe-url.ts';
 import { ROUTES } from '../../../contracts/routes.ts';
+import { safeHref } from '../../../contracts/safe-url.ts';
 import type { LoadedCompany, Locale } from '../../content/loader.ts';
 import { formatPublicPhone } from '../../shared/contact/schema.ts';
 import { BrandMark, GmsLogo, Icon, LogoSprite, ZaloMark } from './icons.tsx';
@@ -102,7 +102,10 @@ function Flag({ kind }: { kind: 'vi' | 'en' }): React.ReactElement {
     return (
       <svg className="flag" viewBox="0 0 30 20" aria-hidden="true" focusable="false">
         <rect width="30" height="20" fill="#DA251D" />
-        <path fill="#FFFF00" d="M15 4.2l1.35 4.15h4.37l-3.53 2.57 1.35 4.15L15 12.5l-3.54 2.57 1.35-4.15-3.53-2.57h4.37z" />
+        <path
+          fill="#FFFF00"
+          d="M15 4.2l1.35 4.15h4.37l-3.53 2.57 1.35 4.15L15 12.5l-3.54 2.57 1.35-4.15-3.53-2.57h4.37z"
+        />
       </svg>
     );
   }
@@ -122,7 +125,17 @@ function Flag({ kind }: { kind: 'vi' | 'en' }): React.ReactElement {
   );
 }
 
-function Links({ keys, locale, active, testId }: { keys: StaticPageKey[]; locale: Locale; active?: StaticPageKey; testId: boolean }) {
+function Links({
+  keys,
+  locale,
+  active,
+  testId,
+}: {
+  keys: StaticPageKey[];
+  locale: Locale;
+  active?: StaticPageKey;
+  testId: boolean;
+}) {
   return (
     <>
       {keys.map((k) => (
@@ -196,12 +209,30 @@ export function SiteHeader({
             </ul>
           </nav>
           <div className="hdr-end">
-            <nav className="lang" data-testid="lang-switcher" aria-label={`${t.langLabel}${viCur ? t.langVi : t.langEn}`}>
+            <nav
+              className="lang"
+              data-testid="lang-switcher"
+              aria-label={`${t.langLabel}${viCur ? t.langVi : t.langEn}`}
+            >
               <span className="lang-pill" aria-hidden="true" />
-              <a href={viPath} hrefLang="vi" lang="vi" aria-label={t.langVi} title={t.langVi} aria-current={viCur ? 'true' : undefined}>
+              <a
+                href={viPath}
+                hrefLang="vi"
+                lang="vi"
+                aria-label={t.langVi}
+                title={t.langVi}
+                aria-current={viCur ? 'true' : undefined}
+              >
                 <Flag kind="vi" />
               </a>
-              <a href={enPath} hrefLang="en" lang="en" aria-label={t.langEn} title={t.langEn} aria-current={viCur ? undefined : 'true'}>
+              <a
+                href={enPath}
+                hrefLang="en"
+                lang="en"
+                aria-label={t.langEn}
+                title={t.langEn}
+                aria-current={viCur ? undefined : 'true'}
+              >
                 <Flag kind="en" />
               </a>
             </nav>

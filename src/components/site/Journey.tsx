@@ -31,8 +31,20 @@ export function JourneySection({
 }): React.ReactElement {
   const isVi = locale === 'vi';
   const defaults = isVi
-    ? ['Đánh giá hiện trạng', 'Tổ chức mặt bằng', 'Cải tạo hạ tầng', 'Triển khai công nghệ', 'Hoàn thiện hệ thống vận hành']
-    : ['Current-state assessment', 'Site organisation', 'Infrastructure upgrade', 'Technology deployment', 'Operating-system completion'];
+    ? [
+        'Đánh giá hiện trạng',
+        'Tổ chức mặt bằng',
+        'Cải tạo hạ tầng',
+        'Triển khai công nghệ',
+        'Hoàn thiện hệ thống vận hành',
+      ]
+    : [
+        'Current-state assessment',
+        'Site organisation',
+        'Infrastructure upgrade',
+        'Technology deployment',
+        'Operating-system completion',
+      ];
   const rows = content.journeySteps
     ? content.journeySteps.map((s) => ({ name: s.name[locale], status: s.status as string | null }))
     : defaults.map((name) => ({ name, status: null as string | null }));
@@ -57,7 +69,10 @@ export function JourneySection({
                 <h3>{s.name}</h3>
                 {isVi && JOURNEY_DESC[i] ? <p>{JOURNEY_DESC[i]}</p> : null}
                 {label ? (
-                  <span className={`badge badge-status badge-status--${done ? 'done' : doing ? 'doing' : 'upcoming'}`} data-status={s.status ?? ''}>
+                  <span
+                    className={`badge badge-status badge-status--${done ? 'done' : doing ? 'doing' : 'upcoming'}`}
+                    data-status={s.status ?? ''}
+                  >
                     <Icon name={done ? 'check' : doing ? 'clock' : 'circle'} size={14} strokeWidth={2} />
                     {label}
                   </span>

@@ -22,7 +22,8 @@ export function NewsListPage({
   const items = all.slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE);
   const totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
   const pos = isVi ? `Trang ${pageNum} / ${totalPages}` : `Page ${pageNum} of ${totalPages}`;
-  const pageHref = (p: number) => (p === 1 ? ROUTES.news[locale] : `${ROUTES.news[locale]}/${isVi ? 'trang' : 'page'}/${p}`);
+  const pageHref = (p: number) =>
+    p === 1 ? ROUTES.news[locale] : `${ROUTES.news[locale]}/${isVi ? 'trang' : 'page'}/${p}`;
   const newsLabel = L('Tin tức / Hành trình', 'News / Journey');
   const first = pageNum === 1;
   return (
@@ -40,7 +41,11 @@ export function NewsListPage({
               ]
         }
         eyebrow={L('Hành trình chuyển đổi', 'Transformation journey')}
-        title={first ? L('Tin tức & Hành trình chuyển đổi', 'News & Transformation Journey') : `${L('Tin tức & Hành trình chuyển đổi', 'News & Transformation Journey')} — ${pos}`}
+        title={
+          first
+            ? L('Tin tức & Hành trình chuyển đổi', 'News & Transformation Journey')
+            : `${L('Tin tức & Hành trình chuyển đổi', 'News & Transformation Journey')} — ${pos}`
+        }
         lead={
           first
             ? L(
@@ -130,7 +135,13 @@ export function NewsListPage({
   );
 }
 
-export function ProjectsListPage({ content, locale }: { content: LoadedSiteContent; locale: Locale }): React.ReactElement {
+export function ProjectsListPage({
+  content,
+  locale,
+}: {
+  content: LoadedSiteContent;
+  locale: Locale;
+}): React.ReactElement {
   const L = (vi: string, en: string) => pick(locale, vi, en);
   const items = content.projects[locale];
   return (
@@ -167,7 +178,10 @@ export function ProjectsListPage({ content, locale }: { content: LoadedSiteConte
             <EmptyBlock
               locale={locale}
               icon="image"
-              text={L('Thư viện dự án đang được cập nhật. Mời bạn quay lại sau.', 'The project gallery is being updated. Please check back later.')}
+              text={L(
+                'Thư viện dự án đang được cập nhật. Mời bạn quay lại sau.',
+                'The project gallery is being updated. Please check back later.',
+              )}
             />
           )}
         </div>
@@ -177,7 +191,13 @@ export function ProjectsListPage({ content, locale }: { content: LoadedSiteConte
   );
 }
 
-export function CareersListPage({ content, locale }: { content: LoadedSiteContent; locale: Locale }): React.ReactElement {
+export function CareersListPage({
+  content,
+  locale,
+}: {
+  content: LoadedSiteContent;
+  locale: Locale;
+}): React.ReactElement {
   const L = (vi: string, en: string) => pick(locale, vi, en);
   const items = content.jobs[locale];
   // Tin tuyển dụng chưa có trường địa điểm riêng: nơi làm việc là địa chỉ công ty (cùng nguồn JSON-LD JobPosting).

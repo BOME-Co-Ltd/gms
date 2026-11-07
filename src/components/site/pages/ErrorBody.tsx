@@ -14,11 +14,16 @@ export function ErrorBody({ locale, kind }: { locale: Locale; kind: '404' | '500
         <div className="col">
           <Icon name={is404 ? 'file-question' : 'server-crash'} size={48} className="ico ico-lg" />
           <h1 className="err-title" id="h1">
-            {is404 ? L('Không tìm thấy trang này.', "We couldn't find this page.") : L('Có lỗi ở phía chúng tôi.', 'Something went wrong on our side.')}
+            {is404
+              ? L('Không tìm thấy trang này.', "We couldn't find this page.")
+              : L('Có lỗi ở phía chúng tôi.', 'Something went wrong on our side.')}
           </h1>
           <p>
             {is404
-              ? L('Trang có thể đã được gỡ hoặc đường dẫn chưa đúng.', 'It may have been removed or the link may be wrong.')
+              ? L(
+                  'Trang có thể đã được gỡ hoặc đường dẫn chưa đúng.',
+                  'It may have been removed or the link may be wrong.',
+                )
               : L('Mời bạn thử lại sau ít phút.', 'Please try again in a few minutes.')}
           </p>
           <div className="err-act">

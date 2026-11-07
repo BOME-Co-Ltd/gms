@@ -18,7 +18,9 @@ export function MapBlock({
   const isVi = locale === 'vi';
   const [open, setOpen] = useState(false);
   const title = isVi ? 'Bản đồ vị trí nhà máy' : 'Plant Location Map';
-  const address = isVi ? 'Quốc lộ 39, Bần Yên Nhân, Mỹ Hào, Hưng Yên' : 'National Route 39, Ban Yen Nhan, My Hao, Hung Yen';
+  const address = isVi
+    ? 'Quốc lộ 39, Bần Yên Nhân, Mỹ Hào, Hưng Yên'
+    : 'National Route 39, Ban Yen Nhan, My Hao, Hung Yen';
   const coords = `${isVi ? 'Toạ độ:' : 'Coordinates:'} ${point} (${address})`;
   const link = (
     <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="btn-sec">
@@ -32,14 +34,29 @@ export function MapBlock({
       <h3>{title}</h3>
       <p>{coords}</p>
       <div className="map-act">
-        <button type="button" className="btn-sec" data-testid="map-open" id="btn-map-open" onClick={() => setOpen(true)}>
+        <button
+          type="button"
+          className="btn-sec"
+          data-testid="map-open"
+          id="btn-map-open"
+          onClick={() => setOpen(true)}
+        >
           {isVi ? 'Hiện bản đồ tương tác' : 'Show interactive map'}
         </button>
       </div>
-      <div className="map-frame" data-testid="map-view" id="map-view-container" data-point={point} hidden={!open} style={{ marginTop: 14 }}>
+      <div
+        className="map-frame"
+        data-testid="map-view"
+        id="map-view-container"
+        data-point={point}
+        hidden={!open}
+        style={{ marginTop: 14 }}
+      >
         <div className="map-head">
           <p>
-            <strong>{isVi ? 'Nhà máy Xử lý & Tái tạo Tài nguyên GMS Hưng Yên' : 'GMS Hung Yen Waste-to-Resource Plant'}</strong>
+            <strong>
+              {isVi ? 'Nhà máy Xử lý & Tái tạo Tài nguyên GMS Hưng Yên' : 'GMS Hung Yen Waste-to-Resource Plant'}
+            </strong>
           </p>
           <p>{coords}</p>
           <div className="map-act">{link}</div>
