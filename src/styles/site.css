@@ -818,6 +818,7 @@ input[type="checkbox"] {
   fill: #0866ff;
 }
 .ft-val {
+  font-style: normal;
   min-width: 0;
   overflow-wrap: anywhere;
 }
