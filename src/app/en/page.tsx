@@ -1,6 +1,9 @@
 import type React from 'react';
-import { HomePageView } from '../page.tsx';
+import { SitePage, siteMetadata } from '../../components/site/site.tsx';
 
-export default function EnglishHomePage(): React.ReactElement {
-  return <HomePageView locale="en" />;
+const PATH = '/en';
+export const generateMetadata = () => siteMetadata(PATH);
+
+export default function Page(): React.ReactElement {
+  return <SitePage path={PATH} />;
 }

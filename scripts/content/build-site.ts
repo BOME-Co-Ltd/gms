@@ -1,5 +1,6 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { parse as parseYaml } from 'yaml';
@@ -30,7 +31,7 @@ import { computeContentHash } from '../deploy/deploy-prod.ts';
 // Tài sản tĩnh (public/) theo vị trí script, không theo cwd: bản build ở thư mục tạm/fixture vẫn có ảnh.
 const PUBLIC_DIR = join(resolve(dirname(fileURLToPath(import.meta.url)), '..', '..'), 'public');
 
-const MENU_ORDER = [
+export const MENU_ORDER = [
   'home',
   'about',
   'solutions',
@@ -44,9 +45,9 @@ const MENU_ORDER = [
   'privacy',
 ] as const;
 
-type StaticPageKey = (typeof MENU_ORDER)[number];
+export type StaticPageKey = (typeof MENU_ORDER)[number];
 
-const MENU_LABELS: Record<Locale, Record<StaticPageKey, string>> = {
+export const MENU_LABELS:Record<Locale, Record<StaticPageKey, string>> = {
   vi: {
     home: 'Trang chủ',
     about: 'Giới thiệu',
@@ -87,7 +88,7 @@ function footerLink(k: StaticPageKey, locale: Locale, active?: StaticPageKey): F
   return { href: ROUTES[k][locale], label: MENU_LABELS[locale][k], current: active === k };
 }
 
-const PAGE_DESCRIPTIONS: Record<Locale, Record<StaticPageKey, string>> = {
+export const PAGE_DESCRIPTIONS:Record<Locale, Record<StaticPageKey, string>> = {
   vi: {
     home: 'GMS Hưng Yên – Giải pháp thông minh, kiến tạo giá trị xanh thông qua công nghệ sàng tuyển và nhiệt phân VPD.',
     about: 'Giới thiệu về GMS Hưng Yên, tầm nhìn, sứ mệnh và hành trình chuyển đổi nhà máy xử lý chất thải.',
@@ -323,7 +324,7 @@ export function buildOrgJsonLd(company: LoadedCompany, siteUrl: string, locale: 
   return JSON.stringify(org);
 }
 
-const INLINE_STYLES = `
+export const INLINE_STYLES = `
 :root {
   --g900: #0F5838;
   --g700: #27673C;
@@ -621,40 +622,25 @@ function ctaSection(content: LoadedSiteContent, locale: Locale, id = 'h-cta'): s
     </section>`;
 }
 
-function renderLayout(opts: {
+/**
+ * NEXT-1: khung trang (thân `<body>`) cho trang Next. `<head>` do Next lo (generateMetadata + layout);
+ * ở đây chỉ còn phần thân: sprite + liên kết bỏ qua + đầu trang | `<main>` | chân trang + nút nổi + script ngăn kéo.
+ */
+export type ShellOpts = {
   locale: Locale;
-  title: string;
-  description: string;
-  canonicalPath: string;
   viPath: string;
   enPath: string;
-  noindex?: boolean;
-  ogImageRel?: string;
   siteUrl: string;
   company: LoadedCompany & { social?: Array<{ url: string }> };
   activePageKey?: StaticPageKey;
   bodyHtml: string;
-}): string {
-  const {
-    locale,
-    title,
-    description,
-    canonicalPath,
-    viPath,
-    enPath,
-    noindex = false,
-    ogImageRel = 'og/default.png',
-    siteUrl,
-    company,
-    activePageKey,
-    bodyHtml,
-  } = opts;
+};
 
-  const canonicalUrl = `${siteUrl}${canonicalPath}`;
-  const viUrl = `${siteUrl}${viPath}`;
-  const enUrl = `${siteUrl}${enPath}`;
-  const ogImgUrl = `${siteUrl}/${ogImageRel.replace(/^\//, '')}`;
-  const ogLocale = locale === 'vi' ? 'vi_VN' : 'en_US';
+export type ShellParts = { before: string; main: string; after: string; orgJsonLd: string };
+
+export function renderShell(opts: ShellOpts): ShellParts {
+  const { locale, viPath, enPath, siteUrl, company, activePageKey, bodyHtml } = opts;
+
   const skipText = locale === 'vi' ? 'Bỏ qua, tới nội dung chính' : 'Skip to main content';
   const brandName = company.legalName || (locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen');
 
@@ -704,44 +690,16 @@ function renderLayout(opts: {
   const bleed = bodyHtml.trimStart().startsWith('<!--bleed-->');
   const mainHtml = bleed ? bodyHtml : wrapSubpage(bodyHtml);
 
-  return `<!DOCTYPE html>
-<html lang="${locale}">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escHtml(title)}</title>
-  <meta name="description" content="${escHtml(description)}" />
-  ${noindex ? '<meta name="robots" content="noindex, nofollow" />' : '<meta name="robots" content="index, follow" />'}
-  <link rel="canonical" href="${escHtml(canonicalUrl)}" />
-  <link rel="alternate" hreflang="vi" href="${escHtml(viUrl)}" />
-  <link rel="alternate" hreflang="en" href="${escHtml(enUrl)}" />
-  <link rel="alternate" hreflang="x-default" href="${escHtml(viUrl)}" />
-  <link rel="icon" type="image/svg+xml" href="/brand/logo-gms-mark.svg" />
-  <link rel="icon" type="image/png" href="/favicon.png" />
-  <link rel="shortcut icon" href="/favicon.ico" />
-  <link rel="apple-touch-icon" href="/brand/logo-gms-mark.svg" />
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="${escHtml(title)}" />
-  <meta property="og:description" content="${escHtml(description)}" />
-  <meta property="og:locale" content="${ogLocale}" />
-  <meta property="og:url" content="${escHtml(canonicalUrl)}" />
-  <meta property="og:image" content="${escHtml(ogImgUrl)}" />
-  <script type="application/ld+json">${orgJsonLd}</script>
-  <script>document.documentElement.classList.add('js')</script>
-  <style>${INLINE_STYLES}</style>
-</head>
-<body id="top">
-  ${LOGO_SPRITE_HTML}
+  return {
+    before: `${LOGO_SPRITE_HTML}
   <a href="#noi-dung" class="skip-link" data-testid="nav-menu">${escHtml(skipText)}</a>
-  ${buildHeaderHtml(shell)}
-  <main id="noi-dung" tabindex="-1">
-    ${mainHtml}
-  </main>
-  ${footerHtml}
+  ${buildHeaderHtml(shell)}`,
+    main: mainHtml,
+    after: `${footerHtml}
   ${buildFabsHtml(shell)}
-  ${WF_SCRIPT}
-</body>
-</html>`;
+  ${WF_SCRIPT}`,
+    orgJsonLd,
+  };
 }
 
 // Sơ đồ hai nhánh (U12): dùng chung trang chủ và trang Công nghệ (cùng markup, cùng tên 6 dòng).
@@ -784,7 +742,7 @@ function boardFigure(
         </figure>`;
 }
 
-function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
+export function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
   const sloganLines = isVi
     ? ['Giải pháp thông minh –', 'Kiến tạo giá trị xanh']
@@ -962,7 +920,7 @@ function renderHomePage(content: LoadedSiteContent, locale: Locale): string {
   `;
 }
 
-function renderAboutPage(content: LoadedSiteContent, locale: Locale): string {
+export function renderAboutPage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
   const customBody = content.pagesBody.about?.[locale]?.bodyHtml ?? '';
   const values = isVi
@@ -1017,7 +975,7 @@ const SOLUTION_IMAGES: Record<number, string> = {
   3: '/img/scada-control-room.jpg',
 };
 
-function renderSolutionsPage(content: LoadedSiteContent, locale: Locale): string {
+export function renderSolutionsPage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
   const items = content.solutionItems[locale];
   return `
@@ -1052,7 +1010,7 @@ function renderSolutionsPage(content: LoadedSiteContent, locale: Locale): string
   `;
 }
 
-function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): string {
+export function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
   const customBody = content.pagesBody.technology?.[locale]?.bodyHtml ?? '';
   // V39/V42(2)/§12a: khung `gms-sorting-line` — ảnh/bản vẽ của GMS, contain, 3:2; ô null ⇒ ẩn cả khung.
@@ -1267,7 +1225,7 @@ function renderTechnologyPage(content: LoadedSiteContent, locale: Locale): strin
   `;
 }
 
-function renderProductsPage(content: LoadedSiteContent, locale: Locale): string {
+export function renderProductsPage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
   const screeningLines = content.outputLines.filter((l) => l.group === 'sang-tuyen');
   const vpdLines = content.outputLines.filter((l) => l.group === 'vpd');
@@ -1311,7 +1269,7 @@ function renderProductsPage(content: LoadedSiteContent, locale: Locale): string 
  * Trang chi tiết (tin, dự án, tuyển dụng) theo news-detail.html: hero có breadcrumb + h1 + hàng thông tin, cột bài
  * ≤ 760px (ảnh đầu, thân `.prose`, nút quay lại), khối mời liên hệ. Thân bài do loader dựng từ Markdown.
  */
-function detailPage(
+export function detailPage(
   content: LoadedSiteContent,
   locale: Locale,
   o: {
@@ -1365,7 +1323,7 @@ function emptyBlock(locale: Locale, iconName: IconName, text: string): string {
   return `<div class="empty" role="status" data-testid="empty-state">${icon(iconName, { size: 40, className: 'ico' })}<p>${escHtml(text)}</p><a class="btn" href="${ROUTES.contact[locale]}">${isVi ? 'Liên hệ' : 'Contact'}${icon('arrow-right', { size: 18, className: 'ico' })}</a></div>`;
 }
 
-function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum: number): string {
+export function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum: number): string {
   const isVi = locale === 'vi';
   // Không có journey-steps.yaml ⇒ lộ trình mặc định, không nhãn (loader.ts LoadedSiteContent.journeySteps).
   const defaultNames = isVi
@@ -1483,7 +1441,7 @@ function renderNewsListPage(content: LoadedSiteContent, locale: Locale, pageNum:
   `;
 }
 
-function renderProjectsListPage(content: LoadedSiteContent, locale: Locale): string {
+export function renderProjectsListPage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
   const items = content.projects[locale];
   const body =
@@ -1520,7 +1478,7 @@ function renderProjectsListPage(content: LoadedSiteContent, locale: Locale): str
   `;
 }
 
-function renderCareersListPage(content: LoadedSiteContent, locale: Locale): string {
+export function renderCareersListPage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
   const items = content.jobs[locale];
   // Tin tuyển dụng chưa có trường địa điểm riêng: nơi làm việc là địa chỉ công ty (cùng nguồn JSON-LD JobPosting).
@@ -1560,7 +1518,7 @@ function renderCareersListPage(content: LoadedSiteContent, locale: Locale): stri
   `;
 }
 
-function renderFaqPage(content: LoadedSiteContent, locale: Locale): string {
+export function renderFaqPage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
   const items = content.faq[locale];
   const body =
@@ -1597,7 +1555,7 @@ function renderFaqPage(content: LoadedSiteContent, locale: Locale): string {
   `;
 }
 
-function renderPrivacyPage(content: LoadedSiteContent, locale: Locale): string {
+export function renderPrivacyPage(content: LoadedSiteContent, locale: Locale): string {
   const isVi = locale === 'vi';
   const pol = content.policies[locale][0];
   const ver = pol?.version ?? '1.0';
@@ -1982,7 +1940,7 @@ const contactFormScript = (hasPhone: boolean, hasZalo: boolean): string => `
     });
 `;
 
-function renderContactPage(
+export function renderContactPage(
   content: LoadedSiteContent,
   locale: Locale,
   contactRecipientEnv: string,
@@ -2185,344 +2143,11 @@ function renderContactPage(
   `;
 }
 
-function writePageDual(outDir: string, urlPath: string, html: string): void {
-  const clean = urlPath.replace(/^\/|\/$/g, '');
-  if (!clean) {
-    writeFileSync(join(outDir, 'index.html'), html);
-    return;
-  }
-  const htmlFile = join(outDir, `${clean}.html`);
-  mkdirSync(dirname(htmlFile), { recursive: true });
-  writeFileSync(htmlFile, html);
-
-  const indexFile = join(outDir, clean, 'index.html');
-  mkdirSync(dirname(indexFile), { recursive: true });
-  writeFileSync(indexFile, html);
-}
-
-export async function runBuildSite(options?: {
-  cwd?: string;
-  contentDir?: string;
-  outDir?: string;
-  siteUrl?: string;
-  siteEnv?: string;
-  contactRecipient?: string;
-  dateOverride?: string;
-}): Promise<{ ok: boolean; errors: string[]; hash?: string }> {
-  const cwd = options?.cwd ?? process.cwd();
-  const contentDir =
-    options?.contentDir ?? (process.env.CONTENT_DIR ? join(cwd, process.env.CONTENT_DIR) : join(cwd, 'content'));
-  const outDir = options?.outDir ?? join(cwd, 'out');
-  const siteUrl = (options?.siteUrl ?? process.env.SITE_URL ?? 'https://gms.example.test').replace(/\/$/, '');
-  const siteEnv = options?.siteEnv ?? process.env.SITE_ENV ?? 'test';
-  const isStaging = siteEnv === 'staging';
-  const contactRecipientEnv =
-    options?.contactRecipient !== undefined
-      ? options.contactRecipient
-      : process.env.CONTACT_RECIPIENT !== undefined
-        ? process.env.CONTACT_RECIPIENT
-        : 'lienhe@vi-du.test';
-
-  const loaded = loadSiteContent(contentDir, options?.dateOverride ?? process.env.DATE_OVERRIDE);
-  if (loaded.errors.length > 0) {
-    const msgs = loaded.errors.map((err) => `[${err.code}] ${err.message}`);
-    for (const m of msgs) {
-      console.error(m);
-    }
-    return { ok: false, errors: msgs };
-  }
-
-  const hash = computeContentHash(contentDir);
-  console.log(`content-hash: ${hash}`);
-
-  // shortcut: LoadedCompany (loader.ts, lãnh địa backend) chưa mang Company.social; đọc lại từ company.yaml ở đây. Bỏ khi loader xuất `social`.
-  const companyYamlPath = join(contentDir, 'company.yaml');
-  const rawSocial = existsSync(companyYamlPath)
-    ? (parseYaml(readFileSync(companyYamlPath, 'utf8')) as { social?: unknown } | null)?.social
-    : undefined;
-  const siteCompany = { ...loaded.company, social: parseSocial(rawSocial) };
-
-  if (existsSync(outDir)) {
-    rmSync(outDir, { recursive: true, force: true });
-  }
-  mkdirSync(outDir, { recursive: true });
-
-  const formStatus = formStatusOf({
-    mailReady: (process.env.CONTACT_MAIL_READY ?? 'false') === 'true',
-    privacyRequestEmail: loaded.company.privacyRequestEmail?.trim(),
-    taxId: loaded.company.taxId?.trim(),
-  });
-  writeFileSync(join(outDir, 'form-status.json'), `${JSON.stringify(formStatus)}\n`);
-
-  const ogDir = join(outDir, 'og');
-  mkdirSync(ogDir, { recursive: true });
-  const defaultOgBytes = await sharp({
-    create: { width: 1200, height: 630, channels: 3, background: { r: 15, g: 88, b: 56 } },
-  })
-    .png()
-    .toBuffer();
-  writeFileSync(join(ogDir, 'default.png'), defaultOgBytes);
-
-  const brandDir = join(outDir, 'brand');
-  mkdirSync(brandDir, { recursive: true });
-  try {
-    const pubBrand = join(PUBLIC_DIR, 'brand');
-    if (existsSync(pubBrand)) {
-      for (const f of readdirSync(pubBrand)) {
-        writeFileSync(join(brandDir, f), readFileSync(join(pubBrand, f)));
-      }
-    }
-  } catch {}
-
-  try {
-    for (const f of ['favicon.ico', 'favicon.png', 'icon.svg']) {
-      const srcFile = join(PUBLIC_DIR, f);
-      if (existsSync(srcFile)) {
-        writeFileSync(join(outDir, f), readFileSync(srcFile));
-      }
-    }
-  } catch {}
-
-  for (const img of loaded.images.values()) {
-    await processAndWriteImage(img, outDir);
-  }
-  const copiedStatic = copyStaticImages(join(PUBLIC_DIR, 'img'), join(outDir, 'img'), new Set(loaded.images.keys()));
-  await optimizeStaticImages(join(outDir, 'img'), copiedStatic);
-
-  const sitemapUrls: string[] = [];
-  const addSitemapUrl = (urlPath: string, noindex: boolean) => {
-    if (!isStaging && !noindex) {
-      sitemapUrls.push(`${siteUrl}${urlPath}`);
-    }
-  };
-
-  for (const locale of ['vi', 'en'] as Locale[]) {
-    for (const key of MENU_ORDER) {
-      const viPath = ROUTES[key].vi;
-      const enPath = ROUTES[key].en;
-      const canonicalPath = locale === 'vi' ? viPath : enPath;
-      const isEmptyList =
-        (key === 'projects' && loaded.projects[locale].length === 0) ||
-        (key === 'careers' && loaded.jobs[locale].length === 0) ||
-        (key === 'faq' && loaded.faq[locale].length === 0);
-      const noindex = isStaging || isEmptyList;
-
-      let bodyHtml = '';
-      switch (key) {
-        case 'home':
-          bodyHtml = renderHomePage(loaded, locale);
-          break;
-        case 'about':
-          bodyHtml = renderAboutPage(loaded, locale);
-          break;
-        case 'solutions':
-          bodyHtml = renderSolutionsPage(loaded, locale);
-          break;
-        case 'technology':
-          bodyHtml = renderTechnologyPage(loaded, locale);
-          break;
-        case 'products':
-          bodyHtml = renderProductsPage(loaded, locale);
-          break;
-        case 'news':
-          bodyHtml = renderNewsListPage(loaded, locale, 1);
-          break;
-        case 'projects':
-          bodyHtml = renderProjectsListPage(loaded, locale);
-          break;
-        case 'careers':
-          bodyHtml = renderCareersListPage(loaded, locale);
-          break;
-        case 'faq':
-          bodyHtml = renderFaqPage(loaded, locale);
-          break;
-        case 'contact':
-          bodyHtml = renderContactPage(loaded, locale, contactRecipientEnv, formStatus.open);
-          break;
-        case 'privacy':
-          bodyHtml = renderPrivacyPage(loaded, locale);
-          break;
-      }
-
-      const fullHtml = renderLayout({
-        locale,
-        title: `${MENU_LABELS[locale][key]} — ${locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen'}`,
-        description: PAGE_DESCRIPTIONS[locale][key],
-        canonicalPath,
-        viPath,
-        enPath,
-        noindex,
-        siteUrl,
-        company: siteCompany,
-        activePageKey: key,
-        bodyHtml,
-      });
-
-      writePageDual(outDir, canonicalPath, fullHtml);
-      addSitemapUrl(canonicalPath, noindex);
-    }
-
-    const totalNews = loaded.news[locale].length;
-    const totalNewsPages = Math.ceil(totalNews / PAGE_SIZE);
-    for (let p = 2; p <= totalNewsPages; p++) {
-      const viPath = `${ROUTES.news.vi}/trang/${p}`;
-      const enPath = `${ROUTES.news.en}/page/${p}`;
-      const canonicalPath = locale === 'vi' ? viPath : enPath;
-      const bodyHtml = renderNewsListPage(loaded, locale, p);
-      const fullHtml = renderLayout({
-        locale,
-        title: `${MENU_LABELS[locale].news} (${p}) — ${locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen'}`,
-        description: PAGE_DESCRIPTIONS[locale].news,
-        canonicalPath,
-        viPath,
-        enPath,
-        noindex: isStaging,
-        siteUrl,
-        company: siteCompany,
-        activePageKey: 'news',
-        bodyHtml,
-      });
-      writePageDual(outDir, canonicalPath, fullHtml);
-    }
-
-    for (const n of loaded.news[locale]) {
-      const viSlug = locale === 'vi' ? n.slug : (n.counterpartSlug ?? n.slug);
-      const enSlug = locale === 'en' ? n.slug : (n.counterpartSlug ?? n.slug);
-      const viPath = `${ROUTES.news.vi}/${viSlug}`;
-      const enPath = `${ROUTES.news.en}/${enSlug}`;
-      const canonicalPath = locale === 'vi' ? viPath : enPath;
-
-      let heroHtml = '';
-      let ogImageRel = 'og/default.png';
-      if (n.heroImage) {
-        const imgObj = loaded.images.get(n.heroImage);
-        if (imgObj && imgObj.allowedInBuild) {
-          const publicImg = `img/${n.heroImage.replace(/^images\//, '')}`;
-          if (imgObj.allowedForOg) {
-            ogImageRel = publicImg;
-          }
-          const caption =
-            imgObj.kind === 'anh-dung-ai'
-              ? `<figcaption class="photo-label" data-testid="photo-label">${locale === 'vi' ? 'Phối cảnh dự kiến' : "Artist's impression"}</figcaption>`
-              : '';
-          heroHtml = `<figure class="fig lead-fig"><div class="frame-wf r169"><img src="/${publicImg}" alt="${escHtml(imgObj.alt[locale])}" width="1200" height="675" />${caption}</div></figure>`;
-        }
-      }
-
-      const bodyHtml = detailPage(loaded, locale, {
-        listLabel: locale === 'vi' ? 'Tin tức / Hành trình' : 'News / Journey',
-        listHref: ROUTES.news[locale],
-        title: n.title,
-        metaHtml: `<time datetime="${escHtml(n.date)}">${escHtml(formatDateLocale(n.date, locale))}</time>`,
-        leadFigureHtml: heroHtml,
-        bodyHtml: n.bodyHtml,
-        backLabel: locale === 'vi' ? 'Tất cả tin tức' : 'All news',
-      });
-
-      const fullHtml = renderLayout({
-        locale,
-        title: `${n.title} — ${locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen'}`,
-        description: n.summary || PAGE_DESCRIPTIONS[locale].news,
-        canonicalPath,
-        viPath,
-        enPath,
-        noindex: isStaging,
-        ogImageRel,
-        siteUrl,
-        company: siteCompany,
-        activePageKey: 'news',
-        bodyHtml,
-      });
-      writePageDual(outDir, canonicalPath, fullHtml);
-      addSitemapUrl(canonicalPath, isStaging);
-    }
-
-    for (const p of loaded.projects[locale]) {
-      const viSlug = locale === 'vi' ? p.slug : (p.counterpartSlug ?? p.slug);
-      const enSlug = locale === 'en' ? p.slug : (p.counterpartSlug ?? p.slug);
-      const viPath = `${ROUTES.projects.vi}/${viSlug}`;
-      const enPath = `${ROUTES.projects.en}/${enSlug}`;
-      const canonicalPath = locale === 'vi' ? viPath : enPath;
-
-      const bodyHtml = detailPage(loaded, locale, {
-        listLabel: locale === 'vi' ? 'Dự án / Thư viện' : 'Projects / Gallery',
-        listHref: ROUTES.projects[locale],
-        title: p.title,
-        metaHtml: `<time datetime="${escHtml(p.date)}">${escHtml(formatDateLocale(p.date, locale))}</time><span>${escHtml(p.category)}</span>`,
-        bodyHtml: p.bodyHtml,
-        backLabel: locale === 'vi' ? 'Tất cả dự án' : 'All projects',
-      });
-
-      const fullHtml = renderLayout({
-        locale,
-        title: `${p.title} — ${locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen'}`,
-        description: p.summary || PAGE_DESCRIPTIONS[locale].projects,
-        canonicalPath,
-        viPath,
-        enPath,
-        noindex: isStaging,
-        siteUrl,
-        company: siteCompany,
-        activePageKey: 'projects',
-        bodyHtml,
-      });
-      writePageDual(outDir, canonicalPath, fullHtml);
-      addSitemapUrl(canonicalPath, isStaging);
-    }
-
-    for (const j of loaded.jobs[locale]) {
-      const viSlug = locale === 'vi' ? j.slug : (j.counterpartSlug ?? j.slug);
-      const enSlug = locale === 'en' ? j.slug : (j.counterpartSlug ?? j.slug);
-      const viPath = `${ROUTES.careers.vi}/${viSlug}`;
-      const enPath = `${ROUTES.careers.en}/${enSlug}`;
-      const canonicalPath = locale === 'vi' ? viPath : enPath;
-      const deadlineLabel =
-        locale === 'vi'
-          ? `Hạn nộp: ${formatDateLocale(j.validThrough, 'vi')}`
-          : `Deadline: ${formatDateLocale(j.validThrough, 'en')}`;
-
-      const bodyHtml = detailPage(loaded, locale, {
-        listLabel: locale === 'vi' ? 'Tuyển dụng' : 'Careers',
-        listHref: ROUTES.careers[locale],
-        title: j.title,
-        metaHtml: `<p class="il">${icon('circle-alert', { className: 'ico' })}<strong>${escHtml(deadlineLabel)}</strong></p>`,
-        bodyHtml: j.bodyHtml,
-        backLabel: locale === 'vi' ? 'Tất cả vị trí tuyển dụng' : 'All open positions',
-      });
-
-      const fullHtml = renderLayout({
-        locale,
-        title: `${j.title} — ${locale === 'vi' ? 'GMS Hưng Yên' : 'GMS Hung Yen'}`,
-        description: PAGE_DESCRIPTIONS[locale].careers,
-        canonicalPath,
-        viPath,
-        enPath,
-        noindex: isStaging,
-        siteUrl,
-        company: siteCompany,
-        activePageKey: 'careers',
-        bodyHtml,
-      });
-      writePageDual(outDir, canonicalPath, fullHtml);
-      addSitemapUrl(canonicalPath, isStaging);
-    }
-  }
-
-  for (const locale of ['vi', 'en'] as Locale[]) {
-    const isVi = locale === 'vi';
-    const html404 = renderLayout({
-      locale,
-      title: isVi ? 'Không tìm thấy trang — GMS Hưng Yên' : 'Page not found — GMS Hung Yen',
-      description: isVi
-        ? 'Không tìm thấy trang này. Trang có thể đã được gỡ hoặc đường dẫn chưa đúng.'
-        : "We couldn't find this page. It may have been removed or the link may be wrong.",
-      canonicalPath: isVi ? '/404' : '/en/404',
-      viPath: '/404',
-      enPath: '/en/404',
-      noindex: true,
-      siteUrl,
-      company: siteCompany,
-      bodyHtml: `<!--bleed-->
+/** M13: thân trang 404/500 (cùng khung, `<!--bleed-->`). 500 chưa nối vào worker (xem báo cáo [cần hỏi]). */
+export function renderErrorBody(locale: Locale, kind: '404' | '500'): string {
+  const isVi = locale === 'vi';
+  if (kind === '404') {
+    return `<!--bleed-->
       <section class="err err-404" aria-labelledby="h1" data-testid="error-404">
         <div class="wrap">
           <div class="col">
@@ -2539,20 +2164,9 @@ export async function runBuildSite(options?: {
             </div>
           </div>
         </div>
-      </section>`,
-    });
-    // M13 (5xx): trang tự chứa, cùng khung. Chưa nối vào worker (xem báo cáo [cần hỏi]).
-    const html500 = renderLayout({
-      locale,
-      title: isVi ? 'Có lỗi ở phía chúng tôi — GMS Hưng Yên' : 'Something went wrong — GMS Hung Yen',
-      description: isVi ? 'Mời bạn thử lại sau ít phút.' : 'Please try again in a few minutes.',
-      canonicalPath: isVi ? '/500' : '/en/500',
-      viPath: '/500',
-      enPath: '/en/500',
-      noindex: true,
-      siteUrl,
-      company: siteCompany,
-      bodyHtml: `<!--bleed-->
+      </section>`;
+  }
+  return `<!--bleed-->
       <section class="err err-500" aria-labelledby="h1" data-testid="error-500">
         <div class="wrap">
           <div class="col">
@@ -2564,56 +2178,274 @@ export async function runBuildSite(options?: {
             </div>
           </div>
         </div>
-      </section>`,
+      </section>`;
+}
+
+/** Cấu hình dựng, đọc từ biến môi trường (Next chạy trong tiến trình con nên chỉ truyền được qua env). */
+export type SiteConfig = {
+  contentDir: string;
+  siteUrl: string;
+  siteEnv: string;
+  contactRecipient: string;
+  dateOverride?: string;
+};
+
+export function siteConfigFromEnv(cwd: string = process.cwd()): SiteConfig {
+  const contentDir =
+    process.env.GMS_CONTENT_DIR ?? (process.env.CONTENT_DIR ? join(cwd, process.env.CONTENT_DIR) : join(cwd, 'content'));
+  return {
+    contentDir,
+    siteUrl: (process.env.SITE_URL ?? 'https://gms.example.test').replace(/\/$/, ''),
+    siteEnv: process.env.SITE_ENV ?? 'test',
+    contactRecipient: process.env.CONTACT_RECIPIENT !== undefined ? process.env.CONTACT_RECIPIENT : 'lienhe@vi-du.test',
+    dateOverride: process.env.DATE_OVERRIDE || undefined,
+  };
+}
+
+// shortcut: LoadedCompany (loader.ts, lãnh địa backend) chưa mang Company.social; đọc lại từ company.yaml ở đây. Bỏ khi loader xuất `social`.
+export function loadSocial(contentDir: string): ReturnType<typeof parseSocial> {
+  const companyYamlPath = join(contentDir, 'company.yaml');
+  const rawSocial = existsSync(companyYamlPath)
+    ? (parseYaml(readFileSync(companyYamlPath, 'utf8')) as { social?: unknown } | null)?.social
+    : undefined;
+  return parseSocial(rawSocial);
+}
+
+export function currentFormStatus(company: LoadedCompany): ReturnType<typeof formStatusOf> {
+  return formStatusOf({
+    mailReady: (process.env.CONTACT_MAIL_READY ?? 'false') === 'true',
+    privacyRequestEmail: company.privacyRequestEmail?.trim(),
+    taxId: company.taxId?.trim(),
+  });
+}
+
+const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+type PageInfo = { rel: string; html: string; canonical: string | null; noindex: boolean; lang: string | null };
+
+function readPages(outDir: string): PageInfo[] {
+  return listHtmlFiles(outDir)
+    .filter((f) => !f.slice(outDir.length).startsWith('/_next/'))
+    .sort()
+    .map((f) => {
+      const html = readFileSync(f, 'utf8');
+      const canonical = html.match(/<link[^>]*\srel="canonical"[^>]*\shref="([^"]*)"/i)?.[1] ?? null;
+      const robots = html.match(/<meta[^>]*\sname="robots"[^>]*\scontent="([^"]*)"/i)?.[1] ?? '';
+      const lang = html.match(/<html[^>]*\slang="([^"]*)"/i)?.[1] ?? null;
+      return { rel: f.slice(outDir.length), html, canonical, noindex: /noindex/i.test(robots), lang };
     });
-    if (isVi) {
-      writeFileSync(join(outDir, '404.html'), html404);
-      writeFileSync(join(outDir, '500.html'), html500);
-    } else {
-      mkdirSync(join(outDir, 'en'), { recursive: true });
-      writeFileSync(join(outDir, 'en', '404.html'), html404);
-      writeFileSync(join(outDir, 'en', '500.html'), html500);
+}
+
+/**
+ * Sau `next build` (output: export ⇒ out/): thay phần ghép HTML cũ bằng bước hậu kỳ + kiểm.
+ *  1. `<html lang>` của trang en (root layout Next dùng chung một lang; shortcut: sửa ở đây, nâng cấp khi tách root layout theo locale);
+ *  2. mỗi `X.html` có bản `X/index.html` (giữ cả hai dạng URL như out/ trước đây);
+ *  3. ảnh: dựng lại out/img từ content/images (bỏ EXIF, nén) + ảnh tĩnh public/img (PERF-01); og/default.png; form-status.json;
+ *  4. sitemap.xml/robots.txt/_headers suy từ HTML đã dựng (canonical + robots meta), không từ danh sách riêng;
+ *  5. kiểm: ảnh thiếu, hreflang/canonical, lang, sitemap, srcset, og, tên cấm, denylist.
+ */
+export async function postBuild(
+  outDir: string,
+  cfg: SiteConfig,
+  loaded: LoadedSiteContent,
+): Promise<{ ok: boolean; errors: string[] }> {
+  const errors: string[] = [];
+  const isStaging = cfg.siteEnv === 'staging';
+
+  // 0. bỏ trang giữ chỗ `_` của tuyến động rỗng (Next export cấm generateStaticParams rỗng)
+  for (const f of listHtmlFiles(outDir)) {
+    if (!f.slice(outDir.length).startsWith('/_next/') && basename(f) === '_.html') rmSync(f);
+  }
+
+  // 1. lang của trang en
+  for (const p of readPages(outDir)) {
+    const isEn = p.rel === '/en.html' || p.rel.startsWith('/en/');
+    if (isEn && p.lang === 'vi') {
+      writeFileSync(join(outDir, p.rel), p.html.replace(/(<html[^>]*\slang=")vi(")/i, '$1en$2'));
     }
   }
 
-  const uniqueUrls = [...new Set(sitemapUrls)];
-  const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
+  // 2. X.html ⇒ X/index.html (404/500 và index gốc thì không)
+  for (const f of listHtmlFiles(outDir)) {
+    const rel = f.slice(outDir.length + 1);
+    if (rel.startsWith('_next/') || basename(rel) === 'index.html') continue;
+    if (/(^|\/)(404|500)\.html$/.test(rel)) continue;
+    const dest = join(outDir, rel.replace(/\.html$/, ''), 'index.html');
+    mkdirSync(dirname(dest), { recursive: true });
+    copyFileSync(f, dest);
+  }
+
+  // 3. ảnh + tài sản tĩnh. Next đã chép nguyên public/; dựng lại out/img để chỉ còn bản đã xử lý và được phép (allowedInBuild).
+  rmSync(join(outDir, 'img'), { recursive: true, force: true });
+  mkdirSync(join(outDir, 'og'), { recursive: true });
+  writeFileSync(
+    join(outDir, 'og', 'default.png'),
+    await sharp({ create: { width: 1200, height: 630, channels: 3, background: { r: 15, g: 88, b: 56 } } })
+      .png()
+      .toBuffer(),
+  );
+  for (const img of loaded.images.values()) {
+    await processAndWriteImage(img, outDir);
+  }
+  const copiedStatic = copyStaticImages(join(PUBLIC_DIR, 'img'), join(outDir, 'img'), new Set(loaded.images.keys()));
+  await optimizeStaticImages(join(outDir, 'img'), copiedStatic);
+
+  const formStatus = currentFormStatus(loaded.company);
+  writeFileSync(join(outDir, 'form-status.json'), `${JSON.stringify(formStatus)}\n`);
+
+  // 4. sitemap / robots / _headers
+  const pages = readPages(outDir);
+  const urls = new Set<string>();
+  for (const p of pages) {
+    if (!isStaging && !p.noindex && p.canonical) urls.add(p.canonical);
+  }
+  writeFileSync(
+    join(outDir, 'sitemap.xml'),
+    `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${uniqueUrls.map((u) => `  <url><loc>${escHtml(u)}</loc></url>`).join('\n')}
+${[...urls].map((u) => `  <url><loc>${escHtml(u)}</loc></url>`).join('\n')}
 </urlset>
-`;
-  writeFileSync(join(outDir, 'sitemap.xml'), sitemapXml);
+`,
+  );
+  writeFileSync(
+    join(outDir, 'robots.txt'),
+    isStaging
+      ? `User-agent: *\nDisallow: /\n`
+      : `User-agent: *\nDisallow: /api/\nSitemap: ${cfg.siteUrl}/sitemap.xml\n`,
+  );
+  // CSP: site tĩnh chưa có CSP ở tầng này (chỉ worker /api/* có, contracts/api.ts). Next chèn script inline (dữ liệu RSC) nên
+  // CSP `script-src 'self'` sẽ làm hỏng trang; thêm CSP cho trang là quyết định của appsec/devops [cần hỏi appsec].
+  writeFileSync(
+    join(outDir, '_headers'),
+    isStaging
+      ? `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Robots-Tag: noindex\n`
+      : `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/api/*\n  X-Robots-Tag: noindex\n  # /api/*\n`,
+  );
 
-  const robotsTxt = isStaging
-    ? `User-agent: *\nDisallow: /\n`
-    : `User-agent: *\nDisallow: /api/\nSitemap: ${siteUrl}/sitemap.xml\n`;
-  writeFileSync(join(outDir, 'robots.txt'), robotsTxt);
-
-  const headersContent = isStaging
-    ? `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Robots-Tag: noindex\n`
-    : `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/api/*\n  X-Robots-Tag: noindex\n  # /api/*\n`;
-  writeFileSync(join(outDir, '_headers'), headersContent);
-
-  const brokenImgs = findBrokenImgRefs(outDir).map((b) => `[IMG_NOT_IN_OUT] ${b}`);
-  if (brokenImgs.length > 0) {
-    for (const m of brokenImgs) console.error(m);
-    return { ok: false, errors: brokenImgs };
+  // 5. kiểm
+  for (const b of findBrokenImgRefs(outDir)) errors.push(`[IMG_NOT_IN_OUT] ${b}`);
+  for (const p of pages) {
+    const m = p.html.match(/<img\b[^>]*?\ssrcset="([^"]*)"/g) ?? [];
+    for (const tag of m) {
+      for (const part of tag.replace(/^[\s\S]*?srcset="/, '').replace(/"$/, '').split(',')) {
+        const u = part.trim().split(/\s+/)[0];
+        if (u?.startsWith('/') && !existsSync(join(outDir, decodeURI(u.split(/[?#]/)[0])))) {
+          errors.push(`[SRCSET_NOT_IN_OUT] ${p.rel}: ${u}`);
+        }
+      }
+    }
+    const isErr = /^\/(en\/)?(404|500)\.html$/.test(p.rel);
+    if (!p.canonical) errors.push(`[CANONICAL_MISSING] ${p.rel}`);
+    if (!isErr) {
+      for (const hl of ['vi', 'en', 'x-default']) {
+        if (!new RegExp(`<link[^>]*\\shreflang="${hl}"`, 'i').test(p.html)) {
+          errors.push(`[HREFLANG_MISSING] ${p.rel}: ${hl}`);
+        }
+      }
+    }
+    const expectLang = p.rel === '/en.html' || p.rel.startsWith('/en/') ? 'en' : 'vi';
+    if (p.lang !== expectLang) errors.push(`[HTML_LANG] ${p.rel}: lang=${p.lang}, cần ${expectLang}`);
+    if (isStaging && !p.noindex) errors.push(`[STAGING_INDEXABLE] ${p.rel}`);
+    const og = p.html.match(/<meta[^>]*\sproperty="og:image"[^>]*\scontent="([^"]*)"/i)?.[1];
+    if (!og) errors.push(`[OG_MISSING] ${p.rel}`);
+    else if (og.startsWith(cfg.siteUrl) && !existsSync(join(outDir, decodeURI(og.slice(cfg.siteUrl.length))))) {
+      errors.push(`[OG_NOT_IN_OUT] ${p.rel}: ${og}`);
+    }
   }
+  if (!isStaging && urls.size === 0) errors.push('[SITEMAP_EMPTY] sitemap.xml không có URL nào');
+  const hero = pages.find((p) => p.rel === '/index.html');
+  if (hero && existsSync(join(outDir, HERO_IMG_REL)) && !/srcset="[^"]*hero-plant-512\.jpg/.test(hero.html)) {
+    errors.push('[PERF01_HERO_SRCSET] trang chủ thiếu srcset ảnh hero 512w');
+  }
+  for (const f of copiedStatic) {
+    if (!/\.(jpe?g|png)$/i.test(f)) continue;
+    try {
+      const w = (await sharp(join(outDir, 'img', f)).metadata()).width ?? 0;
+      if (w > STATIC_IMG_MAX_WIDTH) errors.push(`[PERF01_IMG_TOO_WIDE] img/${f}: ${w}px > ${STATIC_IMG_MAX_WIDTH}px`);
+    } catch {}
+    if (SOLUTION_IMG_FILES.has(f)) {
+      for (const v of [solutionImgSmallName(f), solutionImgMidName(f)]) {
+        if (!existsSync(join(outDir, 'img', v))) errors.push(`[PERF01_VARIANT_MISSING] img/${v}`);
+      }
+    }
+  }
+  const headers = readFileSync(join(outDir, '_headers'), 'utf8');
+  if (!/X-Content-Type-Options:\s*nosniff/.test(headers)) errors.push('[HEADERS] _headers thiếu X-Content-Type-Options');
+  if (typeof formStatus.open !== 'boolean') errors.push('[FORM_STATUS] form-status.json thiếu open');
 
-  // Quét đầu ra theo content/denylist.yaml (build.ts §8 luật 6): có tên cấm ⇒ build đỏ.
-  const denylist = loadDenylist(contentDir);
+  // Quét đầu ra theo content/denylist.yaml (build.ts §8 luật 6): có tên cấm ⇒ build đỏ. Quét cả _next/.
+  const denylist = loadDenylist(cfg.contentDir);
   if ('error' in denylist) {
-    const m = `[${denylist.error.code}] ${denylist.error.message}`;
-    console.error(m);
-    return { ok: false, errors: [m] };
+    errors.push(`[${denylist.error.code}] ${denylist.error.message}`);
+  } else {
+    for (const e of scanOutputForForbiddenNames(outDir, denylist.names)) errors.push(`[${e.code}] ${e.message}`);
   }
-  const nameErrs = scanOutputForForbiddenNames(outDir, denylist.names);
-  if (nameErrs.length > 0) {
-    const msgs = nameErrs.map((e) => `[${e.code}] ${e.message}`);
+  return { ok: errors.length === 0, errors };
+}
+
+/**
+ * `bun run build`: kiểm nội dung ⇒ `next build` (output: export ⇒ out/) ⇒ postBuild (hậu kỳ + kiểm).
+ * Tham số giữ nguyên chữ ký cũ (tests/support/build-e2e-site.ts, tests dùng thư mục nội dung/ra riêng).
+ */
+export async function runBuildSite(options?: {
+  cwd?: string;
+  contentDir?: string;
+  outDir?: string;
+  siteUrl?: string;
+  siteEnv?: string;
+  contactRecipient?: string;
+  dateOverride?: string;
+}): Promise<{ ok: boolean; errors: string[]; hash?: string }> {
+  const cwd = options?.cwd ?? process.cwd();
+  const base = siteConfigFromEnv(cwd);
+  const cfg: SiteConfig = {
+    contentDir: options?.contentDir ?? base.contentDir,
+    siteUrl: (options?.siteUrl ?? base.siteUrl).replace(/\/$/, ''),
+    siteEnv: options?.siteEnv ?? base.siteEnv,
+    contactRecipient: options?.contactRecipient !== undefined ? options.contactRecipient : base.contactRecipient,
+    dateOverride: options?.dateOverride ?? base.dateOverride,
+  };
+  const outDir = options?.outDir ?? join(cwd, 'out');
+
+  const loaded = loadSiteContent(cfg.contentDir, cfg.dateOverride);
+  if (loaded.errors.length > 0) {
+    const msgs = loaded.errors.map((err) => `[${err.code}] ${err.message}`);
     for (const m of msgs) console.error(m);
     return { ok: false, errors: msgs };
   }
+  const hash = computeContentHash(cfg.contentDir);
+  console.log(`content-hash: ${hash}`);
 
+  const nextOut = join(APP_ROOT, 'out');
+  rmSync(nextOut, { recursive: true, force: true });
+  const run = spawnSync(process.env.NODE_BIN ?? 'node', [join(APP_ROOT, 'node_modules', 'next', 'dist', 'bin', 'next'), 'build'], {
+    cwd: APP_ROOT,
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      NEXT_TELEMETRY_DISABLED: '1',
+      GMS_CONTENT_DIR: cfg.contentDir,
+      SITE_URL: cfg.siteUrl,
+      SITE_ENV: cfg.siteEnv,
+      CONTACT_RECIPIENT: cfg.contactRecipient,
+      ...(cfg.dateOverride ? { DATE_OVERRIDE: cfg.dateOverride } : {}),
+    },
+  });
+  if (run.status !== 0) {
+    const m = `[NEXT_BUILD_FAILED] next build thoát với mã ${run.status ?? run.signal}`;
+    console.error(m);
+    return { ok: false, errors: [m] };
+  }
+
+  const res = await postBuild(nextOut, cfg, loaded);
+  if (!res.ok) {
+    for (const m of res.errors) console.error(m);
+    return { ok: false, errors: res.errors };
+  }
+  if (resolve(outDir) !== resolve(nextOut)) {
+    rmSync(outDir, { recursive: true, force: true });
+    cpSync(nextOut, outDir, { recursive: true });
+  }
   return { ok: true, errors: [], hash };
 }
 
@@ -2622,3 +2454,5 @@ if (import.meta.main) {
     if (!res.ok) process.exit(1);
   });
 }
+
+

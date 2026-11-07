@@ -1,12 +1,9 @@
 import type { Metadata } from 'next';
 import type React from 'react';
-import '../styles/globals.css';
-import { FloatingContact } from '../components/ui/FloatingContact.tsx';
+import { INLINE_STYLES } from '../../scripts/content/build-site.ts';
 
+// Biểu tượng dùng chung mọi trang; title/description/canonical/hreflang/robots/og do từng trang khai (siteMetadata).
 export const metadata: Metadata = {
-  title: 'GMS Hưng Yên — Giải pháp thông minh, Kiến tạo giá trị xanh',
-  description:
-    'GMS Hưng Yên – Giải pháp thông minh, kiến tạo giá trị xanh thông qua công nghệ sàng tuyển và nhiệt phân VPD.',
   icons: {
     icon: [
       { url: '/brand/logo-gms-mark.svg', type: 'image/svg+xml' },
@@ -16,29 +13,18 @@ export const metadata: Metadata = {
     shortcut: '/favicon.ico',
     apple: '/brand/logo-gms-mark.svg',
   },
-  alternates: {
-    canonical: 'https://gms.example.test/',
-    languages: {
-      vi: 'https://gms.example.test/',
-      en: 'https://gms.example.test/en',
-      'x-default': 'https://gms.example.test/',
-    },
-  },
-  openGraph: {
-    title: 'GMS Hưng Yên — Giải pháp thông minh, Kiến tạo giá trị xanh',
-    description:
-      'GMS Hưng Yên – Giải pháp thông minh, kiến tạo giá trị xanh thông qua công nghệ sàng tuyển và nhiệt phân VPD.',
-    locale: 'vi_VN',
-    type: 'website',
-  },
 };
 
+// lang="vi" mặc định; trang /en/** được sửa thành "en" ở bước hậu kỳ build (postBuild, build-site.ts).
 export default function RootLayout({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
+        <style dangerouslySetInnerHTML={{ __html: INLINE_STYLES }} />
+      </head>
+      <body id="top" suppressHydrationWarning>
         {children}
-        <FloatingContact />
       </body>
     </html>
   );

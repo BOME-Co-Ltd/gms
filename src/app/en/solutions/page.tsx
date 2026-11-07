@@ -1,6 +1,9 @@
 import type React from 'react';
-import { SolutionsPageView } from '../../../components/pages/SolutionsPageView.tsx';
+import { SitePage, siteMetadata } from '../../../components/site/site.tsx';
 
-export default function SolutionsEnPage(): React.ReactElement {
-  return <SolutionsPageView locale="en" />;
+const PATH = '/en/solutions';
+export const generateMetadata = () => siteMetadata(PATH);
+
+export default function Page(): React.ReactElement {
+  return <SitePage path={PATH} />;
 }

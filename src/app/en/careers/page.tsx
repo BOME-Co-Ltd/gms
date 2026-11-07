@@ -1,6 +1,9 @@
 import type React from 'react';
-import { CareersPageView } from '../../../components/pages/CareersPageView.tsx';
+import { SitePage, siteMetadata } from '../../../components/site/site.tsx';
 
-export default function CareersEnPage(): React.ReactElement {
-  return <CareersPageView locale="en" />;
+const PATH = '/en/careers';
+export const generateMetadata = () => siteMetadata(PATH);
+
+export default function Page(): React.ReactElement {
+  return <SitePage path={PATH} />;
 }
