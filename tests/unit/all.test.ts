@@ -571,7 +571,7 @@ describe('Content Rules & Loader', () => {
     });
     expect(buildRes.ok).toBe(true);
     rmSync(tmpOut, { recursive: true, force: true });
-  });
+  }, 300_000); // runBuildSite chạy next build thật
 
   it('verifies deploy approval logic in deploy-prod.ts', () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'gms-deploy-test-'));
