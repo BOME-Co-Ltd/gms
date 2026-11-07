@@ -962,41 +962,17 @@ body {
 .nav a {
   padding: 0;
 }
-.hero p,
-.sec p,
-.ft p,
-.err p,
-.art p {
+/* Reset kiểu wireframe (p,h1-3,ul{margin:0}) nhưng độ ưu tiên 0 để lớp thành phần (.kicker, .hero-lead…) vẫn đặt được margin */
+:where(.hero p, .sec p, .ft p, .err p, .art p) {
   margin: 0;
 }
-.hero li,
-.sec li,
-.ft li,
-.top li,
-.nav li,
-.drawer li,
-.crumb li {
+:where(.hero li, .sec li, .ft li, .top li, .nav li, .drawer li, .crumb li) {
   margin: 0;
 }
-.hero h1,
-.hero h2,
-.sec h1,
-.sec h2,
-.sec h3,
-.err h1,
-.err h2,
-.ft h2,
-.art h1 {
+:where(.hero h1, .hero h2, .sec h1, .sec h2, .sec h3, .err h1, .err h2, .ft h2, .art h1) {
   margin: 0;
 }
-.hero ul,
-.sec ul,
-.sec ol,
-.ft ul,
-.top ul,
-.nav ul,
-.drawer ul,
-.crumb ol {
+:where(.hero ul, .sec ul, .sec ol, .ft ul, .top ul, .nav ul, .drawer ul, .crumb ol) {
   margin: 0;
   padding: 0;
 }
@@ -3707,12 +3683,8 @@ a.ch .ch-val {
 }
 
 @media (max-width: 480px) {
-  .wrap,
-  .container {
-    padding: 0 14px;
-  }
   .hero-banner {
-    padding: 18px 14px;
+    padding: 18px var(--pad);
   }
   .mf-branches {
     grid-template-columns: 1fr;
@@ -3792,4 +3764,65 @@ a.ch .ch-val {
 }
 .jump a:hover {
   transform: scale(1.08);
+}
+
+/* Dải số liệu M1 theo wireframe (home.html mục 4) */
+.sec-stats {
+  background: var(--mist);
+}
+.stats {
+  display: grid;
+  gap: 8px;
+}
+.stats .sec-head {
+  margin: 0;
+}
+.stat-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+.stat {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  background: var(--white);
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-height: 132px;
+  box-shadow: var(--shadow);
+}
+.stat dt {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.stat dd {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--g900);
+  line-height: 1.2;
+}
+.stat-src {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--muted);
+}
+@media (min-width: 640px) {
+  .stat-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px) {
+  .stats {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    gap: 48px;
+    align-items: center;
+  }
 }
