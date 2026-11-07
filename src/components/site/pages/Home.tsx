@@ -117,21 +117,22 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
       </section>
 
       {content.figures.length > 0 ? (
-        <section className="sec" data-testid="figures-strip" aria-label={L('Số liệu chính', 'Key figures')}>
-          <div className="wrap">
+        <section className="sec sec-stats" data-testid="figures-strip" aria-label={L('Số liệu chính', 'Key figures')}>
+          <div className="wrap stats">
             <div className="sec-head">
               <h2>{L('Năng lực nhà máy', 'Plant capacity')}</h2>
             </div>
-            <ul className="grid-cards">
+            <dl className="stat-list">
               {content.figures.map((f) => (
-                <li className="stat-card" key={f.label[locale]}>
-                  <strong className="stat-value">
+                <div className="stat" key={f.label[locale]}>
+                  <dt>{f.label[locale]}</dt>
+                  <dd>
                     {f.value} {f.unit[locale]}
-                  </strong>
-                  <span>{f.label[locale]}</span> <small>({f.source})</small>
-                </li>
+                    <small className="stat-src">({f.source})</small>
+                  </dd>
+                </div>
               ))}
-            </ul>
+            </dl>
           </div>
         </section>
       ) : null}
