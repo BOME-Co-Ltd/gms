@@ -283,6 +283,7 @@ export function BoardFigure({
   ];
   return (
     <figure>
+      {/* biome-ignore lint/a11y/useSemanticElements: nhóm sơ đồ, không phải nhóm trường form nên không dùng fieldset */}
       <div className="board" data-testid={outputsId} role="group" aria-label={ariaText}>
         <div className="dg" data-testid={branchesId} role="img" aria-label={ariaText}>
           <div className="node n-in" data-stage="input">

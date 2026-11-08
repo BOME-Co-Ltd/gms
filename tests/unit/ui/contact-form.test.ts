@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
-import { createElement } from 'react';
-import { act } from 'react';
+import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ContactForm, type ContactFormProps } from '../../../src/components/site/ContactForm.tsx';
@@ -48,7 +47,9 @@ async function click(id: string) {
 }
 async function submit() {
   await act(async () => {
-    document.getElementById('gms-contact-form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('gms-contact-form')
+      ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   });
 }
 async function fillValid() {
@@ -68,7 +69,8 @@ const mockFetch = (status: number, body: unknown, bad = false) => {
   vi.stubGlobal('fetch', f);
   return f;
 };
-const sentBody = (f: ReturnType<typeof mockFetch>) => JSON.parse((f.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+const sentBody = (f: ReturnType<typeof mockFetch>) =>
+  JSON.parse((f.mock.calls[0] as unknown as [string, { body: string }])[1].body);
 const errText = () => document.querySelector('[data-testid="contact-error"]')?.textContent ?? '';
 
 let scripts: HTMLScriptElement[] = [];
@@ -217,7 +219,8 @@ describe('ContactForm: gửi', () => {
     await fillValid();
     return { render, reset };
   }
-  const opts = (render: ReturnType<typeof vi.fn>) => render.mock.calls[0][1] as Record<string, (...a: unknown[]) => unknown>;
+  const opts = (render: ReturnType<typeof vi.fn>) =>
+    render.mock.calls[0][1] as Record<string, (...a: unknown[]) => unknown>;
 
   it('gửi thành công: khoá nút khi đang gửi, một request, body đúng, honeypot, thành công + gửi khác', async () => {
     let resolve: (v: unknown) => void = () => {};
@@ -308,7 +311,12 @@ describe('ContactForm: gửi', () => {
   }
 
   it('lỗi mạng (fetch reject): báo không gửi được', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('net'); }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('net');
+      }),
+    );
     const { render } = await withTurnstile();
     await submit();
     await act(async () => window.__gmsTurnstileReady?.());
@@ -318,7 +326,10 @@ describe('ContactForm: gửi', () => {
   });
 
   it('422 VALIDATION map lỗi theo trường; mã lạ coi như lỗi chung', async () => {
-    mockFetch(422, { code: 'VALIDATION', fields: { email: 'INVALID_EMAIL', fullName: 'REQUIRED', consent: 'CONSENT_REQUIRED' } });
+    mockFetch(422, {
+      code: 'VALIDATION',
+      fields: { email: 'INVALID_EMAIL', fullName: 'REQUIRED', consent: 'CONSENT_REQUIRED' },
+    });
     const { render } = await withTurnstile();
     await submit();
     await act(async () => window.__gmsTurnstileReady?.());
@@ -362,7 +373,9 @@ describe('ContactForm: gửi', () => {
     await act(async () => window.__gmsTurnstileReady?.());
     await act(async () => opts(render).callback('t'));
     await flush();
-    expect(document.querySelector('.notice-box[data-testid="contact-error"]')?.textContent).toContain('tạm thời chưa mở');
+    expect(document.querySelector('.notice-box[data-testid="contact-error"]')?.textContent).toContain(
+      'tạm thời chưa mở',
+    );
     expect(q('contact-submit-btn').disabled).toBe(true);
     expect(document.querySelector('#contact-summary a[href="tel:+84900000000"]')).not.toBeNull();
     await submit();
@@ -385,7 +398,10 @@ describe('ContactForm: gửi', () => {
     await submit();
     await act(async () => opts(render).callback('t2'));
     await flush();
-    const f2 = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as unknown as [string, { body: string }];
+    const f2 = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as unknown as [
+      string,
+      { body: string },
+    ];
     expect(JSON.parse(f2[1].body).policyVersion).toBe('2.0');
     expect(f).toHaveBeenCalledTimes(1);
   });
@@ -417,9 +433,16 @@ describe('ContactForm: Turnstile', () => {
 
   it('error-callback khi đang chờ báo lỗi; các callback phụ điều khiển trạng thái chờ', async () => {
     const render = vi.fn((_e: HTMLElement, _o: Record<string, unknown>) => 'w1');
-    (window as { turnstile?: unknown }).turnstile = { render, reset: vi.fn(() => { throw new Error('gone'); }) };
+    (window as { turnstile?: unknown }).turnstile = {
+      render,
+      reset: vi.fn(() => {
+        throw new Error('gone');
+      }),
+    };
     await mount({ siteKey: 'KEY' });
-    await act(async () => document.getElementById('contact-name')?.dispatchEvent(new FocusEvent('focusin', { bubbles: true })));
+    await act(async () =>
+      document.getElementById('contact-name')?.dispatchEvent(new FocusEvent('focusin', { bubbles: true })),
+    );
     await act(async () => window.__gmsTurnstileReady?.());
     await act(async () => window.__gmsTurnstileReady?.());
     expect(render).toHaveBeenCalledTimes(1);
@@ -429,7 +452,10 @@ describe('ContactForm: Turnstile', () => {
     expect(slot.getAttribute('data-challenge')).toBe('shown');
     await act(async () => o['after-interactive-callback']());
     expect(slot.hasAttribute('data-challenge')).toBe(false);
-    await act(async () => { o['expired-callback'](); o['timeout-callback'](); });
+    await act(async () => {
+      o['expired-callback']();
+      o['timeout-callback']();
+    });
     await fillValid();
     await act(async () => o['before-interactive-callback']());
     await submit();
@@ -447,7 +473,9 @@ describe('ContactForm: Turnstile', () => {
     (window as { turnstile?: unknown }).turnstile = { render, reset: vi.fn() };
     await mount({ siteKey: 'KEY' });
     await fillValid();
-    await act(async () => document.getElementById('contact-name')?.dispatchEvent(new FocusEvent('focusin', { bubbles: true })));
+    await act(async () =>
+      document.getElementById('contact-name')?.dispatchEvent(new FocusEvent('focusin', { bubbles: true })),
+    );
     await act(async () => window.__gmsTurnstileReady?.());
     const o = render.mock.calls[0][1] as Record<string, (...a: unknown[]) => unknown>;
     await act(async () => o['before-interactive-callback']());

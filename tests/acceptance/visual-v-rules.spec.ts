@@ -33,7 +33,16 @@ const C = {
   white: 'rgb(255, 255, 255)',
 };
 
-type TextRow = { tag: string; text: string; color: string; size: number; weight: number; lh: number; top: number; x: number };
+type TextRow = {
+  tag: string;
+  text: string;
+  color: string;
+  size: number;
+  weight: number;
+  lh: number;
+  top: number;
+  x: number;
+};
 
 /** Mọi phần tử đang thấy có chữ trực tiếp: màu, cỡ, độ đậm, giãn dòng (đơn vị px) — dùng cho V03/V05/V09/V10/V11. */
 async function collectText(page: Page, scope = 'body'): Promise<TextRow[]> {
@@ -69,7 +78,8 @@ async function collectText(page: Page, scope = 'body'): Promise<TextRow[]> {
   }, scope);
 }
 
-const fmt = (rows: TextRow[]) => rows.map((r) => `<${r.tag}> "${r.text}" ${r.color} ${r.size}px/${r.weight}`).join('; ');
+const fmt = (rows: TextRow[]) =>
+  rows.map((r) => `<${r.tag}> "${r.text}" ${r.color} ${r.size}px/${r.weight}`).join('; ');
 
 // ═════════════════════════ V02 Màu chủ đạo ═════════════════════════
 
@@ -187,9 +197,12 @@ test.describe('trạng thái form (V06, V07, V37, V35)', () => {
             const svg = e.querySelector('svg');
             let sameRow = false;
             if (svg) {
-              const tn = document.createTreeWalker(e, NodeFilter.SHOW_TEXT, {
-                acceptNode: (n) => ((n.textContent ?? '').trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
-              }).nextNode();
+              const tn = document
+                .createTreeWalker(e, NodeFilter.SHOW_TEXT, {
+                  acceptNode: (n) =>
+                    (n.textContent ?? '').trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT,
+                })
+                .nextNode();
               if (tn) {
                 const range = document.createRange();
                 range.selectNodeContents(tn);
@@ -231,7 +244,8 @@ test.describe('trạng thái form (V06, V07, V37, V35)', () => {
       // V07 v0.5.2: <svg> lucide circle-check nằm TRONG khối contact-success; chữ và biểu tượng đều #0F5838.
       const svg = e.querySelector('svg');
       const textEls = [e, ...Array.from(e.querySelectorAll('*'))].filter(
-        (n) => !n.closest('svg') && Array.from(n.childNodes).some((c) => c.nodeType === 3 && (c.textContent ?? '').trim()),
+        (n) =>
+          !n.closest('svg') && Array.from(n.childNodes).some((c) => c.nodeType === 3 && (c.textContent ?? '').trim()),
       );
       return {
         text: (e.textContent ?? '').trim().slice(0, 60),
@@ -247,7 +261,10 @@ test.describe('trạng thái form (V06, V07, V37, V35)', () => {
     expect(m.text.length).toBeGreaterThan(0);
     expect(m.textColors.length, 'có chữ trong khối thành công').toBeGreaterThan(0);
     for (const c of m.textColors) expect.soft(c, `chữ thành công #0F5838 (không phải #067647)`).toBe(C.brand900);
-    expect(m.iconColor === C.brand900 || m.iconStroke === C.brand900, `biểu tượng #0F5838 (đo: ${m.iconColor} | ${m.iconStroke})`).toBe(true);
+    expect(
+      m.iconColor === C.brand900 || m.iconStroke === C.brand900,
+      `biểu tượng #0F5838 (đo: ${m.iconColor} | ${m.iconStroke})`,
+    ).toBe(true);
     expect(m.markup, 'biểu tượng là lucide circle-check').toMatch(/circle-check|m9 12 2 2 4-4/i);
   });
 
@@ -275,7 +292,14 @@ test.describe('trạng thái form (V06, V07, V37, V35)', () => {
     };
     // V36(2) v0.5.2: viền + vòng 1px + quầng 4px cùng cấu trúc cho ô thường (#1C70B8, .22) và ô lỗi (#B3261E, .22);
     // outline: 2px solid transparent; transition: border-color .15s, box-shadow .15s.
-    const checkFocus = (id: string, f: Awaited<ReturnType<typeof read>>, ring: string, halo: string, border: string, what: string) => {
+    const checkFocus = (
+      id: string,
+      f: Awaited<ReturnType<typeof read>>,
+      ring: string,
+      halo: string,
+      border: string,
+      what: string,
+    ) => {
       expect.soft(f.border, `${id}: viền ${what}`).toBe(border);
       expect.soft(f.shadow, `${id}: vòng 1px ${what}`).toContain(`${ring} 0px 0px 0px 1px`);
       expect.soft(f.shadow, `${id}: quầng 4px ${what}`).toContain(`${halo} 0px 0px 0px 4px`);
@@ -304,14 +328,24 @@ test.describe('trạng thái form (V06, V07, V37, V35)', () => {
     await fillAndSubmit(page, { name: VALID.name, message: VALID.message, consent: true });
     await expect(tid(page, 'contact-error').first()).toBeVisible();
     const bad = await read('contact-email');
-    checkFocus('contact-email (lỗi)', bad, 'rgb(179, 38, 30)', 'rgba(179, 38, 30, 0.22)', C.error, '#B3261E (ô lỗi, V36(2))');
+    checkFocus(
+      'contact-email (lỗi)',
+      bad,
+      'rgb(179, 38, 30)',
+      'rgba(179, 38, 30, 0.22)',
+      C.error,
+      '#B3261E (ô lỗi, V36(2))',
+    );
   });
 
   test('VR-V35b hộp tóm tắt lỗi: MỘT viền 2px #1C70B8, tiêu đề đỏ + biểu tượng (V36(1))', async ({ page }) => {
     await page.setViewportSize({ width: 1200, height: 900 });
     await open(page, 'contact', 'vi');
     await fillAndSubmit(page, { name: VALID.name, message: VALID.message, consent: true });
-    const alert = page.locator('[role="alert"]').filter({ has: page.locator('a[href^="#"]') }).first();
+    const alert = page
+      .locator('[role="alert"]')
+      .filter({ has: page.locator('a[href^="#"]') })
+      .first();
     await expect(alert).toBeVisible();
     const b = await alert.evaluate((e) => {
       const cs = getComputedStyle(e);
@@ -333,7 +367,8 @@ test.describe('trạng thái form (V06, V07, V37, V35)', () => {
         const main = document.querySelector('main');
         const links = Array.from(main?.querySelectorAll('a[href]') ?? []);
         const fixed = (e: Element) => {
-          for (let p: Element | null = e; p; p = p.parentElement) if (getComputedStyle(p).position === 'fixed') return true;
+          for (let p: Element | null = e; p; p = p.parentElement)
+            if (getComputedStyle(p).position === 'fixed') return true;
           return false;
         };
         const zalo = links.filter((a) => /zalo\.me/.test(a.getAttribute('href') ?? '') && !fixed(a));
@@ -345,7 +380,11 @@ test.describe('trạng thái form (V06, V07, V37, V35)', () => {
             markup: next?.querySelector('svg')?.outerHTML ?? '',
           };
         });
-        return { n: zalo.length, rows, messengerCount: links.filter((a) => /m\.me\/gmshungyen/.test(a.getAttribute('href') ?? '')).length };
+        return {
+          n: zalo.length,
+          rows,
+          messengerCount: links.filter((a) => /m\.me\/gmshungyen/.test(a.getAttribute('href') ?? '')).length,
+        };
       });
       expect(r.n, 'trang Liên hệ có ít nhất một mục Zalo trong nội dung chính').toBeGreaterThan(0);
       for (const row of r.rows) {
@@ -374,9 +413,14 @@ test.describe('trạng thái form (V06, V07, V37, V35)', () => {
     await fillAndSubmit(page, { ...VALID });
     const err = tid(page, 'contact-error').first();
     await expect(err).toBeVisible();
-    const hrefs = await err.evaluate((e) => Array.from(e.querySelectorAll('a[href]')).map((a) => a.getAttribute('href') ?? ''));
+    const hrefs = await err.evaluate((e) =>
+      Array.from(e.querySelectorAll('a[href]')).map((a) => a.getAttribute('href') ?? ''),
+    );
     // Zalo "khi đã công bố" (ux-spec §10): chỉ đòi Messenger ngay sau Zalo nếu Zalo có mặt.
-    expect(hrefs.some((h) => /m\.me\/gmshungyen/.test(h)), `kênh dự phòng ở F3c phải có Messenger (đo: ${hrefs.join(', ')})`).toBe(true);
+    expect(
+      hrefs.some((h) => /m\.me\/gmshungyen/.test(h)),
+      `kênh dự phòng ở F3c phải có Messenger (đo: ${hrefs.join(', ')})`,
+    ).toBe(true);
   });
 });
 
@@ -395,8 +439,7 @@ test('VR-V08 họ font Be Vietnam Pro + dự phòng; tải được, phủ tiế
   const stack = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
   const names = stack.split(',').map((s) => s.trim().replace(/^["']|["']$/g, ''));
   expect(names[0], `họ đầu của body (${stack})`).toBe('Be Vietnam Pro');
-  for (const fb of ['Segoe UI', 'system-ui', 'sans-serif'])
-    expect(names, `dự phòng ${fb} (${stack})`).toContain(fb);
+  for (const fb of ['Segoe UI', 'system-ui', 'sans-serif']) expect(names, `dự phòng ${fb} (${stack})`).toContain(fb);
 
   const faces = await page.evaluate(() =>
     Array.from(document.fonts)
@@ -404,7 +447,10 @@ test('VR-V08 họ font Be Vietnam Pro + dự phòng; tải được, phủ tiế
       .map((f) => ({ status: f.status, range: f.unicodeRange, weight: f.weight })),
   );
   expect(faces.length, 'có @font-face Be Vietnam Pro').toBeGreaterThan(0);
-  expect(faces.some((f) => f.status === 'loaded'), `ít nhất một mặt đã tải (${JSON.stringify(faces)})`).toBe(true);
+  expect(
+    faces.some((f) => f.status === 'loaded'),
+    `ít nhất một mặt đã tải (${JSON.stringify(faces)})`,
+  ).toBe(true);
   const covers = (range: string, cp: number) =>
     range
       .split(',')
@@ -415,11 +461,20 @@ test('VR-V08 họ font Be Vietnam Pro + dự phòng; tải được, phủ tiế
         const hi = b ? Number.parseInt(b, 16) : a.includes('?') ? Number.parseInt(a.replace('?', 'F'), 16) : lo;
         return cp >= lo && cp <= hi;
       });
-  expect(faces.some((f) => covers(f.range, 0x41)), 'có mặt phủ latin (A)').toBe(true);
-  expect(faces.some((f) => covers(f.range, 0x1ea1)), 'có mặt phủ tiếng Việt (ạ U+1EA1)').toBe(true);
+  expect(
+    faces.some((f) => covers(f.range, 0x41)),
+    'có mặt phủ latin (A)',
+  ).toBe(true);
+  expect(
+    faces.some((f) => covers(f.range, 0x1ea1)),
+    'có mặt phủ tiếng Việt (ạ U+1EA1)',
+  ).toBe(true);
   const self = new URL(page.url()).origin;
   expect(fontHosts.length, 'font được tải qua mạng (tự host)').toBeGreaterThan(0);
-  expect(fontHosts.filter((h) => h !== self), 'font tự host, không tải từ máy chủ ngoài').toEqual([]);
+  expect(
+    fontHosts.filter((h) => h !== self),
+    'font tự host, không tải từ máy chủ ngoài',
+  ).toEqual([]);
 });
 
 // ═════════════════════════ V09 Cỡ chữ (bổ sung H1/H2/H3, thân, chú thích) ═════════════════════════
@@ -518,7 +573,10 @@ test('VR-V11 thân 17px/1.65 (mọi trang kể cả Chính sách), H1–H3 1.25 
       await open(page, key, 'vi');
       const worst = await page.evaluate(() => {
         const ps = Array.from(document.querySelectorAll('main p, main li')).filter(
-          (p) => !p.querySelector('p,li') && !p.closest('[data-testid="footer"], header, nav') && p.getBoundingClientRect().width > 1,
+          (p) =>
+            !p.querySelector('p,li') &&
+            !p.closest('[data-testid="footer"], header, nav') &&
+            p.getBoundingClientRect().width > 1,
         );
         let best = { n: 0, text: '' };
         for (const p of ps) {
@@ -537,11 +595,14 @@ test('VR-V11 thân 17px/1.65 (mọi trang kể cả Chính sách), H1–H3 1.25 
               lines.set(top, (lines.get(top) ?? 0) + m[0].length);
             }
           }
-          for (const v of lines.values()) if (v > best.n) best = { n: v, text: (p.textContent ?? '').trim().slice(0, 30) };
+          for (const v of lines.values())
+            if (v > best.n) best = { n: v, text: (p.textContent ?? '').trim().slice(0, 30) };
         }
         return best;
       });
-      expect.soft(worst.n, `${key} @${width}px: dòng dài nhất (ký tự, kể cả dấu cách) trong "${worst.text}"`).toBeLessThanOrEqual(70);
+      expect
+        .soft(worst.n, `${key} @${width}px: dòng dài nhất (ký tự, kể cả dấu cách) trong "${worst.text}"`)
+        .toBeLessThanOrEqual(70);
     }
   }
 });
@@ -562,11 +623,18 @@ test('VR-V13 bo góc: nút/chip dạng pill, thẻ 16px (V13, V19)', async ({ pa
           h: e.getBoundingClientRect().height,
           r: px(getComputedStyle(e).borderTopLeftRadius),
         }));
-      const cards = Array.from(document.querySelectorAll('main article')).filter(vis).map((e) => px(getComputedStyle(e).borderTopLeftRadius));
-      const figs = Array.from(document.querySelectorAll('main figure')).filter(vis).map((e) => px(getComputedStyle(e).borderTopLeftRadius));
+      const cards = Array.from(document.querySelectorAll('main article'))
+        .filter(vis)
+        .map((e) => px(getComputedStyle(e).borderTopLeftRadius));
+      const figs = Array.from(document.querySelectorAll('main figure'))
+        .filter(vis)
+        .map((e) => px(getComputedStyle(e).borderTopLeftRadius));
       return { btns, cards, figs };
     });
-    for (const b of m.btns) expect.soft(b.r, `${key}: nút "${b.text}" dạng pill (r >= h/2 = ${b.h / 2})`).toBeGreaterThanOrEqual(b.h / 2 - 0.5);
+    for (const b of m.btns)
+      expect
+        .soft(b.r, `${key}: nút "${b.text}" dạng pill (r >= h/2 = ${b.h / 2})`)
+        .toBeGreaterThanOrEqual(b.h / 2 - 0.5);
     for (const r of m.cards) expect.soft(r, `${key}: thẻ bo 16px`).toBe(16);
     // v0.5.2: §12a sửa 18px -> 16px theo V13; khung ảnh chỉ nhận 16.
     for (const r of m.figs) expect.soft(r, `${key}: khung ảnh bo 16px`).toBe(16);
@@ -581,7 +649,8 @@ test('VR-V19 nút: cao >= 48px, pill; nút chính nền #27673C chữ trắng; n
     await open(page, key, 'vi');
     const rows = await page.evaluate(() => {
       const hasGradientAncestor = (e: Element) => {
-        for (let p = e.parentElement; p; p = p.parentElement) if (/gradient/.test(getComputedStyle(p).backgroundImage)) return true;
+        for (let p = e.parentElement; p; p = p.parentElement)
+          if (/gradient/.test(getComputedStyle(p).backgroundImage)) return true;
         return false;
       };
       return Array.from(document.querySelectorAll('main a[class*="btn" i], main button[class*="btn" i]'))
@@ -605,7 +674,8 @@ test('VR-V19 nút: cao >= 48px, pill; nút chính nền #27673C chữ trắng; n
         if (b.bg === C.white) expect.soft(b.color, `${key}: nút trên nền tối "${b.text}" chữ #0F5838`).toBe(C.brand900);
       }
     }
-    if (!rows.some((b) => b.dark)) testInfo.annotations.push({ type: 'note', description: `${key}: không có nút trên nền tối để đo` });
+    if (!rows.some((b) => b.dark))
+      testInfo.annotations.push({ type: 'note', description: `${key}: không có nút trên nền tối để đo` });
   }
   await open(page, 'contact', 'vi');
   const s = await tid(page, 'contact-submit').evaluate((e) => {
@@ -645,7 +715,8 @@ test('VR-V15 lề trang 16px (375) / 24px (768); khoảng cách `gap` thuộc th
       for (const e of Array.from(document.querySelectorAll('body *'))) {
         if (e.getBoundingClientRect().width < 1) continue;
         const cs = getComputedStyle(e);
-        for (const v of [cs.rowGap, cs.columnGap]) if (v !== 'normal' && v !== '0px') out.push(`${e.tagName.toLowerCase()}:${v}`);
+        for (const v of [cs.rowGap, cs.columnGap])
+          if (v !== 'normal' && v !== '0px') out.push(`${e.tagName.toLowerCase()}:${v}`);
       }
       return out;
     });
@@ -700,7 +771,8 @@ test('VR-V20 chuyển tiếp <= 300ms và chỉ opacity/transform (V20) — tr�
     await open(page, key, 'vi');
     const bad = await page.evaluate(() => {
       const out: string[] = [];
-      const secs = (s: string) => s.split(',').map((x) => (x.trim().endsWith('ms') ? Number.parseFloat(x) / 1000 : Number.parseFloat(x)));
+      const secs = (s: string) =>
+        s.split(',').map((x) => (x.trim().endsWith('ms') ? Number.parseFloat(x) / 1000 : Number.parseFloat(x)));
       for (const e of Array.from(document.querySelectorAll('body *'))) {
         if (e.closest('input, textarea, [data-testid="lang-switcher"]') || e.matches('input, textarea')) continue;
         const cs = getComputedStyle(e);
@@ -710,7 +782,8 @@ test('VR-V20 chuyển tiếp <= 300ms và chỉ opacity/transform (V20) — tr�
           const d = durs[i % durs.length];
           if (!(d > 0)) return;
           if (d > 0.3 + 1e-6) out.push(`${e.tagName.toLowerCase()} ${p} ${d}s > 0.3s`);
-          if (!['opacity', 'transform'].includes(p)) out.push(`${e.tagName.toLowerCase()} chuyển "${p}" ${d}s (chỉ opacity/transform)`);
+          if (!['opacity', 'transform'].includes(p))
+            out.push(`${e.tagName.toLowerCase()} chuyển "${p}" ${d}s (chỉ opacity/transform)`);
         });
       }
       return Array.from(new Set(out));
@@ -754,7 +827,10 @@ test('VR-V21 hiện khi cuộn: có JS + không reduced-motion ⇒ khối dướ
       break;
     }
   }
-  expect(found, 'có khối nào hiện dần khi cuộn ở các trang mẫu (V21) — [dự đoán lệch nếu sản phẩm chưa làm hiệu ứng này]').not.toBeNull();
+  expect(
+    found,
+    'có khối nào hiện dần khi cuộn ở các trang mẫu (V21) — [dự đoán lệch nếu sản phẩm chưa làm hiệu ứng này]',
+  ).not.toBeNull();
 });
 
 test('VR-V22 sơ đồ công nghệ: nét chạy flow-dash ở chế độ thường (V22)', async ({ page }) => {
@@ -799,7 +875,11 @@ test('VR-V24 nhãn "Phối cảnh dự kiến": chip góc dưới trái ảnh, >
     const chips = await page.evaluate((src) => {
       const re = new RegExp(src, 'i');
       return Array.from(document.querySelectorAll('body *'))
-        .filter((e) => re.test((e.textContent ?? '').trim()) && !Array.from(e.children).some((c) => re.test((c.textContent ?? '').trim())))
+        .filter(
+          (e) =>
+            re.test((e.textContent ?? '').trim()) &&
+            !Array.from(e.children).some((c) => re.test((c.textContent ?? '').trim())),
+        )
         .filter((e) => e.getBoundingClientRect().width > 1)
         .map((e) => {
           const cs = getComputedStyle(e);
@@ -858,7 +938,14 @@ const glossOf = (loc: Locator) =>
         });
       }
     const rs = getComputedStyle(root);
-    return { items, isolation: rs.isolation, bg: rs.backgroundColor, color: rs.color, border: rs.borderTopColor, shadow: rs.boxShadow };
+    return {
+      items,
+      isolation: rs.isolation,
+      bg: rs.backgroundColor,
+      color: rs.color,
+      border: rs.borderTopColor,
+      shadow: rs.boxShadow,
+    };
   });
 
 async function mainButton(page: Page): Promise<Locator> {
@@ -954,7 +1041,9 @@ test('VR-V28 nút bóng loáng: hover/focus bàn phím ⇒ ::before vệt lá #A
   }
 });
 
-test('VR-V28b reduced-motion: hover nút ⇒ ::before không chạy animation, không đổi vị trí (V28, V23)', async ({ page }) => {
+test('VR-V28b reduced-motion: hover nút ⇒ ::before không chạy animation, không đổi vị trí (V28, V23)', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1200, height: 900 });
   await open(page, 'contact', 'vi');
@@ -965,8 +1054,14 @@ test('VR-V28b reduced-motion: hover nút ⇒ ::before không chạy animation, k
   const s1 = await sweepOf(el);
   await page.waitForTimeout(500);
   const s2 = await sweepOf(el);
-  const dur = Math.max(0, ...s1.animDur.split(',').map((x) => Number.parseFloat(x) * (x.trim().endsWith('ms') ? 0.001 : 1)));
-  expect(s1.animName === 'none' || dur <= 0.01, `reduced-motion: không có animation vệt (đo ${s1.animName} ${s1.animDur})`).toBe(true);
+  const dur = Math.max(
+    0,
+    ...s1.animDur.split(',').map((x) => Number.parseFloat(x) * (x.trim().endsWith('ms') ? 0.001 : 1)),
+  );
+  expect(
+    s1.animName === 'none' || dur <= 0.01,
+    `reduced-motion: không có animation vệt (đo ${s1.animName} ${s1.animDur})`,
+  ).toBe(true);
   expect(s2.pos, 'vệt không lướt khi hover').toBe(s1.pos);
 });
 
@@ -975,7 +1070,9 @@ test('VR-V28b reduced-motion: hover nút ⇒ ::before không chạy animation, k
 // mapPoint (20.930031, 106.065651), liên kết "Mở bản đồ" (C-map-open, tab mới), khung 16/10; không có mapPoint ⇒ ẩn khối (INFO-02 đã kiểm).
 // contact-info.feature v0.6 đã khớp V29; INFO-03/INFO-03b/INFO-07 ở contact-info.spec.ts đã viết lại theo feature (không bấm, không nút bật bản đồ).
 for (const locale of LOCALES) {
-  test(`VR-V29-a ${locale}: không còn nút "Hiện bản đồ"; iframe lazy ghim toạ độ nhà máy; có liên kết Mở bản đồ (V29)`, async ({ page }) => {
+  test(`VR-V29-a ${locale}: không còn nút "Hiện bản đồ"; iframe lazy ghim toạ độ nhà máy; có liên kết Mở bản đồ (V29)`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1200, height: 900 });
     await open(page, 'contact', locale);
     expect(await tid(page, 'map-open').count(), 'không có data-testid="map-open" (nút đã bỏ)').toBe(0);
@@ -984,7 +1081,9 @@ for (const locale of LOCALES) {
     await expect(block, 'khối bản đồ có mặt (build mặc định có mapPoint)').toHaveCount(1);
     const f = await block.evaluate((b) => {
       const ifr = b.querySelector('iframe');
-      const open = Array.from(b.ownerDocument.querySelectorAll('main a[href]')).find((a) => /Mở bản đồ|Open map/i.test(a.textContent ?? ''));
+      const open = Array.from(b.ownerDocument.querySelectorAll('main a[href]')).find((a) =>
+        /Mở bản đồ|Open map/i.test(a.textContent ?? ''),
+      );
       const r = ifr?.getBoundingClientRect();
       const frameBox = ifr?.parentElement?.getBoundingClientRect();
       return {
@@ -1004,13 +1103,18 @@ for (const locale of LOCALES) {
     expect(f.src, 'ghim vĩ độ nhà máy').toContain('20.930031');
     expect(f.src, 'ghim kinh độ nhà máy').toContain('106.065651');
     expect(f.title.length, 'iframe có title (tiếp cận)').toBeGreaterThan(0);
-    expect(Math.abs(f.ratio - 1.6) < 0.05 || Math.abs(f.boxRatio - 1.6) < 0.05, `khung 16/10 (iframe ${f.ratio}, khung ${f.boxRatio})`).toBe(true);
+    expect(
+      Math.abs(f.ratio - 1.6) < 0.05 || Math.abs(f.boxRatio - 1.6) < 0.05,
+      `khung 16/10 (iframe ${f.ratio}, khung ${f.boxRatio})`,
+    ).toBe(true);
     expect(f.openHref, 'liên kết "Mở bản đồ" có mặt').not.toBe('');
     expect(f.openTarget, 'Mở bản đồ ở tab mới').toBe('_blank');
   });
 }
 
-test('VR-V29-b chữ địa chỉ ghim hiện cạnh bản đồ: Quốc lộ 39, Phường Bần Yên Nhân, Thị xã Mỹ Hào, Tỉnh Hưng Yên (V29, NAP)', async ({ page }) => {
+test('VR-V29-b chữ địa chỉ ghim hiện cạnh bản đồ: Quốc lộ 39, Phường Bần Yên Nhân, Thị xã Mỹ Hào, Tỉnh Hưng Yên (V29, NAP)', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await open(page, 'contact', 'vi');
   const txt = await page.locator('main').innerText();
@@ -1034,6 +1138,11 @@ test('VR-V29-c iframe chỉ gọi Google khi người đọc cuộn gần tới 
   await open(page, 'contact', 'vi');
   await page.waitForLoadState('networkidle');
   await tid(page, 'map-block').scrollIntoViewIfNeeded();
-  await expect.poll(() => hits.length, { timeout: 5000, message: 'cuộn tới khung ⇒ trình duyệt gọi Google' }).toBeGreaterThan(0);
-  expect(hits.every((u) => u.startsWith('https://www.google.com/maps')), `đường dẫn ${hits[0]}`).toBe(true);
+  await expect
+    .poll(() => hits.length, { timeout: 5000, message: 'cuộn tới khung ⇒ trình duyệt gọi Google' })
+    .toBeGreaterThan(0);
+  expect(
+    hits.every((u) => u.startsWith('https://www.google.com/maps')),
+    `đường dẫn ${hits[0]}`,
+  ).toBe(true);
 });

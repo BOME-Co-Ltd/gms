@@ -59,18 +59,82 @@ test('PERF-06 Bảng dài ở 375px không làm cả trang cuộn ngang, không 
 });
 
 test('PERF-07 Không lỗi tiếp cận serious/critical trên mọi trang (@S4)', async ({ page }) => {
+  test.setTimeout(300_000); // cuộn + chờ animation trên mọi trang vi/en
   const targets = listTargets();
   const { default: AxeBuilder } = (await import(axeModule)) as {
     default: new (a: {
       page: typeof page;
-    }) => { analyze(): Promise<{ violations: Array<{ id: string; impact?: string | null; nodes: unknown[] }> }> };
+    }) => {
+      analyze(): Promise<{
+        violations: Array<{
+          id: string;
+          impact?: string | null;
+          nodes: Array<{ target: unknown; any: Array<{ data?: Record<string, unknown> }> }>;
+        }>;
+      }>;
+    };
   };
   const bad: string[] = [];
   for (const t of targets) {
     await page.goto(t.url);
+    // Axe đo giữa chừng hoạt ảnh fade/reveal ra màu trộn với nền (node đổi giữa các lượt) và bỏ qua phần tử opacity 0:
+    // cuộn kích hoạt mọi .reveal, chờ mọi animation kết thúc, kiểm không còn phần tử opacity != 1 rồi mới chạy axe.
+    await page.evaluate(async () => {
+      const frames = (n: number) =>
+        new Promise<void>((r) => {
+          const tick = (i: number) => (i <= 0 ? r() : requestAnimationFrame(() => tick(i - 1)));
+          tick(n);
+        });
+      const step = Math.max(200, Math.floor(window.innerHeight * 0.5));
+      // Cuộn từng đoạn từ đầu tới cuối; mỗi đoạn chờ vài khung hình cho IntersectionObserver chạy.
+      for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
+        window.scrollTo(0, y);
+        await frames(4);
+      }
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      await frames(4);
+      // Mỗi .reveal chưa có .in: cuộn tới nó rồi chờ theo khung hình (tối đa 120) tới khi observer gắn .in.
+      for (const e of Array.from(document.querySelectorAll('.reveal'))) {
+        if (e.classList.contains('in')) continue;
+        e.scrollIntoView({ block: 'center' });
+        for (let i = 0; i < 120 && !e.classList.contains('in'); i++) await frames(1);
+      }
+      window.scrollTo(0, 0);
+      await frames(2);
+    });
+    // Chờ animation hữu hạn kết thúc (animation lặp vô hạn bị loại vì không bao giờ xong); lặp lại vì chuỗi có thể sinh animation mới.
+    for (let round = 0; round < 3; round++)
+      await page.evaluate(() =>
+        Promise.all(
+          document
+            .getAnimations()
+            .filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime as number))
+            .map((a) => a.finished.catch(() => undefined)),
+        ).then(() => undefined),
+      );
+    const notOpaque = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.reveal, .fade'))
+        .filter((e) => getComputedStyle(e).opacity !== '1')
+        .map(
+          (e) =>
+            `${e.tagName.toLowerCase()}.${Array.from(e.classList).join('.')} opacity=${getComputedStyle(e).opacity}`,
+        ),
+    );
+    if (notOpaque.length > 0)
+      bad.push(`${t.url} opacity != 1 sau khi chờ (x${notOpaque.length}): ${notOpaque.slice(0, 40).join(' | ')}`);
     const { violations } = await new AxeBuilder({ page }).analyze();
-    for (const v of violations.filter((x) => x.impact === 'serious' || x.impact === 'critical'))
-      bad.push(`${t.url} ${v.id} (${v.impact}) x${v.nodes.length}`);
+    for (const v of violations.filter((x) => x.impact === 'serious' || x.impact === 'critical')) {
+      bad.push(
+        `${t.url} ${v.id} (${v.impact}) x${v.nodes.length}\n` +
+          v.nodes
+            .slice(0, 40)
+            .map((n) => {
+              const d = n.any[0]?.data ?? {};
+              return `    target=${JSON.stringify(n.target)} fgColor=${d.fgColor} bgColor=${d.bgColor} contrastRatio=${d.contrastRatio}`;
+            })
+            .join('\n'),
+      );
+    }
   }
   expect(bad, bad.join('\n')).toEqual([]);
 });

@@ -790,7 +790,7 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
             <label
               htmlFor={IDS.consent}
               data-testid="contact-consent-label"
-              style={{ display: 'flex', gap: 12,alignItems: 'flex-start', fontWeight: 400, cursor: 'pointer' }}
+              style={{ display: 'flex', gap: 12, alignItems: 'flex-start', fontWeight: 400, cursor: 'pointer' }}
             >
               <input
                 {...fieldProps('consent')}

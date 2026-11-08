@@ -411,7 +411,7 @@ for (const width of [320, 375, 1200]) {
 
 for (const locale of LOCALES)
   for (const width of [320, 375, 1200]) {
-    test(`FT-22 ${locale} ${width}px: thẻ tuyển dụng — map-pin/circle-alert 20px cạnh trái chữ cùng hàng, gap 8px, tiêu đề h3 20px, nhãn .sr-only (U18)`, async ({
+    test(`FT-22 ${locale} ${width}px: thẻ tuyển dụng — map-pin/circle-alert 20px cạnh trái chữ cùng hàng, gap 8px, tiêu đề h3 ${width === 1200 ? 24 : 20}px, nhãn .sr-only (U18, V09)`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 });
@@ -442,7 +442,7 @@ for (const locale of LOCALES)
         `${locale}: số thẻ tuyển dụng (article) ở trang Tuyển dụng — cần ít nhất 1 tin còn hạn`,
       ).toBeGreaterThan(0);
       for (const [i, c] of cards.entries()) {
-        expect(c.h3, `thẻ ${i}: có h3 cỡ 20px`).toBe(20);
+        expect(c.h3, `thẻ ${i}: có h3 cỡ ${width === 1200 ? 24 : 20}px (V09)`).toBe(width === 1200 ? 24 : 20);
         expect(c.icons.length, `thẻ ${i}: số biểu tượng (địa điểm + hạn nộp)`).toBeGreaterThanOrEqual(2);
         for (const ic of c.icons) {
           expect(`${ic.w}x${ic.h}`, `thẻ ${i}: cỡ biểu tượng`).toBe('20x20');

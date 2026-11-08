@@ -43,7 +43,9 @@ test('INFO-02 Ô trống thì phần tương ứng ẩn hẳn, số thật khôn
   expect(text(allHtml(r))).not.toMatch(/098\s?799\s?83\s?70|\+84\s?98\s?799\s?83\s?70|0987998370/);
 });
 
-test('INFO-03 Cuộn tới khối bản đồ thì bản đồ tự hiện đúng điểm nhà máy, không có nút bật/hiện bản đồ (@S24 @cho-khach:N28)', async ({ page }) => {
+test('INFO-03 Cuộn tới khối bản đồ thì bản đồ tự hiện đúng điểm nhà máy, không có nút bật/hiện bản đồ (@S24 @cho-khach:N28)', async ({
+  page,
+}) => {
   // contact-info.feature v0.6: không bấm gì. Không ép "chưa cuộn thì chưa tải" (do trình duyệt quyết, feature ghi rõ).
   await open(page, 'contact', 'vi');
   expect(await tid(page, 'map-open').count(), 'không còn data-testid="map-open"').toBe(0);
@@ -67,7 +69,9 @@ test('INFO-03b Có liên kết mở bản đồ đúng điểm nhà máy, chữ 
     const link = page.locator('main a[href]').filter({ hasText: label }).first();
     await expect(link, `${locale}: có liên kết mở bản đồ`).toHaveCount(1);
     const href = (await link.getAttribute('href')) ?? '';
-    expect(decodeURIComponent(href).replace(/\s/g, ''),`${locale}: toạ độ trong liên kết`).toContain('20.930031,106.065651');
+    expect(decodeURIComponent(href).replace(/\s/g, ''), `${locale}: toạ độ trong liên kết`).toContain(
+      '20.930031,106.065651',
+    );
     await expect(link, `${locale}: chữ liên kết`).toHaveText(label);
   }
 });
@@ -114,7 +118,9 @@ test('INFO-06 Thiếu mã số thuế thì build xanh, chân trang chỉ hiện 
 // (không đổi được từ test) ⇒ kiểm hai tầng: (1) build với đúng điểm này có tọa độ trong bản build (HTML hoặc JS); (2) bản đang chạy: chọn xem
 // ⇒ khối bản đồ hiện tại cùng điểm (data-point, hoặc nguồn khung bản đồ nếu không có thuộc tính).
 const FACTORY_POINT = { lat: 20.930031, lng: 106.065651 };
-test('INFO-07 Cuộn tới khối bản đồ thì bản đồ hiện đúng điểm nhà máy, không cần bấm (@S24 @cho-khach:N28)', async ({ page }) => {
+test('INFO-07 Cuộn tới khối bản đồ thì bản đồ hiện đúng điểm nhà máy, không cần bấm (@S24 @cho-khach:N28)', async ({
+  page,
+}) => {
   const r = buildSite(companyFile({ mapPoint: '20.930031, 106.065651' }));
   expect(r.ok, r.log).toBe(true);
   // Spec/contract không nói điểm nằm ở HTML hay ở mã chạy phía trình duyệt (khối bản đồ chỉ hiện sau khi chọn xem) ⇒ tìm trong MỌI tệp văn bản của bản build.
