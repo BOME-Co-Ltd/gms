@@ -121,6 +121,34 @@ export function ShellBehavior(): null {
       cleanups.push(() => io.disconnect());
     }
 
+    // V21: khối dưới màn hình đầu mờ + dịch 12px, hiện dần khi cuộn tới. Không IO hoặc giảm chuyển động ⇒ không gắn .reveal (hiện sẵn).
+    if ('IntersectionObserver' in window && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const targets = Array.from(d.querySelectorAll<HTMLElement>('main section ~ section, main article')).filter(
+        (el) => el.getBoundingClientRect().top > window.innerHeight,
+      );
+      if (targets.length > 0) {
+        const io = new IntersectionObserver(
+          (es) => {
+            for (const e of es) {
+              if (e.isIntersecting) {
+                e.target.classList.add('in');
+                io.unobserve(e.target);
+              }
+            }
+          },
+          { threshold: 0.05 },
+        );
+        for (const el of targets) {
+          el.classList.add('reveal');
+          io.observe(el);
+        }
+        cleanups.push(() => {
+          io.disconnect();
+          for (const el of targets) el.classList.remove('reveal', 'in');
+        });
+      }
+    }
+
     const nav = d.querySelector<HTMLElement>('nav.lang');
     const pill = nav?.querySelector<HTMLElement>('.lang-pill');
     if (nav && pill) {

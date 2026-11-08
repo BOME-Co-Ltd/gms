@@ -202,15 +202,17 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
             <ul className="news-grid">
               {top3News.map((n) => (
                 <li key={n.slug}>
-                  <a className="news" data-testid="news-item" href={`${ROUTES.news[locale]}/${n.slug}`}>
+                  <article className="news" data-testid="news-item">
                     <div className="thumb">
                       <Icon name="image" className="ico" />
                     </div>
                     <div className="news-body">
-                      <h3>{n.title}</h3>
+                      <h3>
+                        <a href={`${ROUTES.news[locale]}/${n.slug}`}>{n.title}</a>
+                      </h3>
                       <time dateTime={n.date}>{formatDateLocale(n.date, locale)}</time>
                     </div>
-                  </a>
+                  </article>
                 </li>
               ))}
             </ul>

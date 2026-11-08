@@ -72,7 +72,7 @@ function LostPathArt(): React.ReactElement {
         <rect x="8" y="32" width="10" height="10" rx="2" fill="#fff" opacity=".7" />
         <rect x="24" y="32" width="10" height="10" rx="2" fill="#fff" opacity=".7" />
       </g>
-      <text x="160" y="108" textAnchor="middle" fontSize="64" fontWeight="800" fill="var(--g900)" opacity=".14">
+      <text x="160" y="108" textAnchor="middle" fontSize="64" fontWeight="700" fill="var(--g900)" opacity=".14">
         404
       </text>
       <g transform="translate(118 112) rotate(-18)">
