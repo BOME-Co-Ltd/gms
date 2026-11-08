@@ -3,7 +3,7 @@ import type React from 'react';
 import type { LoadedSiteContent, Locale } from '../../content/loader.ts';
 import { getDictionary } from '../../i18n/index.ts';
 import { Icon } from './icons.tsx';
-import { pick } from './parts.tsx';
+import { PhotoBg, type PhotoKey, pick } from './parts.tsx';
 
 // Mô tả ngắn theo wireframe (chỉ có tiếng Việt).
 const JOURNEY_DESC = [
@@ -21,6 +21,7 @@ export function JourneySection({
   lead,
   sectionId,
   testId,
+  photo = 'reception',
 }: {
   content: LoadedSiteContent;
   locale: Locale;
@@ -28,6 +29,7 @@ export function JourneySection({
   lead?: string;
   sectionId: string;
   testId?: string;
+  photo?: PhotoKey;
 }): React.ReactElement {
   const isVi = locale === 'vi';
   const defaults = isVi
@@ -50,7 +52,13 @@ export function JourneySection({
     : defaults.map((name) => ({ name, status: null as string | null }));
   const labels: Record<string, string> = getDictionary(locale).journeyStatus;
   return (
-    <section className="sec sec-journey on-dark" data-testid={testId} id={sectionId} aria-labelledby="h-journey">
+    <section
+      className="sec sec-journey on-dark has-photo"
+      data-testid={testId}
+      id={sectionId}
+      aria-labelledby="h-journey"
+    >
+      <PhotoBg photo={photo} locale={locale} />
       <div className="wrap">
         <div className="sec-head">
           <h2 id="h-journey">{title}</h2>

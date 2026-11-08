@@ -1,75 +1,61 @@
-// M3 Giải pháp — các bước khép kín dạng thẻ (tgrid t3), ảnh minh hoạ theo thứ tự bước.
+// Giải pháp khép kín — trước là trang riêng M3 (/giai-phap); từ 08/11/2026 là một section trong trang Công nghệ.
+// /giai-phap và /en/solutions chuyển hướng 301 về #giai-phap / #solutions (public/_redirects).
 import type React from 'react';
 import type { LoadedSiteContent, Locale } from '../../../content/loader.ts';
-import { CtaSection, Html, pick, SubHero } from '../parts.tsx';
+import { Html, PhotoFigure, type PhotoKey, pick } from '../parts.tsx';
 
-const SOLUTION_IMAGES: Record<number, string> = {
-  0: '/img/sorting-trommel-screen.jpg',
-  1: '/img/vpd-pyrolysis-facility.jpg',
-  2: '/img/rdf-pellet-production.jpg',
-  3: '/img/scada-control-room.jpg',
-};
-const SMALL = 640;
-const MID = 960;
-const MAX = 1280;
+// Ảnh minh hoạ theo thứ tự mục (ảnh dựng ⇒ nhãn "Ảnh minh hoạ").
+const SOLUTION_PHOTOS: PhotoKey[] = ['sorting', 'vpd', 'rdf', 'scada'];
 
-export function SolutionsPage({ content, locale }: { content: LoadedSiteContent; locale: Locale }): React.ReactElement {
+export function SolutionsSection({
+  content,
+  locale,
+}: {
+  content: LoadedSiteContent;
+  locale: Locale;
+}): React.ReactElement {
   const L = (vi: string, en: string) => pick(locale, vi, en);
   const items = content.solutionItems[locale];
   return (
-    <>
-      <SubHero
-        after="mist"
-        eyebrow={L('Giải pháp', 'Solutions')}
-        title={L('Giải pháp xử lý chất thải & Tái tạo tài nguyên', 'Waste Treatment & Resource Recovery Solutions')}
-      />
-      <section className="sec sec-mist" aria-labelledby="h-sol">
-        <div className="wrap">
-          <div className="sec-head">
-            <h2 id="h-sol">{L('Quy trình giải pháp khép kín', 'Integrated solution framework')}</h2>
-          </div>
-          <ol className="tgrid t3">
-            {items.map((item, i) => {
-              const img = SOLUTION_IMAGES[i];
-              return (
-                <li key={item.title}>
-                  <div className="tcard step-card" data-testid="solution-item">
-                    {img ? (
-                      <figure className="step-fig">
-                        <img
-                          src={img}
-                          srcSet={`${img.replace(/\.jpg$/, `-${SMALL}.jpg`)} ${SMALL}w, ${img.replace(/\.jpg$/, `-${MID}.jpg`)} ${MID}w, ${img} ${MAX}w`}
-                          sizes="(min-width: 900px) 33vw, calc(100vw - 32px)"
-                          alt=""
-                          width={640}
-                          height={360}
-                          {...(i === 0 ? { fetchPriority: 'high' as const } : { loading: 'lazy' as const })}
-                          decoding="async"
-                        />
-                      </figure>
-                    ) : null}
-                    <div className="step-text">
-                      <div className="stp-head">
-                        <span className="step-badge" aria-hidden="true">
-                          {i + 1}
-                        </span>
-                        <h3>
-                          <span className="sr-only">
-                            {L('Bước', 'Step')} {i + 1}:{' '}
-                          </span>
-                          {item.title}
-                        </h3>
-                      </div>
-                      <Html className="step-body" html={item.bodyHtml} />
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
+    <section className="sec sec-mist" id={L('giai-phap', 'solutions')} aria-labelledby="h-sol">
+      <div className="wrap">
+        <div className="sec-head">
+          <span className="eyebrow">{L('Giải pháp', 'Solutions')}</span>
+          <h2 id="h-sol">
+            {L('Giải pháp xử lý chất thải và tái tạo tài nguyên', 'Waste treatment and resource recovery solutions')}
+          </h2>
+          <p>
+            {L(
+              'Từ tiếp nhận, sàng tuyển đến xử lý bằng công nghệ VPD và hợp tác tiêu thụ đầu ra — một quy trình khép kín.',
+              'From reception and sorting to VPD processing and output partnerships — one integrated process.',
+            )}
+          </p>
         </div>
-      </section>
-      <CtaSection content={content} locale={locale} />
-    </>
+        <ol className="tgrid t3">
+          {items.map((item, i) => {
+            const photo = SOLUTION_PHOTOS[i];
+            return (
+              <li key={item.title}>
+                <article className="icard" data-testid="solution-item">
+                  {photo ? <PhotoFigure photo={photo} locale={locale} alt="" /> : null}
+                  <div className="icard-body">
+                    <span className="icard-num" aria-hidden="true">
+                      {i + 1}
+                    </span>
+                    <h3>
+                      <span className="sr-only">
+                        {L('Bước', 'Step')} {i + 1}:{' '}
+                      </span>
+                      {item.title}
+                    </h3>
+                    <Html html={item.bodyHtml} />
+                  </div>
+                </article>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </section>
   );
 }

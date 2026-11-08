@@ -21,6 +21,87 @@ export function Html({
   return <Tag className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+// Ảnh nền minh hoạ cho các section chữ (08/11/2026). Ảnh dựng AI ⇒ luôn kèm nhãn "Ảnh minh hoạ" nhìn thấy (S17/C29).
+// Ảnh trong public/img có thêm bản 640w/960w (images.ts SOLUTION_IMG_FILES) ⇒ srcset; ảnh content/images chỉ có 1 cỡ.
+const variants = (f: string) => `/img/${f}-640.jpg 640w, /img/${f}-960.jpg 960w, /img/${f}.jpg 1280w`;
+export const PHOTOS = {
+  plant: { src: '/img/hero-plant.jpg', srcSet: '/img/hero-plant-512.jpg 512w, /img/hero-plant.jpg 1024w' },
+  sorting: { src: '/img/sorting-trommel-screen.jpg', srcSet: variants('sorting-trommel-screen') },
+  vpd: { src: '/img/vpd-pyrolysis-facility.jpg', srcSet: variants('vpd-pyrolysis-facility') },
+  vpdRender: { src: '/img/vpd-system-render.jpg' },
+  rdf: { src: '/img/rdf-pellet-production.jpg', srcSet: variants('rdf-pellet-production') },
+  scada: { src: '/img/scada-control-room.jpg', srcSet: variants('scada-control-room') },
+  reception: { src: '/img/project-khu-tiep-nhan.jpg' },
+  sortingLine: { src: '/img/project-day-chuyen-sang-tuyen.jpg' },
+  control: { src: '/img/project-phong-dieu-khien.jpg' },
+  lab: { src: '/img/project-phong-thi-nghiem.jpg' },
+  rdfPress: { src: '/img/project-day-chuyen-ep-rdf.jpg' },
+  visit: { src: '/img/news-ngay-hoi-tham-quan-nha-may.jpg' },
+  sourceSort: { src: '/img/news-phan-loai-tai-nguon.jpg' },
+  humus: { src: '/img/news-mun-huu-co-cho-dong-ruong.jpg' },
+} as const satisfies Record<string, { src: string; srcSet?: string }>;
+export type PhotoKey = keyof typeof PHOTOS;
+
+/** Lớp ảnh phủ kín section (đặt làm con đầu tiên của section có class `has-photo`). */
+export function PhotoBg({
+  photo,
+  locale,
+  priority = false,
+}: {
+  photo: PhotoKey;
+  locale: Locale;
+  priority?: boolean;
+}): React.ReactElement {
+  const p: { src: string; srcSet?: string } = PHOTOS[photo];
+  return (
+    <>
+      <div className="photo-bg" aria-hidden="true">
+        <img
+          src={p.src}
+          srcSet={p.srcSet}
+          sizes={p.srcSet ? '100vw' : undefined}
+          alt=""
+          width={1280}
+          height={720}
+          decoding="async"
+          {...(priority ? { fetchPriority: 'high' as const } : { loading: 'lazy' as const })}
+        />
+      </div>
+      <span className="bg-label">{pick(locale, 'Ảnh minh hoạ', 'Illustration')}</span>
+    </>
+  );
+}
+
+/** Ảnh minh hoạ đứng cạnh chữ (khối hai cột). */
+export function PhotoFigure({
+  photo,
+  locale,
+  alt,
+  className,
+}: {
+  photo: PhotoKey;
+  locale: Locale;
+  alt: string;
+  className?: string;
+}): React.ReactElement {
+  const p: { src: string; srcSet?: string } = PHOTOS[photo];
+  return (
+    <figure className={`photo-fig${className ? ` ${className}` : ''}`}>
+      <img
+        src={p.src}
+        srcSet={p.srcSet}
+        sizes={p.srcSet ? '(min-width: 1024px) 560px, calc(100vw - 32px)' : undefined}
+        alt={alt}
+        width={1280}
+        height={900}
+        loading="lazy"
+        decoding="async"
+      />
+      <figcaption className="photo-label">{pick(locale, 'Ảnh minh hoạ', 'Illustration')}</figcaption>
+    </figure>
+  );
+}
+
 export function Streaks({ variant }: { variant: 'home' | 'sub' | 'cta' }): React.ReactElement {
   if (variant === 'cta') {
     return (
@@ -92,7 +173,11 @@ export function SubHero({
   crumbs,
   crumbLabel,
   jump,
+  photo,
+  locale,
 }: {
+  photo?: PhotoKey;
+  locale?: Locale;
   crumbLabel?: string;
   eyebrow?: string;
   title: string;
@@ -105,11 +190,12 @@ export function SubHero({
   const afterVar = after === 'mist' ? 'var(--mist)' : after === 'journey' ? 'var(--b800)' : undefined;
   return (
     <section
-      className="hero hero-sub on-dark"
+      className={`hero hero-sub on-dark${photo ? ' has-photo' : ''}`}
       data-testid={testId}
       aria-labelledby="h1"
       style={afterVar ? ({ '--after-hero': afterVar } as React.CSSProperties) : undefined}
     >
+      {photo ? <PhotoBg photo={photo} locale={locale ?? 'vi'} priority /> : null}
       <Streaks variant="sub" />
       <div className="wrap">
         {crumbs ? <Crumb items={crumbs} label={crumbLabel ?? 'Breadcrumb'} /> : null}
@@ -169,15 +255,18 @@ export function CtaSection({
   locale,
   id = 'h-cta',
   sectionId,
+  photo = 'scada',
 }: {
   content: LoadedSiteContent;
   locale: Locale;
   id?: string;
   sectionId?: string;
+  photo?: PhotoKey;
 }): React.ReactElement {
   const phoneRaw = content.company.phone?.trim() ?? '';
   return (
-    <section className="sec sec-cta on-dark" id={sectionId} aria-labelledby={id}>
+    <section className="sec sec-cta on-dark has-photo" id={sectionId} aria-labelledby={id}>
+      <PhotoBg photo={photo} locale={locale} />
       <Streaks variant="cta" />
       <div className="wrap">
         <div>
@@ -365,7 +454,7 @@ export function BoardFigure({
             )}
           </p>
           <a href={ROUTES.products[locale]}>
-            {pick(locale, 'Xem sản phẩm đầu ra', 'See output products')}
+            {pick(locale, 'Xem ứng dụng', 'See applications')}
             <Icon name="arrow-right" className="ico" />
           </a>
         </div>

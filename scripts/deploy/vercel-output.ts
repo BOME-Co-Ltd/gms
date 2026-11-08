@@ -44,10 +44,26 @@ export function parseHeadersFile(text: string): Route[] {
   return routes;
 }
 
-export function buildVercelConfig(headersText: string): { version: 3; routes: Route[] } {
+/** Đọc out/_redirects (`/cu /moi 301`, cú pháp Cloudflare, contracts/build.ts REDIRECT_LINE) → route chuyển hướng. */
+export function parseRedirectsFile(text: string): Route[] {
+  const routes: Route[] = [];
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (line === '' || line.startsWith('#')) continue;
+    const m = line.match(/^(\/(?!\/)\S*)\s+(\/(?!\/)\S*)\s+(301|308)$/);
+    if (!m) continue;
+    const [, from, to, code] = m;
+    const base = from.replace(/\/$/, '') || '/';
+    routes.push({ src: `^${escRe(base)}/?$`, status: Number(code), headers: { Location: to } });
+  }
+  return routes;
+}
+
+export function buildVercelConfig(headersText: string, redirectsText = ''): { version: 3; routes: Route[] } {
   return {
     version: 3,
     routes: [
+      ...parseRedirectsFile(redirectsText),
       // drop-trailing-slash: /a/ → /a (giữ "/" gốc).
       { src: '^/(.+)/$', status: 308, headers: { Location: '/$1' } },
       ...parseHeadersFile(headersText),
@@ -65,12 +81,16 @@ export function writeVercelOutput(outDir: string, targetDir: string): void {
     throw new Error(`Không thấy ${outDir}/index.html — chạy \`bun run build\` trước.`);
   const headersPath = join(outDir, '_headers');
   const headersText = existsSync(headersPath) ? readFileSync(headersPath, 'utf8') : '';
+  const redirectsPath = join(outDir, '_redirects');
+  const redirectsText = existsSync(redirectsPath) ? readFileSync(redirectsPath, 'utf8') : '';
   rmSync(targetDir, { recursive: true, force: true });
   const staticDir = join(targetDir, 'static');
   mkdirSync(staticDir, { recursive: true });
   cpSync(outDir, staticDir, { recursive: true });
-  rmSync(join(staticDir, '_headers'), { force: true }); // chỉ Cloudflare đọc; ở Vercel đã chuyển vào config.json
-  const config = buildVercelConfig(headersText);
+  // _headers/_redirects chỉ Cloudflare đọc; ở Vercel đã chuyển vào config.json.
+  rmSync(join(staticDir, '_headers'), { force: true });
+  rmSync(join(staticDir, '_redirects'), { force: true });
+  const config = buildVercelConfig(headersText, redirectsText);
   writeFileSync(join(targetDir, 'config.json'), `${JSON.stringify(config, null, 2)}\n`);
   console.log(`vercel-output: ${config.routes.length} route → ${targetDir}`);
 }
