@@ -14,8 +14,8 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
   const isVi = locale === 'vi';
   const L = (vi: string, en: string) => pick(locale, vi, en);
   const sloganLines = isVi
-    ? ['Giải pháp thông minh –', 'Kiến tạo giá trị xanh']
-    : ['Smart solutions –', 'Creating green value'];
+    ? ['Giải pháp thông minh', 'Kiến tạo giá trị xanh']
+    : ['Smart solutions', 'Creating green value'];
   const pillars = isVi
     ? ['Công nghệ VPD', 'Sàng tuyển', 'Tái tạo tài nguyên']
     : ['VPD technology', 'Sorting', 'Resource recovery'];

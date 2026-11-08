@@ -2855,6 +2855,44 @@ main:focus {
     transform: scale(1.08);
   }
 }
+.js.no-intro .hero h1 .ln > span,
+.js.no-intro .hero .fade,
+.js.no-intro .hero .fade2,
+.js.no-intro .hero-sub .fade {
+  animation: none;
+}
+/* Chuyển trang mượt (cross-document view transition): header/footer đứng yên, phần còn lại crossfade ngắn. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+  .hdr {
+    view-transition-name: site-header;
+  }
+  .ft {
+    view-transition-name: site-footer;
+  }
+  ::view-transition-group(root) {
+    animation-duration: 150ms;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 150ms;
+    animation-timing-function: ease-out;
+  }
+  ::view-transition-group(site-header),
+  ::view-transition-group(site-footer) {
+    animation-duration: 0s;
+  }
+  ::view-transition-old(site-header),
+  ::view-transition-old(site-footer) {
+    display: none;
+  }
+  ::view-transition-new(site-header),
+  ::view-transition-new(site-footer) {
+    animation: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

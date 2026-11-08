@@ -66,7 +66,7 @@ export const FOOTER_KEYS: StaticPageKey[] = [
 
 export const PAGE_DESCRIPTIONS: Record<Locale, Record<StaticPageKey, string>> = {
   vi: {
-    home: 'GMS Hưng Yên – Giải pháp thông minh, kiến tạo giá trị xanh thông qua công nghệ sàng tuyển và nhiệt phân VPD.',
+    home: 'GMS Hưng Yên: Giải pháp thông minh, kiến tạo giá trị xanh thông qua công nghệ sàng tuyển và nhiệt phân VPD.',
     about: 'Giới thiệu về GMS Hưng Yên, tầm nhìn, sứ mệnh và hành trình chuyển đổi nhà máy xử lý chất thải.',
     solutions: 'Các giải pháp tiếp nhận, sàng tuyển và xử lý chất thải tạo tài nguyên đầu ra bền vững.',
     technology: 'Sơ đồ quy trình công nghệ sàng tuyển và nhiệt phân chân không VPD tại GMS Hưng Yên.',
@@ -79,7 +79,7 @@ export const PAGE_DESCRIPTIONS: Record<Locale, Record<StaticPageKey, string>> = 
     privacy: 'Chính sách bảo mật và xử lý dữ liệu cá nhân theo Luật số 91/2025/QH15.',
   },
   en: {
-    home: 'GMS Hung Yen – Smart solutions creating green value through mechanical sorting and VPD pyrolysis technology.',
+    home: 'GMS Hung Yen: Smart solutions creating green value through mechanical sorting and VPD pyrolysis technology.',
     about: 'About GMS Hung Yen, our mission, core values and plant transformation journey.',
     solutions: 'Municipal waste sorting, VPD vacuum pyrolysis resource recovery and industrial partnership solutions.',
     technology: 'Process flow diagram for mechanical sorting and VPD vacuum pyrolysis technology at GMS Hung Yen.',

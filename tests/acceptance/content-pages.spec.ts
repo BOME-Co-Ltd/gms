@@ -20,7 +20,7 @@ const OUTPUT_NAMES: Array<[string, 'sang-tuyen' | 'vpd']> = [
 test('PAGE-01 Trang chủ có đủ khối bắt buộc (@S6 @cho-khach:P2 @cho-khach:P16)', async ({ page }) => {
   await open(page, 'home', 'vi'); // bản build mặc định có ≥ 4 Tin (XQ-21)
   const t = await bodyText(page);
-  expect(t).toContain('Giải pháp thông minh – Kiến tạo giá trị xanh');
+  expect(t).toContain('Giải pháp thông minh, Kiến tạo giá trị xanh');
   for (const p of ['Công nghệ VPD', 'Sàng tuyển', 'Tái tạo tài nguyên']) expect(t).toContain(p);
   await expect(tid(page, 'home-branches')).toBeVisible();
   await expect(tid(page, 'home-outputs').locator('li, [data-testid="output-row"]')).toHaveCount(6);

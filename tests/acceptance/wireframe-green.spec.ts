@@ -104,7 +104,7 @@ test('WF-LANG-02 Bấm cờ English ở trang chủ sang /en, bấm cờ Việt 
   await expect(page.locator('html')).toHaveAttribute('lang', 'vi');
 });
 
-test('WF-HERO-01 vi: hero có đúng một h1 hai dòng "Giải pháp thông minh – / Kiến tạo giá trị xanh", hai nút CTA, nhãn "Phối cảnh dự kiến" (V26, S6, S17)', async ({
+test('WF-HERO-01 vi: hero có đúng một h1 hai dòng "Giải pháp thông minh / Kiến tạo giá trị xanh", hai nút CTA, nhãn "Phối cảnh dự kiến" (V26, S6, S17)', async ({
   page,
 }) => {
   await open(page, 'home', 'vi');
@@ -113,7 +113,7 @@ test('WF-HERO-01 vi: hero có đúng một h1 hai dòng "Giải pháp thông min
   const h1 = hero.locator('h1');
   await expect(h1).toHaveCount(1);
   expect(((await h1.textContent()) ?? '').replace(/\s+/g, ' ').trim()).toBe(
-    'Giải pháp thông minh – Kiến tạo giá trị xanh',
+    'Giải pháp thông minh Kiến tạo giá trị xanh',
   );
   const ctas = await hero
     .locator('.hero-cta a')

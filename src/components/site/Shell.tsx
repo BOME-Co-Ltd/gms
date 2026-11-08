@@ -45,7 +45,7 @@ const T = {
     quick: 'Liên hệ nhanh',
     skip: 'Bỏ qua, tới nội dung chính',
     brand: 'GMS Hưng Yên, về trang chủ',
-    slogan: 'Giải pháp thông minh – Kiến tạo giá trị xanh',
+    slogan: 'Giải pháp thông minh, Kiến tạo giá trị xanh',
     logo: 'Logo GMS',
     ft: {
       contact: 'Liên hệ',
@@ -81,7 +81,7 @@ const T = {
     quick: 'Quick contact',
     skip: 'Skip to main content',
     brand: 'GMS Hung Yen, back to home',
-    slogan: 'Smart solutions – Creating green value',
+    slogan: 'Smart solutions, Creating green value',
     logo: 'GMS logo',
     ft: {
       contact: 'Contact',
