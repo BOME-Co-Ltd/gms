@@ -63,7 +63,7 @@ test('PAGE-03 Giới thiệu ẩn khối chứng nhận khi không có chứng n
   await open(page, 'about', 'vi');
   await expect(tid(page, 'about-who')).toBeVisible();
   await expect(tid(page, 'about-journey')).toBeVisible();
-  await expect(tid(page, 'about-values').locator('li, [data-testid="value-card"]')).toHaveCount(4);
+  await expect(tid(page, 'about-values').locator('[data-testid="value-card"]')).toHaveCount(4); // thẻ nằm trong <li> ⇒ chỉ đếm thẻ
   await expect(tid(page, 'about-certificates')).toHaveCount(0);
 });
 

@@ -375,7 +375,7 @@ test('FT-14 Bố cục: <600 một cột xếp dọc; 600–899 hai cột, menu 
 
 // ───────────────────────── Màu, tương phản, focus (J14, §5.2) ─────────────────────────
 
-test('FT-15 Focus bàn phím trong chân trang: viền trắng >= 3px, offset 2px (J14, §14a, §5.2)', async ({ page }) => {
+test('FT-15 Focus bàn phím trong chân trang: viền --g900 >= 3px, offset 2px (J14, §14a, §5.2)', async ({ page }) => {
   await open(page, 'home', 'vi');
   const links = tid(page, 'footer').locator('a');
   const n = await links.count();
@@ -394,17 +394,28 @@ test('FT-15 Focus bàn phím trong chân trang: viền trắng >= 3px, offset 2p
         width: parseFloat(s.outlineWidth),
         color: s.outlineColor,
         offset: parseFloat(s.outlineOffset),
+        g900: (() => {
+          const probe = document.createElement('i');
+          probe.style.color = 'var(--g900)';
+          e.closest('[data-testid="footer"]')?.appendChild(probe);
+          const c = getComputedStyle(probe).color;
+          probe.remove();
+          return c;
+        })(),
       };
     });
     expect(ring.inFooter, `liên kết #${i}: focus trở lại đúng liên kết`).toBe(true);
     expect(ring.style, `#${i} kiểu viền`).not.toBe('none');
     expect(ring.width, `#${i} độ dày viền`).toBeGreaterThanOrEqual(3);
-    expect(ring.color, `#${i} màu viền`).toBe('rgb(255, 255, 255)');
+    // V26/V27 (admin 06/11): chân trang nền trắng ⇒ viền focus màu --g900 như wireframe home.html (thay "viền trắng" bản nền xanh).
+    expect(ring.color, `#${i} màu viền`).toBe(ring.g900);
     expect(ring.offset, `#${i} offset`).toBe(2);
   }
 });
 
-test('FT-16 Nền chân trang #0F5838 và mọi chữ trong chân trang đạt tương phản >= 4.5:1 (J14, T1)', async ({ page }) => {
+test('FT-16 Nền chân trang trắng (V26/V27) và mọi chữ trong chân trang đạt tương phản >= 4.5:1 (J14, T1)', async ({
+  page,
+}) => {
   for (const locale of LOCALES) {
     await open(page, 'home', locale);
     const r = await page.evaluate(() => {
@@ -457,7 +468,7 @@ test('FT-16 Nền chân trang #0F5838 và mọi chữ trong chân trang đạt t
       }
       return { bg: bgRaw, fails };
     });
-    expect(r.bg, `${locale}: nền chân trang`).toBe('rgb(15, 88, 56)');
+    expect(r.bg, `${locale}: nền chân trang trắng (V26/V27)`).toBe('rgb(255, 255, 255)');
     expect(r.fails, `${locale}: ${r.fails.join('\n')}`).toEqual([]);
   }
 });
@@ -515,8 +526,8 @@ test('FT-09b HTML sinh ra của mọi trang không có emoji/ký tự hình ngo�
 test('FT-09c Không dùng font biểu tượng (class fa-/material-icons/glyphicon/bi-) trên mọi trang (J17, §13b luật 1)', async ({
   page,
 }) => {
-  const ICON_FONT =
-    /\bclass="[^"]*\b(fa-[a-z]|fas|far|fab|material-icons|material-symbols|glyphicon|bi-[a-z]|icon-font)\b/;
+  const ICON_FONT = /\bclass="[^"]*\b(fa-[a-z]|fas|far|material-icons|material-symbols|glyphicon|bi-[a-z]|icon-font)\b/;
+  // `fab` bỏ khỏi mẫu: là class nút nổi của site (V32); Font Awesome luôn kèm `fa-…` nên vẫn bị bắt.
   const bad: string[] = [];
   for (const t of listTargets()) {
     const html = await (await page.request.get(t.url)).text();

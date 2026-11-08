@@ -103,7 +103,8 @@ export function ShellBehavior(): null {
 
     // Sơ đồ dòng chảy (.board): vẽ đường nối + hiện nhãn khi cuộn tới (như wireframe). Không IO ⇒ hiện luôn.
     for (const board of d.querySelectorAll<HTMLElement>('.board')) {
-      if (!('IntersectionObserver' in window)) {
+      // V26/V28: giảm chuyển động ⇒ hiện tĩnh ngay, không chờ cuộn.
+      if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) {
         board.classList.add('live');
         continue;
       }

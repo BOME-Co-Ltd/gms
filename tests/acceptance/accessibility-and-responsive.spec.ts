@@ -89,7 +89,8 @@ test('PERF-08 Chỉ dùng Tab/Shift+Tab/Enter đi hết trang Liên hệ, luôn 
     'contact-submit',
   ];
   const seen = new Set<string>();
-  for (let i = 0; i < 120 && seen.size < want.length; i++) {
+  const reached = () => want.filter((w) => [...seen].some((s) => s === w || s.startsWith(w))).length;
+  for (let i = 0; i < 120 && reached() < want.length; i++) {
     await page.keyboard.press('Tab');
     const info = await page.evaluate(() => {
       const e = document.activeElement as HTMLElement | null;

@@ -152,12 +152,23 @@ test('FIG-15 Bảng so sánh có số thiếu nguồn thì build đỏ (@S33 @ki
 });
 
 // --- Ca đọc bản build đang chạy (static + wrangler dev) --------------------------------------------------------------
-test('FIG-01 Số liệu có nguồn đã xác nhận thì hiện (@S7 @cho-khach:N6 @cho-khach:N25)', async ({ page }) => {
-  // Trình duyệt mở site dựng từ nội dung có 1 Số liệu hợp lệ (SITE_FIXTURE=figure-ok, XQ-21).
-  await open(page, 'home', 'vi');
-  const strip = tid(page, 'figures-strip');
-  await expect(strip).toContainText('5 ha');
-  await expect(strip).toContainText('Diện tích nhà máy');
+test('FIG-01 Số liệu có nguồn đã xác nhận thì hiện (@S7 @kiem-luc-build @cho-khach:N6 @cho-khach:N25)', () => {
+  // Bản build mặc định v1 không có số công bố (prd N14/N29/N30: admin tạm ẩn) ⇒ ca này dựng trên nội dung giả có 1 Số liệu hợp lệ.
+  const r = buildSite(
+    figuresFile([
+      figure({
+        key: 'dien-tich',
+        value: '5',
+        unit: { vi: 'ha', en: 'ha' },
+        label: { vi: 'Diện tích nhà máy', en: 'Plant area' },
+      }),
+    ]),
+  );
+  expect(r.ok, r.log).toBe(true);
+  const home = r.read('index.html') ?? '';
+  expect(home).toContain('data-testid="figures-strip"');
+  expect(home).toContain('5 ha');
+  expect(home).toContain('Diện tích nhà máy');
 });
 
 test('FIG-04 Không có Số liệu nào được phép thì dải số liệu ẩn hẳn (@S7)', async ({ page }) => {

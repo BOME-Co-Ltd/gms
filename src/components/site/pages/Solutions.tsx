@@ -1,5 +1,6 @@
 // M3 Giải pháp — các bước khép kín dạng thẻ (tgrid t3), ảnh minh hoạ theo thứ tự bước.
 import type React from 'react';
+import { ROUTES } from '../../../../contracts/routes.ts';
 import type { LoadedSiteContent, Locale } from '../../../content/loader.ts';
 import { CtaSection, Html, pick, SubHero } from '../parts.tsx';
 
@@ -28,7 +29,7 @@ export function SolutionsPage({ content, locale }: { content: LoadedSiteContent;
           <div className="sec-head">
             <h2 id="h-sol">{L('Quy trình giải pháp khép kín', 'Integrated solution framework')}</h2>
           </div>
-          <ol className="tgrid t3">
+          <ol className="tgrid t3 step-grid">
             {items.map((item, i) => {
               const img = SOLUTION_IMAGES[i];
               return (
@@ -61,6 +62,13 @@ export function SolutionsPage({ content, locale }: { content: LoadedSiteContent;
                         </h3>
                       </div>
                       <Html className="step-body" html={item.bodyHtml} />
+                      {/* S9: mỗi việc có lời mời liên hệ */}
+                      <p className="step-cta">
+                        <a href={ROUTES.contact[locale]}>
+                          {L('Trao đổi về việc này', 'Talk to us about this')}
+                          <span className="sr-only">: {item.title}</span>
+                        </a>
+                      </p>
                     </div>
                   </div>
                 </li>

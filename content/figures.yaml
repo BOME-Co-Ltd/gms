@@ -9,4 +9,5 @@
   source: "Hồ sơ dự án GMS Hưng Yên"
   confirmedBy: "Đại diện GMS Hưng Yên"
   confirmedAt: "2026-10-01"
-  public: true
+  # prd N14/N29/N30 (admin duyệt): v1 tạm ẩn dải số liệu tới khi có văn bản xác nhận của GMS
+  public: false

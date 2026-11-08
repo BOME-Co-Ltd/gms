@@ -169,11 +169,17 @@ export function CtaSection({
   locale,
   id = 'h-cta',
   sectionId,
+  contactTestId = !sectionId,
+  from,
 }: {
   content: LoadedSiteContent;
   locale: Locale;
   id?: string;
   sectionId?: string;
+  /** Gắn data-testid="cta-contact" (trang chủ đã có nút riêng mang testid này ⇒ tắt ở đó). */
+  contactTestId?: boolean;
+  /** Khoá trang nguồn (ROUTES) ⇒ ?from=… để thư báo ghi "Trang nơi gửi" (mail-builder resolvePageLabelVi). */
+  from?: string;
 }): React.ReactElement {
   const phoneRaw = content.company.phone?.trim() ?? '';
   return (
@@ -193,8 +199,8 @@ export function CtaSection({
         <div className="cta-act">
           <a
             className="btn btn-light"
-            href={ROUTES.contact[locale]}
-            data-testid={sectionId ? undefined : 'cta-contact'}
+            href={from ? `${ROUTES.contact[locale]}?from=${from}` : ROUTES.contact[locale]}
+            data-testid={contactTestId ? 'cta-contact' : undefined}
           >
             {pick(locale, 'Liên hệ hợp tác', 'Partner with us')}
             <Icon name="arrow-right" className="ico" />
@@ -277,9 +283,9 @@ export function BoardFigure({
   ];
   return (
     <figure>
-      <div className="board" data-testid={outputsId}>
+      <div className="board" data-testid={outputsId} role="group" aria-label={ariaText}>
         <div className="dg" data-testid={branchesId} role="img" aria-label={ariaText}>
-          <div className="node n-in">
+          <div className="node n-in" data-stage="input">
             <strong>{pick(locale, 'Chất thải rắn đầu vào', 'Incoming solid waste')}</strong>
             <span>{pick(locale, 'Tiếp nhận và phân loại', 'Reception and classification')}</span>
           </div>
@@ -298,14 +304,14 @@ export function BoardFigure({
             ))}
           </svg>
           <div className="grp grp1">
-            <div className="node n-br b1">
+            <div className="node n-br b1" data-branch="screening" data-stage="screening">
               <span>{pick(locale, 'Nhánh 1', 'Branch 1')}</span>
               <strong>{pick(locale, 'Sàng tuyển', 'Sorting')}</strong>
             </div>
             <ul className="o-list o1">{content.outputLines.filter((o) => o.group === 'sang-tuyen').map(outputItem)}</ul>
           </div>
           <div className="grp grp2">
-            <div className="node n-br b2">
+            <div className="node n-br b2" data-branch="vpd" data-stage="vpd">
               <span>{pick(locale, 'Nhánh 2', 'Branch 2')}</span>
               <strong>{pick(locale, 'Công nghệ VPD', 'VPD technology')}</strong>
             </div>

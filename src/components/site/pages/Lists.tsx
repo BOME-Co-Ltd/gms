@@ -237,7 +237,7 @@ export function CareersListPage({
             <ul className="news-grid">
               {items.map((j) => (
                 <li key={j.slug}>
-                  <article className="news" data-testid="list-item">
+                  <article className="news job" data-testid="list-item">
                     <div className="news-body">
                       <h3>
                         <a href={`${ROUTES.careers[locale]}/${j.slug}`}>{j.title}</a>

@@ -36,11 +36,11 @@ async function markTargets(page: Page): Promise<Key[]> {
     const inFooter = (e: Element) => !!e.closest('[data-testid="footer"]');
     mark(
       'fab-zalo',
-      all.find((a) => /zalo\.me/.test(a.getAttribute('href') ?? '') && !inFooter(a) && fixed(a)),
+      all.find((a) => /zalo\.me/.test(a.getAttribute('href') ?? '') && !inFooter(a) && fixed(a) && shown(a)),
     );
     mark(
       'fab-call',
-      all.find((a) => (a.getAttribute('href') ?? '').startsWith('tel:') && !inFooter(a) && fixed(a)),
+      all.find((a) => (a.getAttribute('href') ?? '').startsWith('tel:') && !inFooter(a) && fixed(a) && shown(a)),
     );
     mark(
       'footer-zalo',
@@ -110,10 +110,10 @@ for (const locale of LOCALES) {
     }
     const fab = await read('fab-zalo');
     const row = await read('footer-zalo');
-    // §13b luật 6: nút nổi 56px, hàng chân trang 24px
+    // V33 (admin 06/11, thay §13b luật 6): ô logo Zalo trong nút nổi 36px; hàng chân trang 24px
     expect(
-      fab && Math.abs(fab.w - 56) <= 1 && Math.abs(fab.h - 56) <= 1,
-      `nút nổi Zalo 56px (đo: ${fab?.w}x${fab?.h})`,
+      fab && Math.abs(fab.w - 36) <= 1 && Math.abs(fab.h - 36) <= 1,
+      `logo Zalo nút nổi 36px (đo: ${fab?.w}x${fab?.h})`,
     ).toBe(true);
     expect(
       row && Math.abs(row.w - 24) <= 1 && Math.abs(row.h - 24) <= 1,
@@ -146,8 +146,8 @@ for (const locale of LOCALES) {
       });
     const fab = await radius('fab-zalo');
     expect(
-      fab.radii.some((r) => Math.abs(r - 16) <= 0.5),
-      `nút nổi Zalo bo 16px (đo: ${fab.radii.join(',')})`,
+      fab.radii.some((r) => r >= 26), // V32 (admin 06/11): nút tròn 52/56px
+      `nút nổi Zalo tròn (đo: ${fab.radii.join(',')})`,
     ).toBe(true);
     const row = await radius('footer-zalo');
     expect(

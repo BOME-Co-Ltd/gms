@@ -780,7 +780,12 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
                 {T.consentPre}
                 {p.legalName}
                 {T.consentMid}
-                <a href={p.privacyHref} tabIndex={-1} {...(policyChanged ? { target: '_blank', rel: 'noopener' } : {})}>
+                <a
+                  href={p.privacyHref}
+                  className="consent-link"
+                  tabIndex={-1}
+                  {...(policyChanged ? { target: '_blank', rel: 'noopener' } : {})}
+                >
                   {T.privacy}
                 </a>
                 .

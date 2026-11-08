@@ -278,7 +278,9 @@ for (const locale of ['vi', 'en'] as Locale[]) {
     expect(frame, 'khung tech-drawing phải hiện khi có ô ảnh .png').not.toBe('');
     const src = firstImgSrc(frame);
     expect(src.split(/[?#]/)[0], `src ảnh trong khung: "${src}"`).toMatch(/\.png$/i);
-    expect(frame, 'nhãn nhìn thấy trong khung, không chỉ trong alt').toContain(LABEL[locale]);
+    expect(frame.replace(/&#x27;|&#39;|&apos;/g, "'"), 'nhãn nhìn thấy trong khung, không chỉ trong alt').toContain(
+      LABEL[locale],
+    ); // HTML mã hoá dấu nháy
   });
 
   test(`XQ-44b (${locale}) Ô gms-sorting-line.webp kind "anh-that": khung hiện, src đuôi .webp, KHÔNG có nhãn phối cảnh`, () => {

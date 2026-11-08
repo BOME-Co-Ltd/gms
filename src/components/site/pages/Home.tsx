@@ -78,7 +78,7 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
             <h1 id="h1">
               {sloganLines.map((l) => (
                 <span className="ln" key={l}>
-                  <span>{l}</span>
+                  <span>{l}</span>{' '}
                 </span>
               ))}
             </h1>

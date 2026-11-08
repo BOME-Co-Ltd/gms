@@ -204,7 +204,7 @@ export function TechnologyPage({
         </div>
       </section>
 
-      <CtaSection content={content} locale={locale} sectionId="hop-tac" />
+      <CtaSection content={content} locale={locale} sectionId="hop-tac" contactTestId from="technology" />
     </>
   );
 }

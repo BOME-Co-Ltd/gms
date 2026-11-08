@@ -225,7 +225,12 @@ ${[...urls].map((u) => `  <url><loc>${escXml(u)}</loc></url>`).join('\n')}
   }
   if (!isStaging && urls.size === 0) errors.push('[SITEMAP_EMPTY] sitemap.xml không có URL nào');
   const hero = pages.find((p) => p.rel === '/index.html');
-  if (hero && existsSync(join(outDir, HERO_IMG_REL)) && /hero-plant\.jpg/i.test(hero.html) && !/srcset="[^"]*hero-plant-512\.jpg/i.test(hero.html)) {
+  if (
+    hero &&
+    existsSync(join(outDir, HERO_IMG_REL)) &&
+    /hero-plant\.jpg/i.test(hero.html) &&
+    !/srcset="[^"]*hero-plant-512\.jpg/i.test(hero.html)
+  ) {
     errors.push('[PERF01_HERO_SRCSET] trang chủ thiếu srcset ảnh hero 512w');
   }
   for (const f of copiedStatic) {

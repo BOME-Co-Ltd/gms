@@ -157,6 +157,9 @@ for (const locale of LOCALES) {
     await expect(msg).toHaveAttribute('target', '_blank');
     expect(await msg.getAttribute('rel')).toMatch(/\bnoopener\b/);
     await expect(tid(page, 'fab-call')).toHaveAttribute('href', 'tel:+84987998370');
+    // V31: nút về đầu trang chỉ hiện khi cuộn tới chân trang ⇒ cuộn trước khi đo vùng bấm.
+    await tid(page, 'footer').scrollIntoViewIfNeeded();
+    await expect(up).toBeVisible();
     for (const id of ['back-to-top', 'fab-zalo', 'fab-messenger', 'fab-call']) {
       const a = tid(page, id);
       expect((await a.getAttribute('aria-label'))?.trim(), `${id}: tên truy cập`).toBeTruthy();
@@ -231,9 +234,10 @@ test('WF-HOME-02 vi: sơ đồ hai nhánh có 6 đầu ra đều nhãn "Định 
   const outs = page.locator('#hai-nhanh .o');
   await expect(outs).toHaveCount(6);
   for (const t of await outs.locator('.tag').allTextContents()) expect(t.trim()).toBe('Định hướng');
-  const steps = page.locator('#hanh-trinh ol.steps > li');
+  // Markup site: ol.j-steps > li[data-testid=journey-step], data-status theo nhãn hiển thị (V40 "đã xong").
+  const steps = page.locator('#hanh-trinh ol.j-steps > li[data-testid="journey-step"]');
   await expect(steps).toHaveCount(5);
-  for (const li of await steps.all()) await expect(li).toHaveAttribute('data-status', 'done');
+  for (const li of await steps.all()) await expect(li).toHaveAttribute('data-status', 'đã xong');
 });
 
 test('WF-HOME-03 vi: số liệu — khi chưa có số công bố thì không có khối số liệu và không có chuỗi giữ chỗ "[cần hỏi khách]" (S7, U15, N14)', async ({

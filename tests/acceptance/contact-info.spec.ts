@@ -9,7 +9,7 @@ import { open, tid } from '../support/ui';
 
 const text = (html: string) =>
   html
-    .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
+    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ');

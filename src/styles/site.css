@@ -817,7 +817,10 @@ input[type="checkbox"] {
   height: 22px;
 }
 .ft-ico svg.zalo-mark {
-  border-radius: 5px;
+  width: 24px; /* §13b luật 6: logo Zalo chân trang 24px, bo 6px, viền trắng 2px */
+  height: 24px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px #fff;
 }
 .ft-ico svg.fb-mark {
   fill: #0866ff;
@@ -865,7 +868,8 @@ a.ft-row .ft-val {
   color: var(--ft-muted);
 }
 .ft :focus-visible {
-  outline: 3px solid var(--g900);
+  /* V26/V27: chân trang nền trắng, viền focus --g900; !important vì luật focus chung (g700) cũng !important */
+  outline: 3px solid var(--g900) !important;
   outline-offset: 2px;
   border-radius: var(--radius-s);
 }
@@ -2568,7 +2572,8 @@ main:focus {
   overflow: hidden;
   isolation: isolate;
   box-shadow: 0 8px 20px rgba(20, 34, 27, 0.22);
-  transition: transform 0.24s var(--ease-spring);
+  /* J21: không vượt 1.08 ⇒ easing không nảy (ease-spring 1.56 vọt quá đích) */
+  transition: transform 0.24s var(--ease-snappy);
 }
 .fab .ico {
   width: 26px;
@@ -2921,7 +2926,7 @@ main:focus {
 .step-card .step-text {
   display: grid;
   gap: 14px;
-  padding: 20px 24px 24px;
+  padding: 16px 24px 24px; /* U17: vùng chữ cách ảnh 16px */
   align-content: start;
 }
 .step-card .stp-head {
@@ -3155,11 +3160,15 @@ main:focus {
 }
 .news h3 {
   overflow-wrap: anywhere;
+  line-height: 1.3; /* PERF-05: vùng bấm link tiêu đề >= 24px */
+}
+.news.job h3 {
+  font-size: 20px; /* U18: tiêu đề thẻ tuyển dụng 20px */
 }
 .news h3 a {
   text-decoration: none;
   color: inherit;
-  display: inline;
+  display: block; /* PERF-05: cao theo line-height, vùng bấm >= 24px */
 }
 .news h3 a::after {
   content: "";
@@ -3188,6 +3197,10 @@ main:focus {
 .news .il .ico {
   width: 18px;
   height: 18px;
+}
+.news.job .il .ico {
+  width: 20px; /* U18: biểu tượng thẻ tuyển dụng 20px */
+  height: 20px;
 }
 .pager {
   display: flex;
@@ -3862,4 +3875,22 @@ a.ch .ch-val {
     gap: 48px;
     align-items: center;
   }
+}
+.consent-link {
+  padding-block: 3px; /* PERF-05: vùng bấm >= 24px, không xô dòng */
+}
+main :is(p, li, dd) > a:not(.btn) {
+  padding-block: 3px; /* PERF-05: link trong đoạn văn có vùng bấm >= 24px */
+}
+.tgrid.step-grid {
+  gap: 32px; /* U17: khoảng cách giữa hai bước 32px */
+}
+.step-cta {
+  margin-top: 16px;
+}
+.step-cta a {
+  display: inline-block;
+  padding-block: 12px;
+  font-weight: 600;
+  color: var(--g900);
 }

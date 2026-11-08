@@ -67,7 +67,7 @@ const T = {
     navDrawerMain: 'Main menu (mobile)',
     navDrawerSub: 'Secondary menu (mobile)',
     langLabel: 'Change language. Viewing: ',
-    langVi: 'Vietnamese',
+    langVi: 'Tiếng Việt',
     langEn: 'English',
     openMenu: 'Open menu',
     closeMenu: 'Close menu',

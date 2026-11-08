@@ -163,13 +163,16 @@ export function ContactPage({
                   ) : null}
                   {zaloRaw ? (
                     <li>
-                      <a className="ch" href={zaloRaw} rel="noopener noreferrer">
+                      <a className="ch" href={zaloRaw} target="_blank" rel="noopener noreferrer">
                         <span className="ch-ico">
-                          <ZaloMark size={24} className="il-zalo" />
+                          <ZaloMark size={24} className="zalo-mark il-zalo" />
                         </span>
                         <span className="ch-txt">
                           <span className="ch-lbl">{L('Nhắn Zalo', 'Message on Zalo')}</span>
-                          <span className="ch-val">{zaloShown ? `Zalo ${zaloShown}` : 'Zalo'}</span>
+                          <span className="ch-val">
+                            {zaloShown ? `Zalo ${zaloShown}` : 'Zalo'}
+                            <span className="sr-only">{newTab}</span>
+                          </span>
                         </span>
                       </a>
                     </li>
