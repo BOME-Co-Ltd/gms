@@ -7,7 +7,7 @@ import { formatPublicPhone } from '../../../shared/contact/schema.ts';
 import { ContactForm } from '../ContactForm.tsx';
 import { Icon, MessengerBadge, ZaloMark } from '../icons.tsx';
 import { MapBlock } from '../MapBlock.tsx';
-import { pick, Streaks } from '../parts.tsx';
+import { PhotoBg, pick, Streaks } from '../parts.tsx';
 import { fbName, type ShellCompany } from '../Shell.tsx';
 
 export function ContactPage({
@@ -47,7 +47,8 @@ export function ContactPage({
 
   return (
     <>
-      <section className="hero hero-sub on-dark" aria-labelledby="h1">
+      <section className="hero hero-sub on-dark has-photo" aria-labelledby="h1">
+        <PhotoBg photo="plant" locale={locale} priority />
         <Streaks variant="sub" />
         <div className="wrap">
           <div className="fade">

@@ -5,7 +5,7 @@ import type { LoadedSiteContent, Locale } from '../../../content/loader.ts';
 import { Icon } from '../icons.tsx';
 import { JourneySection } from '../Journey.tsx';
 import { formatDateLocale } from '../menu.ts';
-import { BoardFigure, CtaSection, pick, Streaks } from '../parts.tsx';
+import { BoardFigure, CtaSection, PhotoBg, pick, Streaks } from '../parts.tsx';
 
 const HERO_IMG = '/img/hero-plant.jpg';
 const HERO_IMG_SMALL = '/img/hero-plant-512.jpg';
@@ -65,7 +65,15 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
         'Step by step returning reusable resources to the production cycle.',
       ),
     },
-    { cls: 'v4', icon: 'heart-handshake', h: L('Vì cộng đồng xanh', 'For a green community'), p: '' },
+    {
+      cls: 'v4',
+      icon: 'heart-handshake',
+      h: L('Vì cộng đồng xanh', 'For a green community'),
+      p: L(
+        'Đồng hành cùng địa phương, từ phân loại tại nguồn đến vận hành nhà máy có trách nhiệm.',
+        'Working with the local community, from sorting at source to responsible plant operation.',
+      ),
+    },
   ] as const;
 
   return (
@@ -144,6 +152,7 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
         locale={locale}
         sectionId="hanh-trinh"
         testId="home-journey"
+        photo="sortingLine"
         title={L('Hành trình chuyển đổi', 'Transformation journey')}
         lead={L(
           'Năm bước GMS đã đi qua, từ đánh giá hiện trạng tới hệ thống vận hành hoàn chỉnh. Nhà máy đã đi vào hoạt động.',
@@ -152,7 +161,12 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
       />
 
       {content.figures.length > 0 ? (
-        <section className="sec sec-stats" data-testid="figures-strip" aria-label={L('Số liệu chính', 'Key figures')}>
+        <section
+          className="sec sec-stats on-dark has-photo"
+          data-testid="figures-strip"
+          aria-label={L('Số liệu chính', 'Key figures')}
+        >
+          <PhotoBg photo="sorting" locale={locale} />
           <div className="wrap stats">
             <div className="sec-head">
               <h2>{L('Năng lực nhà máy', 'Plant capacity')}</h2>
@@ -172,7 +186,8 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
         </section>
       ) : null}
 
-      <section className="sec sec-values on-dark" aria-labelledby="h-values">
+      <section className="sec sec-values on-dark has-photo" aria-labelledby="h-values">
+        <PhotoBg photo="vpd" locale={locale} />
         <div className="wrap">
           <div className="sec-head">
             <h2 id="h-values">{L('Giá trị chúng tôi theo đuổi', 'Values we pursue')}</h2>
@@ -204,7 +219,21 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
                 <li key={n.slug}>
                   <article className="news" data-testid="news-item">
                     <div className="thumb">
-                      <Icon name="image" className="ico" />
+                      {n.heroImage ? (
+                        <>
+                          <img
+                            src={`/img/${n.heroImage.replace(/^images\//, '')}`}
+                            alt=""
+                            width={1200}
+                            height={896}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          <span className="photo-label">{L('Ảnh minh hoạ', 'Illustration')}</span>
+                        </>
+                      ) : (
+                        <Icon name="image" className="ico" />
+                      )}
                     </div>
                     <div className="news-body">
                       <h3>

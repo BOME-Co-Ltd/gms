@@ -1,9 +1,11 @@
-// M4 Công nghệ — wireframe technology.html (green v0.3.8): đầu trang + sơ đồ hai nhánh + nhánh Sàng tuyển + nhánh VPD.
+// M4 Công nghệ — wireframe technology.html (green v0.3.8): đầu trang + sơ đồ hai nhánh + nhánh Sàng tuyển + nhánh VPD
+// + Giải pháp (gộp từ trang Giải pháp cũ, 08/11/2026).
 // Bảng so sánh (sec-cmp) ẩn hẳn: chưa có số có nguồn (U16/S33).
 import type React from 'react';
 import type { LoadedSiteContent, Locale } from '../../../content/loader.ts';
 import { Icon } from '../icons.tsx';
-import { BoardFigure, CtaSection, Html, pick, SubHero } from '../parts.tsx';
+import { BoardFigure, CtaSection, Html, PhotoFigure, pick, SubHero } from '../parts.tsx';
+import { SolutionsSection } from './Solutions.tsx';
 
 interface Step {
   title: string;
@@ -116,6 +118,8 @@ export function TechnologyPage({
   return (
     <>
       <SubHero
+        photo="vpd"
+        locale={locale}
         eyebrow={pillars}
         title={L('Công nghệ: từ chất thải đến tài nguyên', 'Technology: from waste to resources')}
         lead={L(
@@ -127,6 +131,7 @@ export function TechnologyPage({
           items: [
             { href: '#sang-tuyen', text: L('Sàng tuyển', 'Sorting') },
             { href: '#vpd', text: L('Công nghệ VPD', 'VPD technology') },
+            { href: L('#giai-phap', '#solutions'), text: L('Giải pháp', 'Solutions') },
           ],
         }}
       />
@@ -198,13 +203,22 @@ export function TechnologyPage({
               )}
             </p>
           </div>
-          <div className="branch no-fig">
+          <div className="branch">
             <Stages steps={isVi ? VPD_VI : VPD_EN} testId="vpd-stage" />
+            <div className="branch-fig">
+              <PhotoFigure
+                photo="vpdRender"
+                locale={locale}
+                alt={L('Phối cảnh hệ thống xử lý VPD', 'Rendering of the VPD processing system')}
+              />
+            </div>
           </div>
         </div>
       </section>
 
-      <CtaSection content={content} locale={locale} sectionId="hop-tac" contactTestId from="technology" />
+      <SolutionsSection content={content} locale={locale} />
+
+      <CtaSection content={content} locale={locale} sectionId="hop-tac" photo="control" contactTestId from="technology" />
     </>
   );
 }

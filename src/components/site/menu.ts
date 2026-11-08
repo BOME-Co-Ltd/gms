@@ -23,9 +23,9 @@ export const MENU_LABELS: Record<Locale, Record<StaticPageKey, string>> = {
     about: 'Giới thiệu',
     solutions: 'Giải pháp',
     technology: 'Công nghệ',
-    products: 'Sản phẩm đầu ra',
+    products: 'Ứng dụng',
     news: 'Tin tức / Hành trình',
-    projects: 'Dự án / Thư viện',
+    projects: 'Dự án',
     careers: 'Tuyển dụng',
     faq: 'FAQ',
     contact: 'Liên hệ',
@@ -36,9 +36,9 @@ export const MENU_LABELS: Record<Locale, Record<StaticPageKey, string>> = {
     about: 'About',
     solutions: 'Solutions',
     technology: 'Technology',
-    products: 'Output products',
+    products: 'Applications',
     news: 'News / Journey',
-    projects: 'Projects / Gallery',
+    projects: 'Projects',
     careers: 'Careers',
     faq: 'FAQ',
     contact: 'Contact',
@@ -46,18 +46,18 @@ export const MENU_LABELS: Record<Locale, Record<StaticPageKey, string>> = {
   },
 };
 
-// ux-spec V26: menu chính 7 mục; menu phụ 4 mục (thứ tự theo wireframe: Tuyển dụng · FAQ · Chính sách bảo mật · Liên hệ).
-export const MAIN_KEYS: StaticPageKey[] = ['home', 'about', 'solutions', 'technology', 'products', 'news', 'projects'];
-export const SUB_KEYS: StaticPageKey[] = ['careers', 'faq', 'privacy', 'contact'];
+// Menu chính 5 mục (08/11/2026: bỏ Giải pháp — nội dung gộp vào Công nghệ; Dự án đứng trước Tin tức).
+// Menu phụ trên cùng: Ứng dụng (trước là "Sản phẩm đầu ra") · Tuyển dụng · FAQ · Chính sách bảo mật · Liên hệ.
+export const MAIN_KEYS: StaticPageKey[] = ['home', 'about', 'technology', 'projects', 'news'];
+export const SUB_KEYS: StaticPageKey[] = ['products', 'careers', 'faq', 'privacy', 'contact'];
 
 // ux-spec §14a: hai nhóm liên kết chân trang. Trang chủ đã có ở logo đầu trang nên không lặp.
 export const FOOTER_KEYS: StaticPageKey[] = [
   'about',
-  'solutions',
   'technology',
   'products',
-  'news',
   'projects',
+  'news',
   'careers',
   'faq',
   'privacy',
@@ -69,8 +69,8 @@ export const PAGE_DESCRIPTIONS: Record<Locale, Record<StaticPageKey, string>> = 
     home: 'GMS Hưng Yên: Giải pháp thông minh, kiến tạo giá trị xanh thông qua công nghệ sàng tuyển và nhiệt phân VPD.',
     about: 'Giới thiệu về GMS Hưng Yên, tầm nhìn, sứ mệnh và hành trình chuyển đổi nhà máy xử lý chất thải.',
     solutions: 'Các giải pháp tiếp nhận, sàng tuyển và xử lý chất thải tạo tài nguyên đầu ra bền vững.',
-    technology: 'Sơ đồ quy trình công nghệ sàng tuyển và nhiệt phân chân không VPD tại GMS Hưng Yên.',
-    products: 'Sáu dòng sản phẩm đầu ra định hướng từ nhánh sàng tuyển và công nghệ VPD.',
+    technology: 'Công nghệ và giải pháp: quy trình sàng tuyển, nhiệt phân chân không VPD và hợp tác tại GMS Hưng Yên.',
+    products: 'Ứng dụng của sáu dòng sản phẩm đầu ra định hướng từ nhánh sàng tuyển và công nghệ VPD.',
     news: 'Tin tức hoạt động và hành trình chuyển đổi 5 bước của GMS Hưng Yên.',
     projects: 'Dự án và thư viện hình ảnh thực tế tại nhà máy GMS Hưng Yên.',
     careers: 'Cơ hội nghề nghiệp và thông tin tuyển dụng tại GMS Hưng Yên.',
@@ -82,8 +82,8 @@ export const PAGE_DESCRIPTIONS: Record<Locale, Record<StaticPageKey, string>> = 
     home: 'GMS Hung Yen: Smart solutions creating green value through mechanical sorting and VPD pyrolysis technology.',
     about: 'About GMS Hung Yen, our mission, core values and plant transformation journey.',
     solutions: 'Municipal waste sorting, VPD vacuum pyrolysis resource recovery and industrial partnership solutions.',
-    technology: 'Process flow diagram for mechanical sorting and VPD vacuum pyrolysis technology at GMS Hung Yen.',
-    products: 'Six planned output product lines from the sorting and VPD pyrolysis branches.',
+    technology: 'Technology and solutions: mechanical sorting, VPD vacuum pyrolysis and partnership at GMS Hung Yen.',
+    products: 'Applications of the six planned output lines from the sorting and VPD pyrolysis branches.',
     news: 'Latest news and the 5-step plant transformation journey at GMS Hung Yen.',
     projects: 'Project highlights and visual gallery at GMS Hung Yen.',
     careers: 'Career opportunities and open positions at GMS Hung Yen.',

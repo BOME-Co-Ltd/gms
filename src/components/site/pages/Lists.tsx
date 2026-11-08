@@ -30,6 +30,8 @@ export function NewsListPage({
     <>
       <SubHero
         after="journey"
+        photo="visit"
+        locale={locale}
         crumbLabel={L('Đường dẫn trang', 'Breadcrumb')}
         crumbs={
           first
@@ -65,6 +67,7 @@ export function NewsListPage({
       <JourneySection
         content={content}
         locale={locale}
+        photo="sortingLine"
         sectionId="lo-trinh"
         title={L('Hành trình chuyển đổi', 'Transformation journey')}
         lead={L(
@@ -160,8 +163,14 @@ export function ProjectsListPage({
   return (
     <>
       <SubHero
-        eyebrow={L('Dự án / Thư viện', 'Projects / Gallery')}
-        title={L('Dự án & Thư viện hình ảnh', 'Projects & Visual Gallery')}
+        photo="sortingLine"
+        locale={locale}
+        eyebrow={L('Dự án', 'Projects')}
+        title={L('Dự án', 'Projects')}
+        lead={L(
+          'Các hạng mục và khu vực vận hành tại nhà máy GMS Hưng Yên, kèm hình ảnh minh hoạ.',
+          'Areas and operating units at the GMS Hung Yen plant, with illustrations.',
+        )}
       />
       <section className="sec">
         <div className="wrap">
@@ -230,7 +239,12 @@ export function CareersListPage({
   const place = content.company.address?.[locale]?.trim() || content.company.address?.vi?.trim() || '';
   return (
     <>
-      <SubHero eyebrow={L('Cơ hội nghề nghiệp', 'Career opportunities')} title={L('Tuyển dụng', 'Careers')} />
+      <SubHero
+        photo="control"
+        locale={locale}
+        eyebrow={L('Cơ hội nghề nghiệp', 'Career opportunities')}
+        title={L('Tuyển dụng', 'Careers')}
+      />
       <section className="sec">
         <div className="wrap">
           {items.length > 0 ? (
@@ -285,7 +299,12 @@ export function FaqPage({ content, locale }: { content: LoadedSiteContent; local
   const items = content.faq[locale];
   return (
     <>
-      <SubHero eyebrow="FAQ" title={L('Câu hỏi thường gặp (FAQ)', 'Frequently Asked Questions (FAQ)')} />
+      <SubHero
+        photo="reception"
+        locale={locale}
+        eyebrow="FAQ"
+        title={L('Câu hỏi thường gặp (FAQ)', 'Frequently Asked Questions (FAQ)')}
+      />
       <section className="sec">
         <div className="wrap">
           {items.length > 0 ? (

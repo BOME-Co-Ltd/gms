@@ -64,10 +64,8 @@ import EnglishHomePage from '../../src/app/en/page.tsx';
 import EnglishPrivacyPage from '../../src/app/en/privacy-policy/page.tsx';
 import EnglishProductsPage from '../../src/app/en/products/page.tsx';
 import EnglishProjectsPage from '../../src/app/en/projects-library/page.tsx';
-import EnglishSolutionsPage from '../../src/app/en/solutions/page.tsx';
 import EnglishTechnologyPage from '../../src/app/en/technology/page.tsx';
 import FaqPage from '../../src/app/faq/page.tsx';
-import SolutionsPage from '../../src/app/giai-phap/page.tsx';
 import AboutPage from '../../src/app/gioi-thieu/page.tsx';
 import RootLayout, { metadata } from '../../src/app/layout.tsx';
 import ContactPage from '../../src/app/lien-he/page.tsx';
@@ -980,8 +978,9 @@ describe('Next.js App Router Pages, Sections, UI Components & i18n', () => {
     expect(contactEnHtml.includes('+84 98 799 83 70'), 'EN: số liên hệ định dạng quốc tế').toBe(true);
 
     expect(renderToStaticMarkup(React.createElement(AboutPage))).toContain('Giới thiệu');
-    expect(renderToStaticMarkup(React.createElement(SolutionsPage))).toContain('Giải pháp');
-    expect(renderToStaticMarkup(React.createElement(ProductsPage))).toContain('Sản phẩm');
+    // Giải pháp gộp vào Công nghệ (08/11/2026): /giai-phap → 301 /cong-nghe#giai-phap.
+    expect(renderToStaticMarkup(React.createElement(TechnologyPage))).toContain('id="giai-phap"');
+    expect(renderToStaticMarkup(React.createElement(ProductsPage))).toContain('Ứng dụng');
     expect(renderToStaticMarkup(React.createElement(NewsPage))).toContain('Tin tức');
     expect(renderToStaticMarkup(React.createElement(ProjectsPage))).toContain('Dự án');
     expect(renderToStaticMarkup(React.createElement(CareersPage))).toContain('Tuyển dụng');
@@ -989,8 +988,8 @@ describe('Next.js App Router Pages, Sections, UI Components & i18n', () => {
     expect(renderToStaticMarkup(React.createElement(PrivacyPage))).toContain('bảo mật');
 
     expect(renderToStaticMarkup(React.createElement(EnglishAboutPage))).toContain('About');
-    expect(renderToStaticMarkup(React.createElement(EnglishSolutionsPage))).toContain('Solutions');
-    expect(renderToStaticMarkup(React.createElement(EnglishProductsPage))).toContain('Products');
+    expect(renderToStaticMarkup(React.createElement(EnglishTechnologyPage))).toContain('id="solutions"');
+    expect(renderToStaticMarkup(React.createElement(EnglishProductsPage))).toContain('Applications');
     expect(renderToStaticMarkup(React.createElement(EnglishNewsPage))).toContain('News');
     expect(renderToStaticMarkup(React.createElement(EnglishProjectsPage))).toContain('Projects');
     expect(renderToStaticMarkup(React.createElement(EnglishCareersPage))).toContain('Careers');
