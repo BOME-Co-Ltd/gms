@@ -1,4 +1,4 @@
-// M5 Sản phẩm đầu ra — hai nhóm thẻ (Sàng tuyển / VPD).
+// M5 Ứng dụng (trước là "Sản phẩm đầu ra", đổi tên 08/11/2026) — hai nhóm thẻ (Sàng tuyển / VPD).
 import type React from 'react';
 import type { LoadedSiteContent, Locale } from '../../../content/loader.ts';
 import { CtaSection, pick, SubHero } from '../parts.tsx';
@@ -57,17 +57,18 @@ export function ProductsPage({ content, locale }: { content: LoadedSiteContent; 
   return (
     <>
       <SubHero
-        after="journey"
-        eyebrow={L('Đầu ra định hướng', 'Planned outputs')}
-        title={L('Sản phẩm đầu ra', 'Output Products')}
+        photo="rdf"
+        locale={locale}
+        eyebrow={L('Ứng dụng', 'Applications')}
+        title={L('Ứng dụng của sản phẩm đầu ra', 'Applications of our output products')}
         lead={L(
-          'Sáu dòng sản phẩm thu hồi từ quá trình sàng tuyển cơ học và công nghệ nhiệt phân VPD.',
-          'Six recovered output lines from mechanical sorting and VPD pyrolysis technology.',
+          'Sáu dòng sản phẩm thu hồi từ quá trình sàng tuyển cơ học và công nghệ nhiệt phân VPD, cùng hướng ứng dụng của từng dòng.',
+          'Six recovered output lines from mechanical sorting and VPD pyrolysis technology, and where each one can be used.',
         )}
       />
       {group(L('Nhóm Sàng tuyển', 'Sorting Group (Sàng tuyển)'), 'sang-tuyen', false)}
       {group(L('Nhóm Công nghệ VPD', 'VPD Technology Group (Công nghệ VPD)'), 'vpd', true)}
-      <CtaSection content={content} locale={locale} />
+      <CtaSection content={content} locale={locale} photo="rdfPress" />
     </>
   );
 }

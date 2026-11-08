@@ -16,7 +16,6 @@ import { HomePage } from './pages/Home.tsx';
 import { CareersListPage, FaqPage, NewsListPage, ProjectsListPage } from './pages/Lists.tsx';
 import { PrivacyPage } from './pages/Privacy.tsx';
 import { ProductsPage } from './pages/Products.tsx';
-import { SolutionsPage } from './pages/Solutions.tsx';
 import { TechnologyPage } from './pages/Technology.tsx';
 import { type ShellCompany, SiteFrame } from './Shell.tsx';
 
@@ -60,14 +59,15 @@ function build(): Site {
   for (const locale of ['vi', 'en'] as Locale[]) {
     const isVi = locale === 'vi';
     for (const key of MENU_ORDER) {
+      // Giải pháp đã gộp vào Công nghệ (08/11/2026): không sinh trang; /giai-phap, /en/solutions → 301 (public/_redirects).
+      if (key === 'solutions') continue;
       const isEmptyList =
         (key === 'projects' && loaded.projects[locale].length === 0) ||
         (key === 'careers' && loaded.jobs[locale].length === 0) ||
         (key === 'faq' && loaded.faq[locale].length === 0);
-      const renderers: Record<StaticPageKey, () => React.ReactElement> = {
+      const renderers: Record<Exclude<StaticPageKey, 'solutions'>, () => React.ReactElement> = {
         home: () => <HomePage content={loaded} locale={locale} />,
         about: () => <AboutPage content={loaded} locale={locale} />,
-        solutions: () => <SolutionsPage content={loaded} locale={locale} />,
         technology: () => <TechnologyPage content={loaded} locale={locale} />,
         products: () => <ProductsPage content={loaded} locale={locale} />,
         news: () => <NewsListPage content={loaded} locale={locale} pageNum={1} />,
@@ -181,7 +181,7 @@ function build(): Site {
           <DetailPage
             content={loaded}
             locale={locale}
-            listLabel={isVi ? 'Dự án / Thư viện' : 'Projects / Gallery'}
+            listLabel={isVi ? 'Dự án' : 'Projects'}
             listHref={ROUTES.projects[locale]}
             title={p.title}
             meta={
