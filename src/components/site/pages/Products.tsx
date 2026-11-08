@@ -57,7 +57,6 @@ export function ProductsPage({ content, locale }: { content: LoadedSiteContent; 
   return (
     <>
       <SubHero
-        after="journey"
         eyebrow={L('Đầu ra định hướng', 'Planned outputs')}
         title={L('Sản phẩm đầu ra', 'Output Products')}
         lead={L(
