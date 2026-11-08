@@ -89,7 +89,12 @@ for (const locale of LOCALES) {
           return [s.fill, s.backgroundColor];
         });
         const r = svg.getBoundingClientRect();
+        const box = [svg.parentElement as Element, a].map((e) => {
+          const b = e.getBoundingClientRect();
+          return { w: Math.round(b.width * 10) / 10, h: Math.round(b.height * 10) / 10 };
+        });
         return {
+          box,
           markup,
           fills,
           w: Math.round(r.width * 10) / 10,
@@ -110,22 +115,24 @@ for (const locale of LOCALES) {
     }
     const fab = await read('fab-zalo');
     const row = await read('footer-zalo');
-    // V33 (admin 06/11, thay §13b luật 6): ô logo Zalo trong nút nổi 36px; hàng chân trang 24px
+    // V33 (admin 06/11, thay §13b luật 6): logo Zalo trong nút nổi 36px. V36: logo chân trang 22px trong ô 24px (admin trả lời XQ-QA-0q-1, 08/11).
     expect(
       fab && Math.abs(fab.w - 36) <= 1 && Math.abs(fab.h - 36) <= 1,
       `logo Zalo nút nổi 36px (đo: ${fab?.w}x${fab?.h})`,
     ).toBe(true);
     expect(
-      row && Math.abs(row.w - 24) <= 1 && Math.abs(row.h - 24) <= 1,
-      `biểu tượng Zalo chân trang 24px (đo: ${row?.w}x${row?.h})`,
+      row && Math.abs(row.w - 22) <= 1 && Math.abs(row.h - 22) <= 1,
+      `logo Zalo chân trang 22px (V36; đo: ${row?.w}x${row?.h})`,
+    ).toBe(true);
+    expect(
+      row?.box.some((b) => Math.abs(b.w - 24) <= 1 && Math.abs(b.h - 24) <= 1),
+      `ô chứa logo Zalo chân trang 24px (V36; đo: ${JSON.stringify(row?.box)})`,
     ).toBe(true);
   });
 
-  // Số đo spec nêu thẳng (bo 16px/6px, viền trắng 2px). Có thể bo/viền nằm trong path của logo thay vì CSS: nếu đỏ, xem ảnh
-  // trước khi kết luận lỗi code (dự đoán chưa thấy bản dựng).
-  test(`FT-17b ${locale}: nút nổi Zalo bo 16px; logo Zalo chân trang bo 6px kèm viền trắng 2px (§13b luật 6) [dự đoán]`, async ({
-    page,
-  }) => {
+  // Số đo spec nêu thẳng (nút nổi tròn V32; logo chân trang bo 6px). Viền trắng 2px quanh logo chân trang đã BỎ: chân trang nền
+  // trắng (V26/V27), admin trả lời XQ-QA-0q-1 08/11. Bo có thể nằm trong path của logo thay vì CSS: nếu đỏ, xem ảnh trước khi kết luận.
+  test(`FT-17b ${locale}: nút nổi Zalo tròn (V32); logo Zalo chân trang bo 6px [dự đoán]`, async ({ page }) => {
     await page.setViewportSize({ width: 1200, height: 900 });
     await open(page, 'home', locale);
     await markTargets(page);
@@ -134,15 +141,7 @@ for (const locale of LOCALES) {
         const svg = a.querySelector('svg') as SVGElement;
         const chain = [a, svg, svg.parentElement as Element];
         const px = (e: Element) => Number.parseFloat(getComputedStyle(e).borderTopLeftRadius);
-        const ring = chain.some((e) => {
-          const s = getComputedStyle(e);
-          return (
-            /rgb\(255, 255, 255\)[^,]*\s0px\s0px\s2px/.test(s.boxShadow) ||
-            (Number.parseFloat(s.borderTopWidth) >= 2 && s.borderTopColor === 'rgb(255, 255, 255)') ||
-            (Number.parseFloat(s.outlineWidth) >= 2 && s.outlineColor === 'rgb(255, 255, 255)')
-          );
-        });
-        return { radii: chain.map(px), ring };
+        return { radii: chain.map(px) };
       });
     const fab = await radius('fab-zalo');
     expect(
@@ -154,7 +153,6 @@ for (const locale of LOCALES) {
       row.radii.some((r) => Math.abs(r - 6) <= 0.5),
       `logo Zalo chân trang bo 6px (đo: ${row.radii.join(',')})`,
     ).toBe(true);
-    expect(row.ring, 'logo Zalo chân trang có viền trắng 2px').toBe(true);
   });
 }
 

@@ -817,10 +817,8 @@ input[type="checkbox"] {
   height: 22px;
 }
 .ft-ico svg.zalo-mark {
-  width: 24px; /* §13b luật 6: logo Zalo chân trang 24px, bo 6px, viền trắng 2px */
-  height: 24px;
+  /* V36: logo 22px trong ô 24px, bo 6px; chân trang nền trắng (V26/V27) ⇒ bỏ viền trắng 2px của §13b luật 6 cũ */
   border-radius: 6px;
-  box-shadow: 0 0 0 2px #fff;
 }
 .ft-ico svg.fb-mark {
   fill: #0866ff;

@@ -89,7 +89,7 @@ test('PERF-08 Chỉ dùng Tab/Shift+Tab/Enter đi hết trang Liên hệ, luôn 
     'contact-submit',
   ];
   const seen = new Set<string>();
-  const reached = () => want.filter((w) => [...seen].some((s) => s === w || s.startsWith(w))).length;
+  const reached = () => want.filter((w) => [...seen].some((s) => s === w)).length;
   for (let i = 0; i < 120 && reached() < want.length; i++) {
     await page.keyboard.press('Tab');
     const info = await page.evaluate(() => {
@@ -104,11 +104,7 @@ test('PERF-08 Chỉ dùng Tab/Shift+Tab/Enter đi hết trang Liên hệ, luôn 
     expect(info.ring, `focus không có viền ở ${info.own}`).toBe(true);
     seen.add(info.own);
   }
-  for (const w of want)
-    expect(
-      [...seen].some((s) => s === w || s.startsWith(w)),
-      `Tab không tới ${w}`,
-    ).toBe(true);
+  for (const w of want) expect(seen.has(w), `Tab không tới ${w}`).toBe(true);
   // Shift+Tab đi ngược được và Enter bấm được nút gửi (form trống ⇒ hiện lỗi thay vì gửi)
   await page.keyboard.press('Shift+Tab');
   await tid(page, 'contact-submit').focus();

@@ -37,11 +37,26 @@ test('LAY-01 Khung trang đúng ngôn ngữ đang xem (@S1)', async ({ page }) =
   expect(await links.count()).toBe(MAIN.length);
   const hrefs = await links.evaluateAll((as) => as.map((a) => new URL((a as HTMLAnchorElement).href).pathname));
   expect(hrefs).toEqual(MAIN.map((k) => path(k, 'en')));
+  // Menu phụ chỉ tính trong thanh trên (.top) hoặc ngăn kéo (#drawer), không tính liên kết cùng testid ở nơi khác (ux-spec §2b).
+  const subScope = page.locator('.top, #drawer');
   for (const k of NAV_MENU_ORDER.slice(7))
     expect(
-      await page.locator(`[data-testid="nav-menu"][href="${path(k, 'en')}"]`).count(),
-      `menu phụ (ngăn kéo, ux-spec §2b) có ${k}`,
+      await subScope.locator(`[data-testid="nav-menu"][href="${path(k, 'en')}"]`).count(),
+      `menu phụ (thanh trên/ngăn kéo, ux-spec §2b) có ${k}`,
     ).toBeGreaterThan(0);
+  // ≥1200px: ít nhất một liên kết menu phụ nhìn thấy (mở ngăn kéo trước nếu thiết kế đòi).
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const subLinks = subScope.locator(
+    NAV_MENU_ORDER.slice(7)
+      .map((k) => `[data-testid="nav-menu"][href="${path(k, 'en')}"]`)
+      .join(', '),
+  );
+  const menuBtn = page.locator('#menu-btn');
+  if ((await subLinks.locator('visible=true').count()) === 0 && (await menuBtn.isVisible())) await menuBtn.click();
+  expect(
+    await subLinks.locator('visible=true').count(),
+    'ở ≥1200px có ít nhất một liên kết menu phụ nhìn thấy',
+  ).toBeGreaterThan(0);
   for (const t of await links.allInnerTexts()) expect(t, 'menu EN chứa chữ Việt').not.toMatch(VN_DIACRITIC);
   await expect(tid(page, 'footer').locator(`a[href="${path('privacy', 'en')}"]`)).toHaveCount(1);
 });
