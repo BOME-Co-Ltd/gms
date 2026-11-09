@@ -2,6 +2,7 @@
 // Lệnh build + biến môi trường CHƯA có contract (test-plan.md XQ-21): BUILD_CMD/FIXTURE_ROOT đọc từ env; thiếu ⇒ ném lỗi ⇒ ĐỎ.
 // Tiến trình con chạy QUA sandbox_run.rb khi qa chạy tay; CI gọi trực tiếp.
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -38,10 +39,10 @@ function walk(dir: string, base = dir): string[] {
 
 // `overlay`: tệp chèn vào BẢN CHÉP của thư mục nền (đường dẫn tương đối gốc bản chép, vd 'public/qa-fixture.svg'), ngoài content/.
 // Bản chép nằm ở thư mục tạm; không ghi gì vào public/, src/, content/ thật (admin quyết 07/11, XQ-QA-M40-1).
-export function buildSite(
-  extra: Files = {},
-  env: Record<string, string> = {},
-  overlay: Record<string, string | Buffer> = {},
+function buildCore(
+  extra: Files,
+  env: Record<string, string>,
+  overlay: Record<string, string | Buffer>,
 ): BuildResult {
   if (!BUILD_CMD || !FIXTURE_ROOT)
     throw new Error('Chưa có lệnh build/thư mục fixture (SITE_BUILD_CMD, SITE_FIXTURE_ROOT) — XQ-21');
@@ -69,7 +70,7 @@ export function buildSite(
     encoding: 'utf8',
   });
   const outDir = join(work, 'out');
-  return {
+  return Object.freeze({
     ok: r.status === 0,
     code: r.status,
     log: `${r.stdout}\n${r.stderr}`,
@@ -90,7 +91,61 @@ export function buildSite(
       }
     },
     files: () => walk(outDir),
+  });
+}
+
+// Khoá memo = sha256 của (extra, env, overlay): khoá object xếp theo thứ tự chữ; mỗi giá trị gắn nhãn kiểu + độ dài
+// (chuỗi 's', Buffer 'b' băm theo byte, null 'n') nên Buffer ≠ chuỗi cùng nội dung, null ≠ chuỗi rỗng ≠ khoá vắng mặt.
+function memoKey(extra: Files, env: Record<string, string>, overlay: Record<string, string | Buffer | null>): string {
+  const h = createHash('sha256');
+  const part = (name: string, o: Record<string, string | Buffer | null>) => {
+    h.update(`[${name}:${Object.keys(o).length}]`);
+    for (const k of Object.keys(o).sort()) {
+      const v = o[k];
+      h.update(`k${Buffer.byteLength(k)}:${k}`);
+      if (v === null) h.update('n;');
+      else if (Buffer.isBuffer(v)) {
+        h.update(`b${v.length}:`);
+        h.update(v);
+        h.update(';');
+      } else {
+        h.update(`s${Buffer.byteLength(v)}:`);
+        h.update(v);
+        h.update(';');
+      }
+    }
   };
+  part('extra', extra);
+  part('env', env);
+  part('overlay', overlay);
+  return h.digest('hex');
+}
+
+const memo = new Map<string, BuildResult>();
+
+// KẾT QUẢ DÙNG CHUNG giữa các ca trong cùng tiến trình (build xác định theo đầu vào, kể cả build đỏ ok:false).
+// Spec KHÔNG được ghi/xoá trong outDir hay thư mục cha của nó, cũng không sửa đối tượng trả về (đã đóng băng).
+// Spec nào cần ghi vào thư mục build thì dùng buildSiteFresh (luôn build mới, không đọc/ghi memo).
+export function buildSite(
+  extra: Files = {},
+  env: Record<string, string> = {},
+  overlay: Record<string, string | Buffer> = {},
+): BuildResult {
+  const key = memoKey(extra, env, overlay);
+  const hit = memo.get(key);
+  if (hit) return hit;
+  const r = buildCore(extra, env, overlay);
+  memo.set(key, r);
+  return r;
+}
+
+// Luôn build mới trong thư mục tạm riêng; không đọc, không ghi memo. Dùng khi spec ghi vào thư mục build.
+export function buildSiteFresh(
+  extra: Files = {},
+  env: Record<string, string> = {},
+  overlay: Record<string, string | Buffer> = {},
+): BuildResult {
+  return buildCore(extra, env, overlay);
 }
 
 // Đọc HTML của một URL trong bản build (chưa rõ trailingSlash ⇒ thử cả hai dạng; XQ-21).
