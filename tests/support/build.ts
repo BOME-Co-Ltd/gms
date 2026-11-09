@@ -123,7 +123,7 @@ function memoKey(extra: Files, env: Record<string, string>, overlay: Record<stri
 
 const memo = new Map<string, BuildResult>();
 
-// KẾT QUẢ DÙNG CHUNG giữa các ca trong cùng tiến trình (build xác định theo đầu vào, kể cả build đỏ ok:false).
+// KẾT QUẢ DÙNG CHUNG giữa các ca trong cùng tiến trình (build xác định theo đầu vào; chỉ build xanh, build đỏ luôn build lại).
 // Spec KHÔNG được ghi/xoá trong outDir hay thư mục cha của nó, cũng không sửa đối tượng trả về (đã đóng băng).
 // Spec nào cần ghi vào thư mục build thì dùng buildSiteFresh (luôn build mới, không đọc/ghi memo).
 export function buildSite(
@@ -135,7 +135,8 @@ export function buildSite(
   const hit = memo.get(key);
   if (hit) return hit;
   const r = buildCore(extra, env, overlay);
-  memo.set(key, r);
+  // Build đỏ có thể do máy (vd ENOTEMPTY ở .next khi macOS chèn .DS_Store); nhớ lại sẽ lan lỗi sang ca khác.
+  if (r.ok) memo.set(key, r);
   return r;
 }
 
