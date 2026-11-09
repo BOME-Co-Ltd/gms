@@ -407,6 +407,38 @@ describe('ContactForm: gửi', () => {
   });
 });
 
+describe('ContactForm: gõ trước khi hydrate', () => {
+  it('chữ có sẵn trong HTML máy chủ được giữ sau hydrate và gửi được', async () => {
+    const { renderToString } = await import('react-dom/server');
+    const { hydrateRoot } = await import('react-dom/client');
+    const props = { ...baseProps, siteKey: 'KEY' };
+    host.innerHTML = renderToString(createElement(ContactForm, props));
+    q('contact-name').value = 'Nguyễn Văn A';
+    q('contact-email').value = 'a@congty.vn';
+    q('contact-message').value = 'Cần tư vấn';
+    q('contact-consent').checked = true;
+    const render = vi.fn((_el: HTMLElement, _o: Record<string, unknown>) => 'w1');
+    (window as { turnstile?: unknown }).turnstile = { render, reset: vi.fn() };
+    const f = mockFetch(200, { ok: true });
+    let hydrated!: Root;
+    await act(async () => {
+      hydrated = hydrateRoot(host, createElement(ContactForm, props));
+    });
+    root = hydrated;
+    expect(q('contact-name').value).toBe('Nguyễn Văn A');
+    expect(q('contact-message').value).toBe('Cần tư vấn');
+    expect(q('contact-consent').checked).toBe(true);
+    await submit();
+    await act(async () => window.__gmsTurnstileReady?.());
+    await act(async () => {
+      (render.mock.calls[0][1] as Record<string, (...a: unknown[]) => unknown>).callback('tok1');
+    });
+    expect(document.getElementById('err-fullName')?.hidden).toBe(true);
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(sentBody(f).fullName).toBe('Nguyễn Văn A');
+  });
+});
+
 describe('ContactForm: Turnstile', () => {
   it('nạp script khi chạm form, chỉ một lần', async () => {
     await mount({ siteKey: 'KEY' });

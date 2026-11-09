@@ -217,6 +217,24 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
     setFocusSeq((n) => n + 1);
   };
 
+  // Chữ khách gõ vào HTML máy chủ trước khi React hydrate nằm trong DOM nhưng state còn rỗng:
+  // đọc lại một lần lúc mount để lần render kế tiếp không xoá chữ và Gửi không báo thiếu.
+  useEffect(() => {
+    const str = (k: Exclude<FieldKey, 'consent'>) =>
+      (document.getElementById(IDS[k]) as HTMLInputElement | HTMLTextAreaElement | null)?.value ?? '';
+    const found: Values = {
+      fullName: str('fullName'),
+      email: str('email'),
+      phone: str('phone'),
+      company: str('company'),
+      message: str('message'),
+      consent: (document.getElementById(IDS.consent) as HTMLInputElement | null)?.checked ?? false,
+    };
+    if (ORDER.some((k) => found[k] !== EMPTY[k])) {
+      valuesRef.current = found;
+      setValuesState(found);
+    }
+  }, []);
   useEffect(() => {
     if (focusSeq > 0) boxRef.current?.focus();
   }, [focusSeq]);
