@@ -3,11 +3,16 @@
 // viên trượt đổi ngôn ngữ. Không gọi mạng. Đứng sau markup đã prerender nên trang vẫn đọc/bấm được khi chưa có JS.
 import { useEffect } from 'react';
 
+// Chờ tối đa bằng này trước khi chuyển trang để viên trượt kịp nhích (trước đây 320 ms). Giảm chuyển động ⇒ đi ngay.
+const LANG_NAV_DELAY_MS = 100;
+
 export function ShellBehavior(): null {
   useEffect(() => {
     const d = document;
     d.documentElement.classList.add('js');
     const cleanups: Array<() => void> = [];
+    // Script inline (menu-early.ts) đã bật menu trước hydrate: gỡ listener của nó để không có hai bộ (mở rồi đóng ngay).
+    const earlyOpen = (window as unknown as { __gmsMenu?: { off: () => boolean } }).__gmsMenu?.off() ?? false;
 
     const btn = d.getElementById('menu-btn');
     const dr = d.getElementById('drawer');
@@ -65,6 +70,7 @@ export function ShellBehavior(): null {
       const onPanel = (e: Event) => {
         if ((e.target as HTMLElement).closest('a')) close(false);
       };
+      if (earlyOpen) d.addEventListener('keydown', onKey); // đã mở trước hydrate: nối tiếp Esc/Tab
       btn.addEventListener('click', onOpen);
       closeB.addEventListener('click', onClose);
       bg.addEventListener('click', onClose);
@@ -178,10 +184,29 @@ export function ShellBehavior(): null {
         else
           setTimeout(() => {
             location.href = href;
-          }, 320);
+          }, LANG_NAV_DELAY_MS);
+      };
+      // Tải sẵn trang ngôn ngữ kia khi trỏ/chạm/focus vào nút (một lần mỗi đích).
+      const prefetched = new Set<string>();
+      const onHint = (e: Event) => {
+        const a = (e.target as HTMLElement).closest?.('a');
+        if (!a || a === cur() || prefetched.has(a.href)) return;
+        prefetched.add(a.href);
+        const l = d.createElement('link');
+        l.rel = 'prefetch';
+        l.href = a.href;
+        d.head.appendChild(l);
       };
       nav.addEventListener('click', onLang);
-      cleanups.push(() => nav.removeEventListener('click', onLang));
+      nav.addEventListener('pointerover', onHint);
+      nav.addEventListener('touchstart', onHint, { passive: true });
+      nav.addEventListener('focusin', onHint);
+      cleanups.push(() => {
+        nav.removeEventListener('click', onLang);
+        nav.removeEventListener('pointerover', onHint);
+        nav.removeEventListener('touchstart', onHint);
+        nav.removeEventListener('focusin', onHint);
+      });
     }
     return () => {
       for (const fn of cleanups) fn();

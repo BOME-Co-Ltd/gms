@@ -271,7 +271,21 @@ describe('ShellBehavior: chuyển ngôn ngữ', () => {
     expect(pill.style.transition).toBe('');
   });
 
-  it('bấm ngôn ngữ khác: chặn mặc định, trượt pill rồi điều hướng sau 320ms', async () => {
+  it('trỏ vào ngôn ngữ khác: chèn link prefetch một lần; ngôn ngữ hiện tại thì không', async () => {
+    await mount();
+    const [cur, en] = links();
+    await act(async () => {
+      cur.dispatchEvent(new MouseEvent('pointerover', { bubbles: true }));
+      en.dispatchEvent(new MouseEvent('pointerover', { bubbles: true }));
+      en.dispatchEvent(new MouseEvent('pointerover', { bubbles: true }));
+    });
+    const pf = document.head.querySelectorAll('link[rel="prefetch"]');
+    expect(pf.length).toBe(1);
+    expect((pf[0] as HTMLLinkElement).href).toBe(en.href);
+    pf[0].remove();
+  });
+
+  it('bấm ngôn ngữ khác: chặn mặc định, trượt pill rồi điều hướng sau 100ms', async () => {
     const loc = stubLocation();
     await mount();
     const [, en] = links();
@@ -284,7 +298,9 @@ describe('ShellBehavior: chuyển ngôn ngữ', () => {
     expect(ev.defaultPrevented).toBe(true);
     expect($('.lang-pill').style.getPropertyValue('--pill-x')).toBe('60px');
     expect(loc.href).toBe('http://localhost/vi/');
-    vi.advanceTimersByTime(320);
+    vi.advanceTimersByTime(99);
+    expect(loc.href).toBe('http://localhost/vi/');
+    vi.advanceTimersByTime(1);
     expect(loc.href).toBe(en.href);
   });
 

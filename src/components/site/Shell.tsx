@@ -7,6 +7,7 @@ import type { LoadedCompany, Locale } from '../../content/loader.ts';
 import { formatPublicPhone } from '../../shared/contact/schema.ts';
 import { BrandMark, GmsLogo, Icon, LogoSprite, ZaloMark } from './icons.tsx';
 import { FOOTER_KEYS, MAIN_KEYS, MENU_LABELS, type StaticPageKey, SUB_KEYS } from './menu.ts';
+import { MENU_EARLY_SCRIPT } from './menu-early.ts';
 import { ShellBehavior } from './ShellBehavior.tsx';
 
 export type ShellCompany = LoadedCompany & { social: Array<{ url: string }> };
@@ -274,6 +275,8 @@ export function SiteHeader({
           ) : null}
         </div>
       </div>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: chuỗi hằng cố định; bật nút menu trước hydrate, hash vào CSP khi build. */}
+      <script dangerouslySetInnerHTML={{ __html: MENU_EARLY_SCRIPT }} />
     </>
   );
 }
