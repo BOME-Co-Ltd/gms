@@ -1,11 +1,11 @@
 // runBuildSite gọi từ thư mục khác gốc app (test chạy song song) phải build trong bản chép riêng:
 // hai build đồng thời không dẫm lên nhau và không chạm .next/out của repo thật.
 import { spawn } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const FIXTURE = join(ROOT, 'tests', 'fixtures', 'site-root');
@@ -77,4 +77,51 @@ process.exit(r.ok ? 0 : 1);`;
     expect(readdirSync(a)).not.toContain('.gms-next-build');
     expect(readdirSync(b)).not.toContain('.gms-next-build');
   }, 600_000);
+
+  // Hai ca dưới gọi runBuildSite NGAY TRONG tiến trình vitest để coverage ghi nhận prepareIsolatedRoot.
+  it('trong tiến trình: build xanh, bản chép .gms-next-build được dọn, .next/out thật không bị chạm', async () => {
+    const { runBuildSite } = await import('../../../scripts/content/build-site');
+    const w = newWork();
+    works.push(w);
+    const realNext = join(ROOT, '.next');
+    const realOut = join(ROOT, 'out');
+    const before = [
+      existsSync(realNext) ? statSync(realNext).mtimeMs : null,
+      existsSync(realOut) ? statSync(realOut).mtimeMs : null,
+    ];
+    vi.stubEnv('NODE_ENV', 'production');
+    try {
+      const r = await runBuildSite({ cwd: w, contentDir: join(w, 'content'), siteUrl: 'https://gms.example.test' });
+      expect(r.ok).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    expect(existsSync(join(w, 'out', 'index.html'))).toBe(true);
+    expect(readdirSync(w)).not.toContain('.gms-next-build');
+    const after = [
+      existsSync(realNext) ? statSync(realNext).mtimeMs : null,
+      existsSync(realOut) ? statSync(realOut).mtimeMs : null,
+    ];
+    expect(after).toEqual(before);
+  }, 600_000);
+
+  it('trong tiến trình: next build lỗi ⇒ trả NEXT_BUILD_FAILED và vẫn dọn .gms-next-build', async () => {
+    const { runBuildSite } = await import('../../../scripts/content/build-site');
+    const w = newWork();
+    works.push(w);
+    // NODE_BIN trỏ tới lệnh luôn thoát mã 1 ⇒ nhánh build lỗi, không đụng repo thật.
+    vi.stubEnv('NODE_BIN', 'false');
+    vi.stubEnv('NODE_ENV', 'production');
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const r = await runBuildSite({ cwd: w, contentDir: join(w, 'content'), siteUrl: 'https://gms.example.test' });
+      expect(r.ok).toBe(false);
+      expect(r.errors[0]).toContain('[NEXT_BUILD_FAILED]');
+    } finally {
+      errSpy.mockRestore();
+      vi.unstubAllEnvs();
+    }
+    expect(readdirSync(w)).not.toContain('.gms-next-build');
+    expect(existsSync(join(w, 'out'))).toBe(false);
+  }, 300_000);
 });
