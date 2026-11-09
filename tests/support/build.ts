@@ -64,11 +64,16 @@ function buildCore(
     writeFileSync(to, data);
   }
   const [cmd, ...args] = BUILD_CMD.split(' ');
-  const r = spawnSync(cmd, args, {
-    cwd: work,
-    env: { ...process.env, SITE_URL: 'https://gms.example.test', ...env },
-    encoding: 'utf8',
-  });
+  const run = () =>
+    spawnSync(cmd, args, {
+      cwd: work,
+      env: { ...process.env, SITE_URL: 'https://gms.example.test', ...env },
+      encoding: 'utf8',
+    });
+  // Lỗi của máy, không phải của site: macOS chèn .DS_Store vào .next/server lúc Next xoá thư mục ⇒ ENOTEMPTY.
+  // Chỉ lỗi này được build lại, tối đa 2 lần; lỗi build khác giữ nguyên kết quả đỏ.
+  let r = run();
+  for (let i = 0; i < 2 && r.status !== 0 && /ENOTEMPTY[^\n]*\.next/.test(`${r.stdout}\n${r.stderr}`); i++) r = run();
   const outDir = join(work, 'out');
   return Object.freeze({
     ok: r.status === 0,
