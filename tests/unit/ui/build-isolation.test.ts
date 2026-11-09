@@ -1,7 +1,7 @@
 // runBuildSite gọi từ thư mục khác gốc app (test chạy song song) phải build trong bản chép riêng:
 // hai build đồng thời không dẫm lên nhau và không chạm .next/out của repo thật.
 import { spawn } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,10 +17,6 @@ const CONTENT: Record<string, string> = {
   'policy/1.0.en.md': '---\nversion: "1.0"\neffectiveFrom: "2026-01-01"\n---\nSample policy.\n',
   'denylist.yaml': 'names:\n  - "Xanh Asian"\n',
 };
-
-function mtimeOf(p: string): number | null {
-  return existsSync(p) ? statSync(p).mtimeMs : null;
-}
 
 function newWork(): string {
   const work = mkdtempSync(join(tmpdir(), 'gms-iso-'));
@@ -40,8 +36,7 @@ afterAll(() => {
 
 describe('runBuildSite từ thư mục khác gốc app', () => {
   it('hai build đồng thời đều xanh, mỗi bên có out riêng, .next/out thật không bị chạm', async () => {
-    const watched = ['.next', 'out'].map((n) => join(ROOT, n));
-    const before = watched.map(mtimeOf);
+    // Không so mtime .next/out thật ở đây: all.test.ts cố ý build thật và chạy song song với file này.
     const a = newWork();
     const b = newWork();
     works.push(a, b);
@@ -78,7 +73,6 @@ process.exit(r.ok ? 0 : 1);`;
     expect({ code: rb.code, tail: rb.code === 0 ? '' : rb.log.slice(-1500) }).toEqual({ code: 0, tail: '' });
     expect(existsSync(join(a, 'out', 'index.html'))).toBe(true);
     expect(existsSync(join(b, 'out', 'index.html'))).toBe(true);
-    expect(watched.map(mtimeOf)).toEqual(before);
     // bản chép tạm được dọn
     expect(readdirSync(a)).not.toContain('.gms-next-build');
     expect(readdirSync(b)).not.toContain('.gms-next-build');
