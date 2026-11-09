@@ -104,15 +104,14 @@ test('X-03 Có tuyên bố phải qua kiểm lúc build rồi văn bản xác nh
   expect(home).toMatch(/5\s*ha/);
 });
 
-// prd N14/N29/N30: v1 tạm ẩn dải số liệu (content/figures.yaml public:false). Trường hợp có số liệu được kiểm ở FIG-01 (ca build).
-test('X-03b Trang chủ ở bản đang chạy hiện "5 ha" với nhãn "Diện tích nhà máy" (@S33)', async ({ page }) => {
+// prd N14/N29/N30: v1 tạm ẩn dải số liệu (content/figures.yaml public:false). Trường hợp CÓ số liệu ("5 ha" / "Diện tích nhà máy")
+// được kiểm ở FIG-01 (ca build, nội dung giả có 1 Số liệu hợp lệ); ca này kiểm hành vi v1 ở bản đang chạy: dải ẩn, không lộ số.
+test('X-03b Trang chủ ở bản đang chạy (v1) không có dải số liệu, không hiện "5 ha" hay nhãn "Diện tích nhà máy" (@S33)', async ({
+  page,
+}) => {
   await open(page, 'home', 'vi');
-  // Skip có điều kiện: không có dải số liệu (figures-strip) ⇒ v1 ẩn theo N14, ca này chưa áp dụng; có dải thì chạy đủ.
-  test.skip(
-    (await tid(page, 'figures-strip').count()) === 0,
-    'N14/N29/N30: v1 ẩn dải số liệu (figures.yaml public:false); mở lại khi PM có văn bản công bố số liệu',
-  );
+  await expect(tid(page, 'figures-strip')).toHaveCount(0);
   const t = await bodyText(page);
-  expect(t).toContain('Diện tích nhà máy');
-  expect(t).toMatch(/5\s*ha/);
+  expect(t).not.toContain('Diện tích nhà máy');
+  expect(t).not.toMatch(/5\s*ha\b/);
 });
