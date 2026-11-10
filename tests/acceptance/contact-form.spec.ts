@@ -18,6 +18,22 @@ test.beforeEach(async () => {
   await control.reset();
   await control.recipient(TO);
   await control.policyVersion('1.0');
+  // Cô lập: thư của ca/spec trước còn bay (gửi nền) có thể rơi vào hộp thư SAU reset. Chờ lắng rồi reset lại tới khi
+  // hộp thư + cảnh báo trống liên tiếp; ghi cảnh báo để còn dấu vết nếu hiện tượng lặp (khi đó nghi code, không che).
+  let drained = 0;
+  for (let clean = 0; clean < 2 && drained < 5; ) {
+    await new Promise((r) => setTimeout(r, 400));
+    if ((await control.mailbox()).length === 0 && (await control.alerts()).length === 0) {
+      clean++;
+      continue;
+    }
+    drained++;
+    clean = 0;
+    console.warn(`[contact-form] hộp thư không trống sau reset (lần ${drained}); reset lại`);
+    await control.reset();
+    await control.recipient(TO);
+    await control.policyVersion('1.0');
+  }
 });
 test.afterEach(async () => {
   await control.setNow(null);

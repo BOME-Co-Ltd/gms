@@ -4238,6 +4238,9 @@ main :is(p, li, dd) > a:not(.btn) {
   margin-top: 2px;
   color: var(--g500);
 }
+.facts li > div {
+  max-width: 48ch; /* V11: dòng ≤70 ký tự ở khung 768 */
+}
 .facts strong {
   display: block;
   font-size: 14px;
