@@ -24,7 +24,14 @@ import type {
   RateCounter,
   WorkerConfig,
 } from '../ports.ts';
-import { buildAlertMail, buildNotifyMail, buildSummaryMail, encodeBodyB64, notifyBodyText } from './mail-builder.ts';
+import {
+  buildAlertMail,
+  buildConfirmMail,
+  buildNotifyMail,
+  buildSummaryMail,
+  encodeBodyB64,
+  notifyBodyText,
+} from './mail-builder.ts';
 
 export type ContactDeps = {
   queue: ContactQueue;
@@ -354,6 +361,18 @@ async function notifyRoom(deps: ContactDeps, nowSec: number): Promise<number> {
   return Math.max(0, Math.min(MAIL_CAPS.notifyPerHour - used.hour, MAIL_CAPS.notifyPer24h - used.day));
 }
 
+/**
+ * Thư xác nhận cho khách: gửi một lần, ngay sau khi thư báo chủ site đi thành công (bản ghi đã xoá ⇒ không gửi trùng
+ * khi thử lại). Lỗi không ảnh hưởng hàng đợi, chỉ log mã.
+ */
+async function sendCustomerConfirm(rec: OutboxRecord, deps: ContactDeps, nowSec: number): Promise<void> {
+  const cfg = deps.config();
+  if (cfg.confirmToCustomer === false || !rec.email || rec.email.trim() === '') return;
+  const res = await deps.mailer.send(buildConfirmMail(rec, cfg.mailFrom, cfg.contactRecipient, cfg.siteOrigin, nowSec));
+  if (res.ok) deps.logger.info('MAIL_CONFIRM_SENT', { id: rec.id });
+  else deps.logger.error('MAIL_CONFIRM_FAILED', { id: rec.id, code: res.code });
+}
+
 /** Gửi một thư báo đã giữ lease (attempts đã +1 lúc lease). Không log nội dung, chỉ id + mã. */
 async function sendLeasedSingle(rec: OutboxRecord, deps: ContactDeps, nowSec: number): Promise<void> {
   const cfg = deps.config();
@@ -362,6 +381,7 @@ async function sendLeasedSingle(rec: OutboxRecord, deps: ContactDeps, nowSec: nu
     await deps.queue.recordMailLog('notify', nowSec);
     await deps.queue.markSentAndDelete(rec.id, nowSec);
     deps.logger.info('MAIL_NOTIFY_SENT', { id: rec.id });
+    await sendCustomerConfirm(rec, deps, nowSec);
   } else {
     const backoffIdx = Math.min(Math.max(rec.attempts, 1) - 1, OUTBOX.retryBackoffMinutes.length - 1);
     const delaySec = OUTBOX.retryBackoffMinutes[backoffIdx] * 60;
