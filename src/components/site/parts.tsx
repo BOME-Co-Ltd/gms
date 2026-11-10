@@ -351,8 +351,8 @@ export function BoardFigure({
   );
   const ariaText = pick(
     locale,
-    'Sơ đồ: chất thải đầu vào chia hai nhánh. Sàng tuyển ra nilon, mùn hữu cơ, RDF. Công nghệ VPD ra syngas, than hoạt tính, dầu tái chế.',
-    'Diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil.',
+    'Sơ đồ: chất thải đầu vào qua sàng tuyển, ra nilon, mùn hữu cơ, RDF; một phần chuyển tiếp sang công nghệ VPD, ra syngas, than hoạt tính, dầu tái chế.',
+    'Diagram: incoming waste goes to sorting, which yields plastic film, organic humus and RDF; part of it continues to VPD technology, which yields syngas, activated carbon and recycled oil.',
   );
   const down = (href: string, text: string) =>
     anchors ? (
@@ -361,7 +361,9 @@ export function BoardFigure({
         <Icon name="arrow-down" className="ico" />
       </a>
     ) : null;
-  const railsA = ['M0 316C40 316 40 150 80 150', 'M0 316C40 316 40 482 80 482'];
+  const railsA = ['M0 316C40 316 40 150 80 150'];
+  // Sàng tuyển (đáy b1, y=182) trỏ xuống VPD (đỉnh b2, y=450).
+  const railV = 'M6 182V444';
   const railsB = [
     'M0 150C48 150 48 46 96 46',
     'M0 150H96',
@@ -392,6 +394,17 @@ export function BoardFigure({
             {railsA.map((d) => (
               <path key={`f${d}`} className="flow soft" d={d} />
             ))}
+          </svg>
+          <svg
+            className="dg-conn conn-v"
+            viewBox="0 0 12 632"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path className="rail" pathLength={1} d={railV} />
+            <path className="flow soft" d={railV} />
+            <path className="arrow" d="M1 442L6 450L11 442Z" />
           </svg>
           <div className="grp grp1">
             <div className="node n-br b1" data-branch="screening" data-stage="screening">

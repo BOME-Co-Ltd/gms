@@ -47,7 +47,11 @@ export function ContactPage({
 
   return (
     <>
-      <section className="hero hero-sub on-dark has-photo" aria-labelledby="h1">
+      <section
+        className="hero hero-sub on-dark has-photo"
+        aria-labelledby="h1"
+        style={{ '--after-hero': 'var(--mist)' } as React.CSSProperties}
+      >
         <PhotoBg photo="plant" locale={locale} priority />
         <Streaks variant="sub" />
         <div className="wrap">

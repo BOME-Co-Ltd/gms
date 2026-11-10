@@ -6,6 +6,18 @@ import { useEffect } from 'react';
 // Chờ tối đa bằng này trước khi chuyển trang để viên trượt kịp nhích (trước đây 320 ms). Giảm chuyển động ⇒ đi ngay.
 const LANG_NAV_DELAY_MS = 100;
 
+const samePath = (p: string) => p.replace(/(\/index)?(\.html)?\/?$/, '') || '/';
+
+/** Cú bấm thường (không phím bổ trợ) vào liên kết tới đúng trang đang xem, không có # và không phải nút ngôn ngữ. */
+function isSelfLinkClick(e: MouseEvent): boolean {
+  if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return false;
+  const a = (e.target as HTMLElement).closest?.('a');
+  if (!a || a.target || a.hasAttribute('download') || a.closest('nav.lang')) return false;
+  const u = new URL(a.href, location.href);
+  if (u.origin !== location.origin || u.hash || u.search !== location.search) return false;
+  return samePath(u.pathname) === samePath(location.pathname);
+}
+
 export function ShellBehavior(): null {
   useEffect(() => {
     const d = document;
@@ -176,8 +188,10 @@ export function ShellBehavior(): null {
       }
       const onLang = (e: MouseEvent) => {
         const a = (e.target as HTMLElement).closest('a');
-        if (!a || a === cur() || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+        if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
         e.preventDefault();
+        // Ngôn ngữ đang chọn: không tải lại trang.
+        if (a === cur()) return;
         const href = a.href;
         put(a);
         if (matchMedia('(prefers-reduced-motion: reduce)').matches) location.href = href;
@@ -208,6 +222,17 @@ export function ShellBehavior(): null {
         nav.removeEventListener('focusin', onHint);
       });
     }
+    // Bấm liên kết tới chính trang đang xem (menu, logo, chân trang; không có #) ⇒ không tải lại:
+    // đóng ngăn kéo nếu đang mở rồi cuộn về đầu trang. Phím bổ trợ/chuột giữa ⇒ để trình duyệt xử lý.
+    const onSelf = (e: MouseEvent) => {
+      if (!isSelfLinkClick(e)) return;
+      e.preventDefault();
+      if (dr && !dr.hidden) closeB?.click();
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+    };
+    d.addEventListener('click', onSelf);
+    cleanups.push(() => d.removeEventListener('click', onSelf));
     return () => {
       for (const fn of cleanups) fn();
     };

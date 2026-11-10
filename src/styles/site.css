@@ -2155,6 +2155,14 @@ main:focus {
   .conn-b {
     grid-column: 4;
   }
+  .conn-v {
+    grid-column: 3;
+    justify-self: center;
+    width: 12px;
+  }
+  .conn-v .arrow {
+    fill: rgba(255, 255, 255, 0.7);
+  }
   .b1 {
     grid-column: 3;
     grid-row: 1;
@@ -2861,38 +2869,7 @@ main:focus {
 .js.no-intro .hero-sub .fade {
   animation: none;
 }
-/* Chuyển trang mượt (cross-document view transition): header/footer đứng yên, phần còn lại crossfade ngắn. */
-@media (prefers-reduced-motion: no-preference) {
-  @view-transition {
-    navigation: auto;
-  }
-  .hdr {
-    view-transition-name: site-header;
-  }
-  .ft {
-    view-transition-name: site-footer;
-  }
-  ::view-transition-group(root) {
-    animation-duration: 150ms;
-  }
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation-duration: 150ms;
-    animation-timing-function: ease-out;
-  }
-  ::view-transition-group(site-header),
-  ::view-transition-group(site-footer) {
-    animation-duration: 0s;
-  }
-  ::view-transition-old(site-header),
-  ::view-transition-old(site-footer) {
-    display: none;
-  }
-  ::view-transition-new(site-header),
-  ::view-transition-new(site-footer) {
-    animation: none;
-  }
-}
+/* Không dùng cross-document view transition: Chrome giữ ảnh chụp trang cũ ~1s trước khi vẽ trang mới (đo 10/11/2026), khiến bấm menu bị khựng. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -4140,7 +4117,14 @@ main :is(p, li, dd) > a:not(.btn) {
   }
 }
 .sec-journey.has-photo {
-  --photo-shade: linear-gradient(180deg, rgb(20 42 96 / 0.86) 0%, rgb(36 73 153 / 0.78) 100%);
+  /* Mép trên đặc (khớp mép cắt chéo của hero phía trên), rồi mờ dần về lớp phủ thường. */
+  --photo-shade: linear-gradient(
+    180deg,
+    rgb(20 42 96) 0,
+    rgb(20 42 96) 8px,
+    rgb(20 42 96 / 0.86) 96px,
+    rgb(36 73 153 / 0.78) 100%
+  );
 }
 .sec-values.has-photo,
 .sec-stats.has-photo {
@@ -4358,4 +4342,13 @@ main :is(p, li, dd) > a:not(.btn) {
 /* Khối CTA: nút và số điện thoại nằm bên phải ⇒ lớp phủ đều cả hai phía. */
 .sec-cta.has-photo {
   --photo-shade: linear-gradient(100deg, rgb(9 58 37 / 0.9) 0%, rgb(20 60 110 / 0.82) 100%);
+}
+/* Section kế tiếp có ảnh nền ⇒ không có màu đặc nào khớp mép cắt chéo: bỏ ::after, tránh dải màu lộ trên ảnh (#lo-trinh). */
+.hero:has(+ .has-photo)::after {
+  display: none;
+}
+/* Riêng #lo-trinh: giữ mép cắt chéo, tô đúng màu mép trên của lớp phủ. */
+.hero:has(+ .sec-journey.has-photo)::after {
+  display: block;
+  background: rgb(20 42 96);
 }

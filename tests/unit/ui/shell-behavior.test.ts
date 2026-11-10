@@ -315,12 +315,24 @@ describe('ShellBehavior: chuyển ngôn ngữ', () => {
     expect(loc.href).toBe(en.href);
   });
 
-  it('bấm ngôn ngữ hiện tại, phím bổ trợ hoặc chuột giữa: để trình duyệt xử lý', async () => {
+  it('bấm ngôn ngữ đang chọn: chặn mặc định, không điều hướng (không tải lại)', async () => {
     const loc = stubLocation();
     await mount();
-    const [cur, en] = links();
+    const [cur] = links();
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+    await act(async () => {
+      cur.dispatchEvent(ev);
+    });
+    expect(ev.defaultPrevented).toBe(true);
+    vi.advanceTimersByTime(1000);
+    expect(loc.href).toBe('http://localhost/vi/');
+  });
+
+  it('phím bổ trợ hoặc chuột giữa: để trình duyệt xử lý', async () => {
+    const loc = stubLocation();
+    await mount();
+    const [, en] = links();
     const evs = [
-      [cur, {}],
       [en, { ctrlKey: true }],
       [en, { metaKey: true }],
       [en, { shiftKey: true }],
@@ -347,5 +359,37 @@ describe('ShellBehavior: chuyển ngôn ngữ', () => {
     links()[0].removeAttribute('aria-current');
     await mount();
     expect($('nav.lang').classList.contains('pill-on')).toBe(false);
+  });
+});
+
+describe('ShellBehavior: bấm liên kết trang đang xem', () => {
+  function addLink(href: string) {
+    const a = document.createElement('a');
+    a.href = href;
+    a.textContent = 'x';
+    document.body.appendChild(a);
+    return a;
+  }
+  const click = (a: HTMLElement, init: MouseEventInit = {}) => {
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true, ...init });
+    a.dispatchEvent(ev);
+    return ev;
+  };
+
+  it('cùng đường dẫn, không #: chặn tải lại và cuộn về đầu', async () => {
+    const scroll = vi.fn();
+    vi.stubGlobal('scrollTo', scroll);
+    await mount();
+    const ev = click(addLink(location.pathname));
+    expect(ev.defaultPrevented).toBe(true);
+    expect(scroll).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
+  });
+
+  it('trang khác, có #, hoặc có phím bổ trợ: để trình duyệt xử lý', async () => {
+    vi.stubGlobal('scrollTo', vi.fn());
+    await mount();
+    expect(click(addLink('/trang-khac')).defaultPrevented).toBe(false);
+    expect(click(addLink(`${location.pathname}#muc`)).defaultPrevented).toBe(false);
+    expect(click(addLink(location.pathname), { metaKey: true }).defaultPrevented).toBe(false);
   });
 });
