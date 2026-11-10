@@ -4214,7 +4214,7 @@ main :is(p, li, dd) > a:not(.btn) {
 .split .prose p {
   margin: 0 0 16px;
   font-size: 17px;
-  line-height: 1.7;
+  line-height: 1.65; /* V11 */
 }
 .split .prose p:last-child {
   margin-bottom: 0;
@@ -4279,8 +4279,8 @@ main :is(p, li, dd) > a:not(.btn) {
   align-content: start;
 }
 .icard-body h3 {
-  font-size: 20px;
-  line-height: 1.3;
+  font-size: var(--h3); /* V09: H3 20px di động, 24px desktop */
+  line-height: 1.25;
 }
 .icard-body p {
   margin: 0;

@@ -1,7 +1,11 @@
 // seo-technical.feature → SEO-01..SEO-14 (S32). Tên miền chính thức = CANONICAL_ORIGIN [giả định — chờ khách] P12.
 // x-default → bản vi của chính trang [giả định — chờ khách] P2, P20. Hết hạn tuyển dụng P33. Staging/production: SITE_ENV khi build (XQ-21).
 // v0.3: không còn xuất bản/gỡ qua CMS — mọi thay đổi nội dung = một lần build mới; ca đọc sitemap/head dựng nội dung giả rồi đọc đầu ra build.
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
+import { retiredRedirectErrors } from '../../src/components/site/build/retired.ts';
 import { allHtml, type BuildResult, buildSite, count, type Files, htmlOf, newsFiles } from '../support/build';
 import { BASE_URL, CANONICAL_ORIGIN } from '../support/env';
 import { companyFile, yamlItem } from '../support/fixtures';
@@ -401,16 +405,24 @@ test('SEO-18 Bản build: đủ 4 dòng 301 nguyên văn, không còn chỗ nào
   }
 });
 
-// Mỗi mã lỗi build của RETIRED_PAGE_ERROR = một ca (routes.ts). Cách dựng ca ở dưới là GIẢ ĐỊNH về điểm cắm của bản build
-// (overlay public/…, slug Tin) — XQ-QA-CO01-2; đỏ vì sai điểm cắm thì báo lại, không sửa kỳ vọng.
+// Mỗi mã lỗi build của RETIRED_PAGE_ERROR = một ca (routes.ts). Overlay public/… KHÔNG vào build (bản chép không được chép
+// public/) nên SEO-19 gọi thẳng retiredRedirectErrors(outDir) trên out/ tạm (XQ-QA-CO01-2b); ca đầy đủ ở tests/unit/retired-output.test.ts.
 test('SEO-19 Thiếu một dòng 301 trong _redirects thì build đỏ RETIRED_REDIRECT_MISSING (@S32 @risk:legacy-url @kiem-luc-build)', () => {
-  const r = buildSite(NEWS, {}, { 'public/_redirects': '# không có dòng nào của Giải pháp\n' });
-  expect(r.ok, 'build phải đỏ').toBe(false);
-  expect(r.log).toContain(RETIRED_ERR.redirectMissing);
+  const d = mkdtempSync(join(tmpdir(), 'qa-seo19-'));
+  try {
+    writeFileSync(join(d, '_redirects'), '# không có dòng nào của Giải pháp\n');
+    expect(retiredRedirectErrors(d).join('\n')).toContain(RETIRED_ERR.redirectMissing);
+  } finally {
+    rmSync(d, { recursive: true, force: true });
+  }
 });
 
 test('SEO-20 Có tệp phục vụ được đường cũ trong out/ thì build đỏ RETIRED_PATH_IN_OUTPUT (@S32 @risk:legacy-url @kiem-luc-build)', () => {
-  const r = buildSite(NEWS, {}, { 'public/giai-phap.html': '<!doctype html><title>cũ</title>' });
+  // Điểm cắm hợp lệ duy nhất qua nội dung: build KHÔNG chép public/ của bản chép (admin 07/11, M40-0x) ⇒ không thả được
+  // tệp vào out/. Luật (contracts/routes.ts :116) cũng khớp NỘI DUNG tệp dưới out/ ⇒ thân tin nhắc "/giai-phap" dạng chữ thường
+  // (không phải liên kết markdown, nên content-check không báo mã khác) vào HTML tin ⇒ RETIRED_PATH_IN_OUTPUT.
+  // [chưa kiểm] thân tin có đi vào out/ nguyên chữ hay không; không thì ca đỏ và cần điểm cắm khác (XQ-QA-CO01-2).
+  const r = buildSite(newsFiles('co01-cu', { body: 'Xem thêm tại /giai-phap để biết chi tiết.' }));
   expect(r.ok, 'build phải đỏ').toBe(false);
   expect(r.log).toContain(RETIRED_ERR.pathInOutput);
 });
