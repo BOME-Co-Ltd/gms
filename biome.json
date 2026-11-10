@@ -5,6 +5,7 @@
       "!**/node_modules",
       "!**/.next",
       "!**/out",
+      "!**/out-e2e",
       "!**/.vercel",
       "!**/coverage",
       "!**/next-env.d.ts",

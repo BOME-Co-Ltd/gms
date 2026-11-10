@@ -83,7 +83,7 @@
     "sub": "The GMS plant is built around two process groups: sorting to separate material streams, and VPD technology to convert suitable feedstock into new products.",
     "overviewEyebrow": "Overview",
     "overviewTitle": "One stream in, six resource streams out",
-    "diagramAria": "Overview diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil. The outputs return to a cycle of use.",
+    "diagramAria": "Overview diagram: incoming waste goes to sorting, which yields plastic film, organic humus and RDF; part of it continues to VPD technology, which yields syngas, activated carbon and recycled oil. The outputs return to a cycle of use.",
     "drawingBadge": "Engineering drawing",
     "drawingTitle": "The GMS sorting line",
     "drawingAlt": "Photo of the GMS municipal waste sorting line",

@@ -3,8 +3,10 @@ import {
   CfClientIp,
   CloudflareSendEmailMailer,
   ConsoleAppLogger,
+  ConsoleMailer,
   D1ContactQueue,
   D1RateCounter,
+  isLocalMailSink,
   SystemClock,
   TurnstileHumanCheck,
   WebCryptoIpKey,
@@ -17,6 +19,8 @@ export interface Env {
   DB: D1Database;
   ASSETS?: Fetcher;
   MAIL?: { send(msg: unknown): Promise<void> };
+  /** 'console' = in thư ra console, chỉ khi SITE_ORIGIN là localhost. */
+  MAIL_SINK?: string;
   FORM_ENABLED?: string;
   POLICY_VERSION?: string;
   SITE_ORIGIN?: string;
@@ -33,7 +37,9 @@ export interface Env {
 function makeProdDeps(env: Env): ContactDeps {
   const queue = new D1ContactQueue(env.DB);
   const rate = new D1RateCounter(env.DB);
-  const mailer = new CloudflareSendEmailMailer(env.MAIL);
+  const mailer = isLocalMailSink(env.MAIL_SINK, env.SITE_ORIGIN)
+    ? new ConsoleMailer()
+    : new CloudflareSendEmailMailer(env.MAIL);
   const siteHost = (() => {
     try {
       return new URL(env.SITE_ORIGIN ?? '').hostname;

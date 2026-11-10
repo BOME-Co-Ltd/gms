@@ -125,6 +125,28 @@ export class CloudflareSendEmailMailer implements Mailer {
   }
 }
 
+/** Chỉ cho chạy local: in thư ra console thay vì gửi. Không bao giờ chọn được ở staging/production (xem isLocalMailSink). */
+export class ConsoleMailer implements Mailer {
+  async send(msg: MailSendInput): Promise<MailSendResult> {
+    console.log(
+      JSON.stringify({ level: 'info', code: 'MAIL_SINK_CONSOLE', kind: msg.kind, to: msg.to, subject: msg.subject }),
+    );
+    console.log(msg.rawMime);
+    return { ok: true };
+  }
+}
+
+/** MAIL_SINK=console chỉ có hiệu lực khi SITE_ORIGIN là localhost / 127.0.0.1; nơi khác bị bỏ qua. */
+export function isLocalMailSink(sink: string | undefined, siteOrigin: string | undefined): boolean {
+  if (sink !== 'console') return false;
+  try {
+    const host = new URL(siteOrigin ?? '').hostname;
+    return host === 'localhost' || host === '127.0.0.1';
+  } catch {
+    return false;
+  }
+}
+
 type D1Row = Record<string, unknown>;
 
 /** Hàng chỉ có cột CRON_SELECT_COLUMNS: các trường không đọc để rỗng, không bao giờ log. */

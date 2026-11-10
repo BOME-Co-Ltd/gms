@@ -1964,6 +1964,16 @@ main:focus {
   height: 2px;
   background: rgba(255, 255, 255, 0.35);
 }
+/* Mobile: mũi tên vào nhánh — trục trái đi Đầu vào → Sàng tuyển rồi tiếp xuống VPD. */
+.n-br::after {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 27px;
+  border: 5px solid transparent;
+  border-right: 0;
+  border-left-color: rgba(255, 255, 255, 0.7);
+}
 .o-list {
   list-style: none;
   position: relative;
@@ -2131,6 +2141,7 @@ main:focus {
   }
   .grp::before,
   .n-br::before,
+  .n-br::after,
   .o::before,
   .o::after,
   .o-list::before {
