@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import React from 'react';
@@ -73,6 +73,7 @@ import HomePage from '../../src/app/page.tsx';
 import ProductsPage from '../../src/app/san-pham-dau-ra/page.tsx';
 import NewsPage from '../../src/app/tin-tuc/page.tsx';
 import CareersPage from '../../src/app/tuyen-dung/page.tsx';
+import { copyPhotoAssets } from '../../src/components/site/build/photo-assets.test-support.ts';
 import { loadSiteContent } from '../../src/content/loader.ts';
 import {
   buildBaseInternalPaths,
@@ -562,7 +563,12 @@ describe('Content Rules & Loader', () => {
     expect(jsonLd).toContain('0900123456');
 
     const tmpOut = mkdtempSync(join(tmpdir(), 'gms-unit-out-'));
+    // Build trong bản chép riêng (như build-isolation.test.ts): không ghi .next của repo thật (sandbox test không cho ghi).
+    const work = mkdtempSync(join(tmpdir(), 'gms-unit-work-'));
+    cpSync(join(process.cwd(), 'tests', 'fixtures', 'site-root'), work, { recursive: true });
+    copyPhotoAssets(process.cwd(), work);
     const buildRes = await runBuildSite({
+      cwd: work,
       contentDir: join(process.cwd(), 'content'),
       outDir: tmpOut,
       siteUrl: 'https://gms.example.test',
@@ -570,6 +576,7 @@ describe('Content Rules & Loader', () => {
     });
     expect(buildRes.ok).toBe(true);
     rmSync(tmpOut, { recursive: true, force: true });
+    rmSync(work, { recursive: true, force: true });
   }, 300_000); // runBuildSite chạy next build thật
 
   it('verifies deploy approval logic in deploy-prod.ts', () => {
