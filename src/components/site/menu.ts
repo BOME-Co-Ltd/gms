@@ -4,7 +4,6 @@ import type { Locale } from '../../content/loader.ts';
 export const MENU_ORDER = [
   'home',
   'about',
-  'solutions',
   'technology',
   'products',
   'news',
@@ -21,10 +20,9 @@ export const MENU_LABELS: Record<Locale, Record<StaticPageKey, string>> = {
   vi: {
     home: 'Trang chủ',
     about: 'Giới thiệu',
-    solutions: 'Giải pháp',
     technology: 'Công nghệ',
     products: 'Ứng dụng',
-    news: 'Tin tức / Hành trình',
+    news: 'Tin tức',
     projects: 'Dự án',
     careers: 'Tuyển dụng',
     faq: 'FAQ',
@@ -34,16 +32,22 @@ export const MENU_LABELS: Record<Locale, Record<StaticPageKey, string>> = {
   en: {
     home: 'Home',
     about: 'About',
-    solutions: 'Solutions',
     technology: 'Technology',
     products: 'Applications',
-    news: 'News / Journey',
+    news: 'News',
     projects: 'Projects',
     careers: 'Careers',
     faq: 'FAQ',
     contact: 'Contact',
     privacy: 'Privacy policy',
   },
+};
+
+// Tiêu đề trang (phần tên trong <title>) ≠ nhãn menu ở ba trang (ux-spec C3b/C3c, V43). Nhãn menu chỉ dùng ở menu,
+// thanh trên, ngăn kéo, chân trang; <title> dùng bảng này.
+export const PAGE_TITLES: Record<Locale, Record<StaticPageKey, string>> = {
+  vi: { ...MENU_LABELS.vi, products: 'Sản phẩm đầu ra', projects: 'Dự án / Thư viện', news: 'Tin tức / Hành trình' },
+  en: { ...MENU_LABELS.en, products: 'Output products', projects: 'Projects / Gallery', news: 'News / Journey' },
 };
 
 // Menu chính 5 mục (08/11/2026: bỏ Giải pháp — nội dung gộp vào Công nghệ; Dự án đứng trước Tin tức).
@@ -68,7 +72,6 @@ export const PAGE_DESCRIPTIONS: Record<Locale, Record<StaticPageKey, string>> = 
   vi: {
     home: 'GMS Hưng Yên: Giải pháp thông minh, kiến tạo giá trị xanh thông qua công nghệ sàng tuyển và nhiệt phân VPD.',
     about: 'Giới thiệu về GMS Hưng Yên, tầm nhìn, sứ mệnh và hành trình chuyển đổi nhà máy xử lý chất thải.',
-    solutions: 'Các giải pháp tiếp nhận, sàng tuyển và xử lý chất thải tạo tài nguyên đầu ra bền vững.',
     technology: 'Công nghệ và giải pháp: quy trình sàng tuyển, nhiệt phân chân không VPD và hợp tác tại GMS Hưng Yên.',
     products: 'Ứng dụng của sáu dòng sản phẩm đầu ra định hướng từ nhánh sàng tuyển và công nghệ VPD.',
     news: 'Tin tức hoạt động và hành trình chuyển đổi 5 bước của GMS Hưng Yên.',
@@ -81,7 +84,6 @@ export const PAGE_DESCRIPTIONS: Record<Locale, Record<StaticPageKey, string>> = 
   en: {
     home: 'GMS Hung Yen: Smart solutions creating green value through mechanical sorting and VPD pyrolysis technology.',
     about: 'About GMS Hung Yen, our mission, core values and plant transformation journey.',
-    solutions: 'Municipal waste sorting, VPD vacuum pyrolysis resource recovery and industrial partnership solutions.',
     technology: 'Technology and solutions: mechanical sorting, VPD vacuum pyrolysis and partnership at GMS Hung Yen.',
     products: 'Applications of the six planned output lines from the sorting and VPD pyrolysis branches.',
     news: 'Latest news and the 5-step plant transformation journey at GMS Hung Yen.',

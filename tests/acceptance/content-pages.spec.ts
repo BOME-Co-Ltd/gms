@@ -4,7 +4,7 @@
 import { expect, test } from '@playwright/test';
 import { allHtml, buildSite, count, type Files, htmlOf, newsFiles } from '../support/build';
 import { pageFile, yamlItem } from '../support/fixtures';
-import { detailPath, type Locale, path } from '../support/routes';
+import { detailPath, type Locale, path, RETIRED_ERR, SOLUTIONS_ANCHOR } from '../support/routes';
 import { bodyText, open, tid, VN_DIACRITIC } from '../support/ui';
 
 const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -67,25 +67,54 @@ test('PAGE-03 Giới thiệu ẩn khối chứng nhận khi không có chứng n
   await expect(tid(page, 'about-certificates')).toHaveCount(0);
 });
 
-test('PAGE-04 Mỗi việc ở trang Giải pháp có lời mời liên hệ (@S9 @cho-khach:P31)', async ({ page }) => {
-  await open(page, 'solutions', 'en');
-  const jobs = tid(page, 'solution-item');
-  await expect(jobs).toHaveCount(3);
-  for (let i = 0; i < 3; i++) await expect(jobs.nth(i).locator(`a[href="${path('contact', 'en')}"]`)).toHaveCount(1);
-});
+// CO-01 (10/11/2026): mục Giải pháp là một khối của trang Công nghệ, neo "giai-phap" (vi) / "solutions" (en).
+for (const locale of ['vi', 'en'] as Locale[]) {
+  test(`PAGE-04 ${locale}: khối Giải pháp trên Công nghệ có đúng 3 việc, mỗi việc có lời mời liên hệ, sơ đồ vẫn còn (@S9 @S10 @cho-khach:P31, V43)`, async ({
+    page,
+  }) => {
+    await open(page, 'technology', locale);
+    const block = page.locator(`#${SOLUTIONS_ANCHOR[locale]}`);
+    await expect(block, 'đúng một khối mang id neo').toHaveCount(1);
+    const jobs = block.locator('[data-testid="solution-item"]');
+    await expect(jobs).toHaveCount(3);
+    for (let i = 0; i < 3; i++)
+      await expect(jobs.nth(i).locator(`a[href="${path('contact', locale)}"]`)).toHaveCount(1);
+    if (locale === 'en') expect(await block.innerText()).not.toMatch(VN_DIACRITIC);
+    await expect(tid(page, 'tech-diagram').locator('[data-branch="screening"]')).toHaveCount(1);
+    await expect(tid(page, 'tech-diagram').locator('[data-branch="vpd"]')).toHaveCount(1);
+    // Không còn phần tử solution-item nào ngoài khối neo (không có trang Giải pháp riêng).
+    await expect(tid(page, 'solution-item')).toHaveCount(3);
+  });
+}
 
-test('PAGE-05 Việc thứ 4 thiếu bản EN thì build đỏ (@S9 @kiem-luc-build @risk:untranslated)', async ({ page }) => {
+test('PAGE-05 Việc thứ 4 thiếu bản EN thì build đỏ, nêu Công nghệ / Giải pháp (@S9 @kiem-luc-build @risk:untranslated)', async ({
+  page,
+}) => {
   const r = buildSite({
     'solutions-items/viec-4.vi.md':
       '---\nkey: "viec-4"\ntitle: "Việc thứ tư"\npublished: true\nslug: "viec-4"\n---\nNội dung.\n',
   });
   expect(r.ok).toBe(false);
   expect(r.log).toMatch(/Giải pháp|solutions/i);
+  expect(r.log, 'thông báo nêu trang Công nghệ').toMatch(/Công nghệ|technology/i);
   expect(r.log).toMatch(/thiếu bản "?en"?/);
   for (const l of ['vi', 'en'] as Locale[]) {
-    await open(page, 'solutions', l);
-    await expect(tid(page, 'solution-item')).toHaveCount(3);
+    await open(page, 'technology', l);
+    await expect(page.locator(`#${SOLUTIONS_ANCHOR[l]} [data-testid="solution-item"]`)).toHaveCount(3);
   } // bản đang chạy giữ nguyên
+});
+
+// V43/XQ-5 + routes.ts RETIRED_PAGE_ERROR.anchorMissing: khối Giải pháp rỗng ⇒ build ĐỎ, không có out/ để kiểm DOM.
+// [giả định — XQ-QA-CO01-1] cách làm rỗng: ba việc mẫu (khoá viec-1..viec-3, theo PAGE-05 dùng viec-4 là việc thứ 4) đặt published:false.
+test('PAGE-05b Khối Giải pháp rỗng thì build đỏ RETIRED_ANCHOR_MISSING (@S9 @kiem-luc-build @risk:legacy-url, V43)', () => {
+  const files: Files = {};
+  for (const n of [1, 2, 3])
+    for (const l of ['vi', 'en'])
+      files[`solutions-items/viec-${n}.${l}.md`] =
+        `---\nkey: "viec-${n}"\ntitle: "Việc ${n}"\npublished: false\nslug: "viec-${n}"\n---\nNội dung.\n`;
+  const r = buildSite(files);
+  expect(r.ok, 'build phải đỏ khi không còn việc nào được đăng').toBe(false);
+  expect(r.log).toContain(RETIRED_ERR.anchorMissing);
 });
 
 test('PAGE-06 Sơ đồ Công nghệ là chữ thật, song ngữ (@S10 @cho-khach:N4 @cho-khach:N21 @cho-khach:N5)', async ({

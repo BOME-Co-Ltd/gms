@@ -166,7 +166,7 @@ export function ProjectsListPage({
         photo="sortingLine"
         locale={locale}
         eyebrow={L('Dự án', 'Projects')}
-        title={L('Dự án', 'Projects')}
+        title={L('Dự án / Thư viện', 'Projects / Gallery')}
         lead={L(
           'Các hạng mục và khu vực vận hành tại nhà máy GMS Hưng Yên, kèm hình ảnh minh hoạ.',
           'Areas and operating units at the GMS Hung Yen plant, with illustrations.',

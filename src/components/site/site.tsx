@@ -7,7 +7,7 @@ import { PAGE_SIZE, ROUTES } from '../../../contracts/routes.ts';
 import { type LoadedSiteContent, type Locale, loadSiteContent } from '../../content/loader.ts';
 import { buildOrgJsonLd, currentFormStatus, loadSocial, type SiteConfig, siteConfigFromEnv } from './build/config.ts';
 import { Icon } from './icons.tsx';
-import { formatDateLocale, MENU_LABELS, MENU_ORDER, PAGE_DESCRIPTIONS, type StaticPageKey } from './menu.ts';
+import { formatDateLocale, MENU_ORDER, PAGE_DESCRIPTIONS, PAGE_TITLES, type StaticPageKey } from './menu.ts';
 import { AboutPage } from './pages/About.tsx';
 import { ContactPage } from './pages/Contact.tsx';
 import { DetailPage } from './pages/Detail.tsx';
@@ -59,13 +59,11 @@ function build(): Site {
   for (const locale of ['vi', 'en'] as Locale[]) {
     const isVi = locale === 'vi';
     for (const key of MENU_ORDER) {
-      // Giải pháp đã gộp vào Công nghệ (08/11/2026): không sinh trang; /giai-phap, /en/solutions → 301 (public/_redirects).
-      if (key === 'solutions') continue;
       const isEmptyList =
         (key === 'projects' && loaded.projects[locale].length === 0) ||
         (key === 'careers' && loaded.jobs[locale].length === 0) ||
         (key === 'faq' && loaded.faq[locale].length === 0);
-      const renderers: Record<Exclude<StaticPageKey, 'solutions'>, () => React.ReactElement> = {
+      const renderers: Record<StaticPageKey, () => React.ReactElement> = {
         home: () => <HomePage content={loaded} locale={locale} />,
         about: () => <AboutPage content={loaded} locale={locale} />,
         technology: () => <TechnologyPage content={loaded} locale={locale} />,
@@ -90,7 +88,7 @@ function build(): Site {
         locale,
         viPath: ROUTES[key].vi,
         enPath: ROUTES[key].en,
-        title: `${MENU_LABELS[locale][key]} — ${brand(locale)}`,
+        title: `${PAGE_TITLES[locale][key]} — ${brand(locale)}`,
         description: PAGE_DESCRIPTIONS[locale][key],
         noindex: isStaging || isEmptyList,
         ogImageRel: 'og/default.png',
@@ -108,7 +106,7 @@ function build(): Site {
         locale,
         viPath,
         enPath,
-        title: `${MENU_LABELS[locale].news} (${p}) — ${brand(locale)}`,
+        title: `${PAGE_TITLES[locale].news} (${p}) — ${brand(locale)}`,
         description: PAGE_DESCRIPTIONS[locale].news,
         noindex: isStaging,
         ogImageRel: 'og/default.png',

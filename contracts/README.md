@@ -1,5 +1,29 @@
 # contracts/ — gms-hungyen-web
 
+## Lượt 20 (10/11/2026): CO-01 — gộp trang Giải pháp vào Công nghệ, 301 một bước giữ query trước `#`
+
+Task `architect-20261110112906-f118`. Spec v0.8.1 (`seo-technical.feature` :43–103), `seo-requirements.md` §2 "301 trang Giải pháp đã gộp", K17, 8d. Cơ chế + bằng chứng: `design.md` §6e "301 trang đã gỡ".
+
+| File | Đổi | Ai dùng |
+|---|---|---|
+| `routes.ts:13–16` | `PageKey` bỏ `"solutions"` (14 khoá, 10 trang cố định) | frontend_web · backend · qa |
+| `routes.ts:24–40` | `ROUTES` bỏ dòng `solutions`; comment ở `technology` | như trên |
+| `routes.ts:70–97` | `RetiredRedirect` (zod), `RETIRED_PAGE_REDIRECTS` (4 luật), `retiredRedirectLine(r)` = dòng nguyên văn trong `_redirects` | devops (`public/_redirects`) · backend (kiểm) · qa |
+| `routes.ts:99–104` | `RETIRED_PATH_PATTERN`, `RETIRED_RESERVED_SEGMENTS` (`vi: ["giai-phap"]`) | backend |
+| `routes.ts:106–122` | `RETIRED_PAGE_ERROR`: `RETIRED_REDIRECT_MISSING`, `RETIRED_ANCHOR_MISSING`, `RETIRED_PATH_IN_OUTPUT`, `RETIRED_SLUG_RESERVED` (đỏ mọi `SITE_ENV`) | backend · qa (`@kiem-luc-build`) |
+| `content-model.md:19` | "11 khoá" ⇒ 10 trang, bỏ `solutions` | backend |
+
+Lựa chọn (để soát không phải đoán):
+- **`_redirects` tĩnh (chọn) vs Worker chặn 4 đường (loại, giữ làm đường lui).** Asset-worker dựng `Location` = `pathname + (query đích || query request) + hash đích` (mã nguồn, design.md §6e) ⇒ cả ba ca spec (giữ UTM, UTM trước `#`, host không đổi) đạt mà không thêm mã, không tốn quota Worker, không mở thêm đường vào Worker. Ràng buộc kéo theo: đích không có query; đủ 4 dòng vì so khớp phân biệt `/` cuối.
+- **Mã lỗi đặt ở `routes.ts`, không ở `build.ts §8`.** Lượt này admin giao chép đúng một tệp sang mirror repo code; đặt mã ở `routes.ts` để mirror một tệp là đủ cho backend. Lượt sau đụng `build.ts` thì có thể dời vào §8 (đổi tên hằng = D7). Dạng dòng stderr vẫn theo `build.ts §8` (`[<CODE>] <thông báo>`).
+- **Quét chuỗi có biên phải, không biên trái.** Biên trái không dùng được vì URL tuyệt đối (`https://<host>/giai-phap`) có chữ cái đứng trước `/`. Đổi lại: đoạn `giai-phap` ở bất kỳ đâu (`/tin-tuc/giai-phap`) cũng khớp ⇒ cấm làm slug (`RETIRED_SLUG_RESERVED`, báo sớm và rõ hơn `RETIRED_PATH_IN_OUTPUT`). `"."` thuộc biên phải để tên ảnh `giai-phap.jpg` không đỏ oan; tệp `out/giai-phap.html` bắt bằng kiểm tồn tại tệp.
+
+- **Lượt 20b — khối Giải pháp rỗng (ux-spec v0.6 XQ-5/V43 hỏi architect): chọn (a).** Ẩn khối/neo/chip vẫn là đường của giao diện, nhưng bản build như vậy đỏ `RETIRED_ANCHOR_MISSING` (`routes.ts:111–115`, chỉ thêm comment, mã không đổi) ⇒ production luôn có neo và ≥ 1 mục. Loại (b) neo rỗng (người đọc từ link cũ rơi vào chỗ trống; trái "không khoảng trống" của ux_ui) và (c) đổi đích 301 khi rỗng (`_redirects` cố định, spec :63–66 chốt đích). Lý do đầy đủ: design.md §6e "Khối Giải pháp rỗng".
+
+Hệ quả tự lộ ra (ngoài lãnh địa architect, báo admin): (1) `public/_redirects:1–2` của repo code chỉ có 2 dòng (không `/` cuối) ⇒ `/giai-phap/` không 301 một bước (devops thêm 2 dòng). (2) `src/components/site/menu.ts:7` `MENU_ORDER` còn `solutions` (frontend_web; menu chính 5 mục ở `menu.ts:51` đã đúng). (3) `tests/support/routes.ts:6,19,46` còn `solutions` (qa). (4) Repo code đọc mục Giải pháp từ `content/solutions-items/*.md` + mặc định trong mã (`src/content/loader.ts:258`, `:529–555`) — loại nội dung này **không có** trong `content-model.md`/`content-model.ts` (lệch có từ trước lượt 20, không do CO-01). Đề xuất lượt sau khai vào contract; lượt này không thêm vì ngoài phạm vi giao.
+
+**Đã kiểm:** đọc mã asset-worker (`workers-sdk` nhánh `main` + bản miniflare trong `node_modules` repo code, dòng ở design.md "Đã kiểm"); đọc repo code `wrangler.jsonc:11–13`, `next.config.ts:5`, `public/_redirects`, chỗ dùng `ROUTES`. **Chưa kiểm:** `tsc` (vai không có lệnh); mirror `../gms/gms-hungyen-web/contracts/routes.ts` chưa chép (hook Tier 1 chặn, chưa có `design_approved` + `contract_signed`); hành vi thật trên Cloudflare staging (K17).
+
 ## Lượt 19 (07/11/2026): XQ-QA-L18-1 + đóng XQ-45 — chỉ chữ comment, không đổi hành vi
 
 Task `architect-20261106185337-80dc` (chặng 04-build, sau `design_approved`). Không đổi schema, mã hay thông báo nào; kết quả xanh/đỏ không đổi ở ca nào.

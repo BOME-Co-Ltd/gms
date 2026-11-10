@@ -23,7 +23,7 @@ export const NOT_FOUND_SAMPLE: Record<Locale, string> = {
 
 export const NOT_FOUND_LABEL = '404';
 
-/** 11 trang cố định + 3 trang chi tiết + 404, mỗi trang ở vi và en = 30 dòng. */
+/** 10 trang cố định + 3 trang chi tiết + 404, mỗi trang ở vi và en = 28 dòng (prd v0.8). */
 export function listTargets(): Target[] {
   const out: Target[] = [];
   for (const l of ['vi', 'en'] as Locale[]) {

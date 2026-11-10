@@ -22,6 +22,7 @@ import {
   solutionImgMidName,
   solutionImgSmallName,
 } from './images.ts';
+import { retiredOutputErrors } from './retired.ts';
 
 // Tài sản tĩnh (public/) theo vị trí script, không theo cwd: bản build ở thư mục tạm/fixture vẫn có ảnh.
 const PUBLIC_DIR = join(resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..'), 'public');
@@ -274,6 +275,9 @@ ${[...urls].map((u) => `  <url><loc>${escXml(u)}</loc></url>`).join('\n')}
     errors.push('[HEADERS] _headers thiếu X-Content-Type-Options');
   errors.push(...headersRuleLimitErrors(headers));
   if (typeof formStatus.open !== 'boolean') errors.push('[FORM_STATUS] form-status.json thiếu open');
+
+  // Trang đã gỡ (CO-01): 4 dòng 301, neo ở trang Công nghệ, không còn đường cũ trong out/.
+  errors.push(...retiredOutputErrors(outDir));
 
   // Quét đầu ra theo content/denylist.yaml (build.ts §8 luật 6): có tên cấm ⇒ build đỏ. Quét cả _next/.
   const denylist = loadDenylist(cfg.contentDir);

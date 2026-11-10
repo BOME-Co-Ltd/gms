@@ -380,7 +380,7 @@ async function iconRows(page: Page, articleScope: boolean): Promise<IconRow[]> {
   }, articleScope);
 }
 
-const ICON_PAGES: PageKey[] = ['home', 'solutions', 'careers', 'contact', 'news'];
+const ICON_PAGES: PageKey[] = ['home', 'technology', 'careers', 'contact', 'news'];
 for (const width of [320, 375, 1200]) {
   test(`FT-21 ${width}px: mọi biểu tượng cạnh chữ (chân trang, NAP, nút, nhãn bước, thẻ tuyển dụng) cùng hàng, tâm dọc ở giữa khối chữ, cha là flex center (J19, §13b luật 8)`, async ({
     page,

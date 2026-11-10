@@ -131,7 +131,9 @@ export function TechnologyPage({
           items: [
             { href: '#sang-tuyen', text: L('Sàng tuyển', 'Sorting') },
             { href: '#vpd', text: L('Công nghệ VPD', 'VPD technology') },
-            { href: L('#giai-phap', '#solutions'), text: L('Giải pháp', 'Solutions') },
+            ...(content.solutionItems[locale].length > 0
+              ? [{ href: L('#giai-phap', '#solutions'), text: L('Giải pháp', 'Solutions') }]
+              : []),
           ],
         }}
       />

@@ -5,6 +5,7 @@ import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { type SiteConfig, siteConfigFromEnv } from '../../src/components/site/build/config.ts';
+import { retiredSlugErrors } from '../../src/components/site/build/retired.ts';
 import { postBuild } from '../../src/components/site/build/verify.ts';
 import { loadSiteContent } from '../../src/content/loader.ts';
 import { computeContentHash } from '../deploy/deploy-prod.ts';
@@ -87,6 +88,11 @@ export async function runBuildSite(options?: {
     const msgs = loaded.errors.map((err) => `[${err.code}] ${err.message}`);
     for (const m of msgs) console.error(m);
     return { ok: false, errors: msgs };
+  }
+  const slugErrors = retiredSlugErrors(loaded);
+  if (slugErrors.length > 0) {
+    for (const m of slugErrors) console.error(m);
+    return { ok: false, errors: slugErrors };
   }
   const hash = computeContentHash(cfg.contentDir);
   console.log(`content-hash: ${hash}`);

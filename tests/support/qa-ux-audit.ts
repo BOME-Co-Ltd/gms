@@ -31,7 +31,6 @@ interface AuditState {
 const PAGES = [
   { path: '/', name: 'Trang chủ' },
   { path: '/gioi-thieu', name: 'Giới thiệu' },
-  { path: '/giai-phap', name: 'Giải pháp' },
   { path: '/cong-nghe', name: 'Công nghệ' },
   { path: '/san-pham-dau-ra', name: 'Sản phẩm đầu ra' },
   { path: '/tin-tuc', name: 'Tin tức' },

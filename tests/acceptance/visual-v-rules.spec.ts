@@ -157,7 +157,7 @@ test('VR-V04 nền trang trắng #FFFFFF; có nền nhấn nhẹ đúng --mist #
   }
   // Nền nhấn: ux-spec v0.5.2 V04 chốt MỘT giá trị --mist #F2F6F1 (bỏ rgb(15 88 56 / 0.05)); so đúng, không dung sai.
   let found = 0;
-  for (const key of ['home', 'about', 'technology', 'solutions', 'products'] as PageKey[]) {
+  for (const key of ['home', 'about', 'technology', 'products'] as PageKey[]) {
     await open(page, key, 'vi');
     found += await page.evaluate(() => {
       return Array.from(document.querySelectorAll('main *, section')).filter(
@@ -868,7 +868,6 @@ test('VR-V24 nhãn "Phối cảnh dự kiến": chip góc dưới trái ảnh, >
     ['home', 'en'],
     ['technology', 'vi'],
     ['about', 'vi'],
-    ['solutions', 'vi'],
     ['products', 'vi'],
   ] as Array<[PageKey, Locale]>) {
     await open(page, key, locale);

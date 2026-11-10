@@ -16,7 +16,7 @@ Mô hình collection Payload của lượt 2–4 **đã bỏ** (bỏ CMS, raw 31
 | Ô ảnh dây chuyền sàng tuyển của GMS (M4, lượt 13, V39) | `content/images/gms-sorting-line.<jpg\|jpeg\|png\|webp>` + `.yaml` | `ImageMeta`; tên cố định `TECHNOLOGY_IMAGE_SLOTS.sortingLine`; không có ảnh dùng được ⇒ ẩn khung |
 | Cặp ảnh "Trước ↔ Sau" trang chủ (M1 khối S6, lượt 14, V41 (b)) | `content/images/gms-before.<đuôi>` + `.yaml`, `content/images/gms-after.<đuôi>` + `.yaml` | `ImageMeta`, `kind` bắt buộc `"anh-that"` (`HOME_IMAGE_SLOT_KIND`); tên cố định `HOME_IMAGE_SLOTS`; thiếu một trong hai ảnh dùng được ⇒ ẩn cả khối |
 | Tên không được nêu (lượt 14, V38/V41 (c)(d)) | `content/denylist.yaml` | `ForbiddenNames` (`names: string[]`, ≥ 1); v1 `["Xanh Asian"]`; **không** render, không vào `public/`/`out/`; thiếu/rỗng/sai ⇒ build đỏ `DENYLIST_MISSING` |
-| Trang cố định (11 khoá `routes.ts → PageKey`) | `content/pages/<key>.<locale>.md` | `Common` |
+| Trang cố định (10 trang; lượt 20 CO-01 bỏ khoá `solutions` — mục Giải pháp là khối của trang `technology`) | `content/pages/<key>.<locale>.md` | `Common` |
 | Chính sách bảo mật | `content/policy/<version>.<locale>.md` | `PolicyFront`; bản có `effectiveFrom` mới nhất ≤ ngày build là bản hiệu lực, version của nó ⇒ `POLICY_VERSION` |
 | Thông tin công ty | `content/company.yaml` | `Company` |
 | Xác nhận của GMS | `content/approvals/<sha256>.yaml` | `Approval` (không tính vào băm) |

@@ -60,7 +60,7 @@ export function ProductsPage({ content, locale }: { content: LoadedSiteContent; 
         photo="rdf"
         locale={locale}
         eyebrow={L('Ứng dụng', 'Applications')}
-        title={L('Ứng dụng của sản phẩm đầu ra', 'Applications of our output products')}
+        title={L('Sản phẩm đầu ra', 'Output products')}
         lead={L(
           'Sáu dòng sản phẩm thu hồi từ quá trình sàng tuyển cơ học và công nghệ nhiệt phân VPD, cùng hướng ứng dụng của từng dòng.',
           'Six recovered output lines from mechanical sorting and VPD pyrolysis technology, and where each one can be used.',

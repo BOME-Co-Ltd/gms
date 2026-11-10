@@ -9,11 +9,12 @@ import { open, tid } from '../support/ui';
 
 const LOCALES: Locale[] = ['vi', 'en'];
 const trimSlash = (p: string) => (p.length > 1 ? p.replace(/\/$/, '') : p);
-const MAIN: PageKey[] = ['home', 'about', 'solutions', 'technology', 'products', 'news', 'projects'];
-const SUB: PageKey[] = ['careers', 'faq', 'privacy', 'contact'];
+// V43 (lệnh thay đổi 01, 10/11/2026): menu chính 5 mục; thanh trên 5 mục, "Ứng dụng" (Sản phẩm đầu ra) đứng đầu.
+const MAIN: PageKey[] = ['home', 'about', 'technology', 'projects', 'news'];
+const SUB: PageKey[] = ['products', 'careers', 'faq', 'privacy', 'contact'];
 
 for (const locale of LOCALES) {
-  test(`WF-HDR-01 ${locale}: thanh trên có hotline tel:+84987998370 và menu phụ Tuyển dụng, FAQ, Chính sách bảo mật, Liên hệ (V26, §2b)`, async ({
+  test(`WF-HDR-01 ${locale}: thanh trên có hotline tel:+84987998370 và menu phụ Ứng dụng, Tuyển dụng, FAQ, Chính sách bảo mật, Liên hệ (V26, V43, §2b)`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -27,7 +28,9 @@ for (const locale of LOCALES) {
     expect(paths.map(trimSlash)).toEqual(SUB.map((k) => trimSlash(path(k, locale))));
   });
 
-  test(`WF-HDR-02 ${locale}: header có logo về trang chủ và menu chính 7 mục đúng thứ tự (V26)`, async ({ page }) => {
+  test(`WF-HDR-02 ${locale}: header có logo về trang chủ và menu chính 5 mục đúng thứ tự (V26, V43)`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await open(page, 'home', locale);
     const hdr = page.locator('header.hdr');

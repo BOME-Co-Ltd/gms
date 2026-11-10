@@ -2,10 +2,20 @@
 // x-default → bản vi của chính trang [giả định — chờ khách] P2, P20. Hết hạn tuyển dụng P33. Staging/production: SITE_ENV khi build (XQ-21).
 // v0.3: không còn xuất bản/gỡ qua CMS — mọi thay đổi nội dung = một lần build mới; ca đọc sitemap/head dựng nội dung giả rồi đọc đầu ra build.
 import { expect, type Page, test } from '@playwright/test';
-import { allHtml, type BuildResult, buildSite, type Files, htmlOf, newsFiles } from '../support/build';
-import { CANONICAL_ORIGIN } from '../support/env';
+import { allHtml, type BuildResult, buildSite, count, type Files, htmlOf, newsFiles } from '../support/build';
+import { BASE_URL, CANONICAL_ORIGIN } from '../support/env';
 import { companyFile, yamlItem } from '../support/fixtures';
-import { detailPath, type Locale, PAGE_KEYS, type PageKey, path } from '../support/routes';
+import {
+  detailPath,
+  type Locale,
+  PAGE_KEYS,
+  type PageKey,
+  path,
+  RETIRED_ERR,
+  RETIRED_PATH_RE,
+  RETIRED_REDIRECTS,
+  SOLUTIONS_ANCHOR,
+} from '../support/routes';
 import { open, VN_DIACRITIC } from '../support/ui';
 
 const abs = (p: string) => (/^https?:/.test(p) ? p : CANONICAL_ORIGIN + p);
@@ -100,6 +110,11 @@ test('SEO-06 Sitemap chỉ có trang có nội dung, không 404, không noindex 
     expect(locs).toContain(abs(detailPath('projects', `m1-${l}`, l)));
   }
   expect(locs.some((u) => /404/.test(u))).toBe(false);
+  // CO-01: đúng 9 trang cố định có nội dung ×2 locale (không Tuyển dụng), không URL Giải pháp cũ.
+  expect(PAGE_KEYS.filter((k) => k !== 'careers')).toHaveLength(9);
+  for (const old of ['/giai-phap', '/giai-phap/', '/en/solutions', '/en/solutions/'])
+    expect(locs, `sitemap không có ${old}`).not.toContain(abs(old));
+  expect(locs.filter((u) => RETIRED_PATH_RE.test(u))).toEqual([]);
   expect(new Set(locs).size, 'không URL trùng').toBe(locs.length);
   for (const u of locs) {
     const html = htmlOf(r, u.replace(CANONICAL_ORIGIN, ''));
@@ -297,6 +312,113 @@ test('SEO-14 Production được lập chỉ mục (@S32 @kiem-luc-build)', () =
   expect(robots).toMatch(
     new RegExp(`^\\s*Sitemap:\\s*${CANONICAL_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/sitemap\\.xml`, 'im'),
   );
+});
+
+// ───────────── CO-01 (10/11/2026): 301 trang Giải pháp đã gộp (seo-technical.feature v0.8.1 :54–103; K17) ─────────────
+// Chạy trên bản đang phục vụ (wrangler dev --local, Static Assets đọc _redirects). Không theo chuyển hướng: đọc mã và Location thật.
+const UTM = '?utm_source=facebook&utm_medium=social&utm_campaign=hanh-trinh-08';
+const SHOULD_NOT_REDIRECT = 'mở Location thì phải 200 ngay, không qua chuyển hướng nào nữa';
+const loc = (res: { headers: () => Record<string, string> }) => res.headers()['location'] ?? '';
+
+for (const r of RETIRED_REDIRECTS) {
+  test(`SEO-15 URL cũ "${r.from}" chuyển MỘT bước 301 tới "${r.to}", đích 200 ngay (@S9 @S32 @risk:legacy-url @risk:redirect-chain, V43)`, async ({
+    request,
+  }) => {
+    const first = await request.get(r.from, { maxRedirects: 0 });
+    expect(first.status(), 'phản hồi đầu tiên').toBe(301);
+    const u = new URL(loc(first), BASE_URL);
+    expect(u.origin, 'cùng tên miền').toBe(new URL(BASE_URL).origin);
+    expect(u.pathname + u.search + u.hash).toBe(r.to);
+    const dest = await request.get(r.toPath, { maxRedirects: 0 });
+    expect(dest.status(), SHOULD_NOT_REDIRECT).toBe(200);
+    const html = await dest.text();
+    expect(html).toMatch(new RegExp(`<html[^>]*lang="${r.locale}"`));
+    expect(count(html, new RegExp(`\\sid="${r.anchor}"`)), `đúng một khối id="${r.anchor}"`).toBe(1);
+  });
+
+  test(`SEO-16 UTM của link cũ "${r.from}" được giữ qua 301, đứng trước neo; đích canonical về URL sạch (@S9 @S32 @risk:legacy-url @risk:redirect-chain, V43)`, async ({
+    request,
+  }) => {
+    const first = await request.get(r.from + UTM, { maxRedirects: 0 });
+    expect(first.status()).toBe(301);
+    const u = new URL(loc(first), BASE_URL);
+    expect(u.origin).toBe(new URL(BASE_URL).origin);
+    expect(u.pathname).toBe(r.toPath);
+    expect(u.search, 'UTM giữ nguyên').toBe(UTM);
+    expect(u.hash).toBe(`#${r.anchor}`);
+    // Theo cú pháp URL, query phải đứng TRƯỚC "#": chuỗi Location thô không được có "?" sau "#".
+    expect(loc(first).indexOf('?')).toBeGreaterThan(-1);
+    expect(loc(first).indexOf('?')).toBeLessThan(loc(first).indexOf('#'));
+    const dest = await request.get(r.toPath + u.search, { maxRedirects: 0 });
+    expect(dest.status(), SHOULD_NOT_REDIRECT).toBe(200);
+    expect(canonical(await dest.text())).toEqual([abs(r.toPath)]);
+  });
+
+  test(`SEO-17 URL cũ "${r.from}" kèm tham số lạ vẫn ở lại tên miền và đúng ngôn ngữ (@S9 @S32 @risk:open-redirect, V43)`, async ({
+    request,
+  }) => {
+    for (const q of ['?next=https://example.com', '?next=//example.com', '?next=https%3A%2F%2Fexample.com']) {
+      const first = await request.get(r.from + q, { maxRedirects: 0 });
+      expect(first.status(), q).toBe(301);
+      const raw = loc(first);
+      expect(raw.startsWith(r.toPath), `Location "${raw}" bắt đầu bằng ${r.toPath}`).toBe(true);
+      const u = new URL(raw, BASE_URL);
+      expect(u.hostname, 'host của Location').not.toBe('example.com');
+      expect(u.origin).toBe(new URL(BASE_URL).origin);
+      expect(u.pathname).toBe(r.toPath);
+    }
+  });
+}
+
+test('SEO-18 Bản build: đủ 4 dòng 301 nguyên văn, không còn chỗ nào trỏ tới URL cũ (@S9 @S32 @risk:legacy-url @risk:hreflang @kiem-luc-build)', () => {
+  const r = buildSite(NEWS);
+  expect(r.ok, r.log).toBe(true);
+  const lines = (r.read('_redirects') ?? '').split('\n').map((s) => s.trim());
+  for (const x of RETIRED_REDIRECTS) {
+    expect(lines, `thiếu dòng "${x.from} ${x.to} 301"`).toContain(`${x.from} ${x.to} 301`);
+    expect(
+      lines.filter((s) => s.split(/\s+/)[0] === x.from),
+      `đúng một luật cho ${x.from}`,
+    ).toHaveLength(1);
+  }
+  for (const f of ['giai-phap.html', 'giai-phap/index.html', 'en/solutions.html', 'en/solutions/index.html'])
+    expect(r.has(f), `out/${f} không được tồn tại`).toBe(false);
+  // Mọi tệp văn bản trừ _redirects không chứa đường cũ (sitemap, canonical, hreflang, og:url, liên kết, chunk JS).
+  const textFile = /\.(html|txt|xml|json|js|mjs|css|svg|map|webmanifest)$|(^|\/)_headers$/;
+  const hits = r
+    .files()
+    .filter(
+      (f) =>
+        f !== '_redirects' && (RETIRED_PATH_RE.test(f) || (textFile.test(f) && RETIRED_PATH_RE.test(r.read(f) ?? ''))),
+    );
+  expect(hits, `tệp còn nhắc tới URL Giải pháp cũ:\n${hits.join('\n')}`).toEqual([]);
+  const locs = sitemapLocs(r);
+  for (const l of ['vi', 'en'] as Locale[]) expect(locs).toContain(abs(path('technology', l)));
+  for (const l of ['vi', 'en'] as Locale[]) {
+    const html = htmlOf(r, path('technology', l))!;
+    expect(count(html, new RegExp(`\\sid="${SOLUTIONS_ANCHOR[l]}"`)), `${l}: một neo`).toBe(1);
+    expect(html).toMatch(new RegExp(`<html[^>]*lang="${l}"`));
+  }
+});
+
+// Mỗi mã lỗi build của RETIRED_PAGE_ERROR = một ca (routes.ts). Cách dựng ca ở dưới là GIẢ ĐỊNH về điểm cắm của bản build
+// (overlay public/…, slug Tin) — XQ-QA-CO01-2; đỏ vì sai điểm cắm thì báo lại, không sửa kỳ vọng.
+test('SEO-19 Thiếu một dòng 301 trong _redirects thì build đỏ RETIRED_REDIRECT_MISSING (@S32 @risk:legacy-url @kiem-luc-build)', () => {
+  const r = buildSite(NEWS, {}, { 'public/_redirects': '# không có dòng nào của Giải pháp\n' });
+  expect(r.ok, 'build phải đỏ').toBe(false);
+  expect(r.log).toContain(RETIRED_ERR.redirectMissing);
+});
+
+test('SEO-20 Có tệp phục vụ được đường cũ trong out/ thì build đỏ RETIRED_PATH_IN_OUTPUT (@S32 @risk:legacy-url @kiem-luc-build)', () => {
+  const r = buildSite(NEWS, {}, { 'public/giai-phap.html': '<!doctype html><title>cũ</title>' });
+  expect(r.ok, 'build phải đỏ').toBe(false);
+  expect(r.log).toContain(RETIRED_ERR.pathInOutput);
+});
+
+test('SEO-21 Slug Tin trùng đoạn "giai-phap" thì build đỏ RETIRED_SLUG_RESERVED (@S32 @risk:legacy-url @kiem-luc-build)', () => {
+  const r = buildSite(newsFiles('giai-phap', { vi: { slug: 'giai-phap' }, en: { slug: 'solutions-news' } }));
+  expect(r.ok, 'build phải đỏ').toBe(false);
+  expect(r.log).toContain(RETIRED_ERR.slugReserved);
 });
 
 void (null as unknown as Page);

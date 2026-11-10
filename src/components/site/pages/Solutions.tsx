@@ -14,9 +14,11 @@ export function SolutionsSection({
 }: {
   content: LoadedSiteContent;
   locale: Locale;
-}): React.ReactElement {
+}): React.ReactElement | null {
   const L = (vi: string, en: string) => pick(locale, vi, en);
   const items = content.solutionItems[locale];
+  // Rỗng ⇒ ẩn cả khối, neo và chip (ux-spec XQ-5); bản build như vậy đỏ RETIRED_ANCHOR_MISSING (build/retired.ts).
+  if (items.length === 0) return null;
   return (
     <section className="sec sec-mist" id={L('giai-phap', 'solutions')} aria-labelledby="h-sol">
       <div className="wrap">

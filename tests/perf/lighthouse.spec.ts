@@ -15,7 +15,7 @@ const RUNS = 3;
 const RESULTS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '.results');
 const modName = 'lighthouse'; // import động: pha 1 chưa có package, file vẫn biên dịch được
 
-// Mã HTTP mong đợi: trang thường 200, trang 404 mẫu đúng 404. Không nới redirect (3xx) — spec không khai redirect cho 30 đích đo.
+// Mã HTTP mong đợi: trang thường 200, trang 404 mẫu đúng 404. Không nới redirect (3xx) — spec không khai redirect cho 28 đích đo (URL Giải pháp cũ không nằm trong danh sách đo).
 const NOT_FOUND_URLS: string[] = Object.values(NOT_FOUND_SAMPLE);
 const expectedStatus = (t: { label: string; url: string }) =>
   t.label === '404' || NOT_FOUND_URLS.includes(t.url) ? 404 : 200;
@@ -24,7 +24,7 @@ async function httpStatus(url: string): Promise<number> {
   return (await fetch(BASE_URL + url, { redirect: 'manual' })).status;
 }
 
-// ignoreStatusCode chỉ bật cho đích 404; 29 đích còn lại giữ mặc định Lighthouse (trang lỗi HTTP làm lần đo hỏng).
+// ignoreStatusCode chỉ bật cho đích 404; 27 đích còn lại giữ mặc định Lighthouse (trang lỗi HTTP làm lần đo hỏng).
 async function lighthouseRuns(url: string, expected = 200): Promise<Run[]> {
   const browser = await chromium.launch({ args: ['--remote-debugging-port=9333'] });
   try {
@@ -60,9 +60,9 @@ async function lighthouseRuns(url: string, expected = 200): Promise<Run[]> {
   }
 }
 
-test('PERF-01 Mỗi trang đạt ngưỡng Lighthouse mobile — 28 trang đủ 7 ngưỡng, 404 không xét SEO (@S3)', async () => {
+test('PERF-01 Mỗi trang đạt ngưỡng Lighthouse mobile — 26 trang đủ 7 ngưỡng, 404 không xét SEO (@S3)', async () => {
   const targets = listTargets();
-  expect(targets).toHaveLength(30); // 15 trang x 2 locale (Bối cảnh)
+  expect(targets).toHaveLength(28); // 14 trang x 2 locale: 10 trang cố định + 3 chi tiết + 404 (prd v0.8, Giải pháp đã gộp)
   const wrongStatus: string[] = [];
   for (const t of targets) {
     const want = expectedStatus(t);
@@ -74,8 +74,8 @@ test('PERF-01 Mỗi trang đạt ngưỡng Lighthouse mobile — 28 trang đủ 
   for (const t of targets)
     results.push({ page: t.label, locale: t.locale, runs: await lighthouseRuns(t.url, expectedStatus(t)) });
   const report = aggregate(results);
-  // 28 trang x 7 + 2 trang 404 x 6 = 208 dòng chấm; 2 dòng SEO của 404 ghi "Không xét" (spec v0.5.3), không biến mất.
-  expect(report.rows.filter((r) => r.verdict !== 'Không xét')).toHaveLength(208);
+  // 26 trang x 7 + 2 trang 404 x 6 = 194 dòng chấm; 2 dòng SEO của 404 ghi "Không xét" (spec v0.5.3), không biến mất.
+  expect(report.rows.filter((r) => r.verdict !== 'Không xét')).toHaveLength(194);
   const skipped = report.rows.filter((r) => r.verdict === 'Không xét').map((r) => `${r.page}/${r.locale}/${r.metric}`);
   expect(skipped).toEqual(['404/vi/SEO', '404/en/SEO']);
   mkdirSync(RESULTS_DIR, { recursive: true });
