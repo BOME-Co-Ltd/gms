@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { copyPhotoAssets } from '../../src/components/site/build/photo-assets.test-support.ts';
 import { BUILD_CMD, FIXTURE_ROOT } from './env';
 
 // đường dẫn tương đối content/ ⇒ nội dung; `null` = XOÁ tệp khỏi bộ nội dung (vd BASE_CONTENT 'denylist.yaml' để thử "thiếu tệp")
@@ -44,6 +45,8 @@ function buildCore(extra: Files, env: Record<string, string>, overlay: Record<st
     throw new Error('Chưa có lệnh build/thư mục fixture (SITE_BUILD_CMD, SITE_FIXTURE_ROOT) — XQ-21');
   const work = mkdtempSync(join(tmpdir(), 'gms-build-'));
   cpSync(FIXTURE_ROOT, work, { recursive: true });
+  // Bản chép phải có ảnh thật (hero-plant-512.jpg…) nếu không verify báo SRCSET_NOT_IN_OUT; FIXTURE_ROOT = <gốc>/tests/fixtures/site-root.
+  copyPhotoAssets(join(FIXTURE_ROOT, '..', '..', '..'), work);
   const content = join(work, 'content');
   for (const [rel, data] of Object.entries({ ...BASE_CONTENT, ...extra })) {
     const to = join(content, rel);
