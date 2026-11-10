@@ -552,7 +552,7 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
       if (viDoc && viDoc.data.published !== false && !enDoc) {
         errors.push({
           code: 'SOLUTIONS_MISSING_EN',
-          message: `Trang Giải pháp (solutions): mục "${String(viDoc.data.title ?? key)}" thiếu bản en`,
+          message: `Trang Công nghệ (technology), khối Giải pháp (solutions): mục "${String(viDoc.data.title ?? key)}" thiếu bản en`,
         });
         continue;
       }
@@ -577,7 +577,8 @@ export function loadSiteContent(contentDir: string, dateOverride?: string): Load
         });
       }
     }
-    if (customVi.length > 0) {
+    // Đã có tệp nội dung thì không dùng mặc định: để rỗng thì khối rỗng và build đỏ RETIRED_ANCHOR_MISSING.
+    if (byKey.size > 0) {
       solutionItems.vi = customVi;
       solutionItems.en = customEn;
     }

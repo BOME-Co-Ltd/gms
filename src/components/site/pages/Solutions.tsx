@@ -34,23 +34,25 @@ export function SolutionsSection({
             )}
           </p>
         </div>
-        <ol className="tgrid t3">
+        <ol className="tgrid t3 step-grid">
           {items.map((item, i) => {
             const photo = SOLUTION_PHOTOS[i];
             return (
               <li key={item.title}>
-                <article className="icard" data-testid="solution-item">
-                  {photo ? <PhotoFigure photo={photo} locale={locale} alt="" /> : null}
-                  <div className="icard-body">
-                    <span className="icard-num" aria-hidden="true">
-                      {i + 1}
-                    </span>
-                    <h3>
-                      <span className="sr-only">
-                        {L('Bước', 'Step')} {i + 1}:{' '}
+                <article className="icard step-card" data-testid="solution-item">
+                  {photo ? <PhotoFigure photo={photo} locale={locale} alt="" className="step-fig" /> : null}
+                  <div className="step-text">
+                    <div className="stp-head">
+                      <span className="step-badge" aria-hidden="true">
+                        {i + 1}
                       </span>
-                      {item.title}
-                    </h3>
+                      <h3>
+                        <span className="sr-only">
+                          {L('Bước', 'Step')} {i + 1}:{' '}
+                        </span>
+                        {item.title}
+                      </h3>
+                    </div>
                     <Html html={item.bodyHtml} />
                     {/* S9: mỗi việc có lời mời liên hệ */}
                     <p className="step-cta">

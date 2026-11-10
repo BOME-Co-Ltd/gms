@@ -143,9 +143,9 @@ for (const locale of LOCALES) {
     }
     if (locale === 'en')
       for (const l of links) expect(l.text, `nav chân trang EN chứa chữ Việt: "${l.text}"`).not.toMatch(VN_DIACRITIC);
-    // v0.5 §14a: menu là MỘT <ul> 10 mục; bốn mục cuối theo thứ tự Tuyển dụng · FAQ · Chính sách bảo mật · Liên hệ
+    // ux-spec v0.6 §14a/XQ-2 (V43): menu là MỘT <ul> 9 mục (không Giải pháp, không Trang chủ); bốn mục cuối theo thứ tự Tuyển dụng · FAQ · Chính sách bảo mật · Liên hệ
     await expect(navs.locator('ul'), 'menu là một danh sách duy nhất').toHaveCount(1);
-    expect(links.length, 'số mục menu').toBe(10);
+    expect(links.length, 'số mục menu').toBe(9);
     expect(
       links.slice(-4).map((l) => trimSlash(l.path)),
       'bốn mục cuối menu',
@@ -233,7 +233,8 @@ test('FT-04b Menu chân trang một danh sách hai cột, thứ tự đọc cộ
       .evaluateAll((as) => as.map((a) => Math.round(a.getBoundingClientRect().left / 4) * 4));
     const cols = Array.from(new Set(xs)).sort((a, b) => a - b);
     expect(cols.length, `${width}: số cột của menu (vị trí x: ${xs.join(',')})`).toBe(2);
-    const half = xs.length / 2;
+    // §14a: grid-auto-flow:column, --rows = nửa số mục; số mục lẻ (9) thì cột 1 nhiều hơn một: 5 + 4 (làm tròn lên).
+    const half = Math.ceil(xs.length / 2);
     expect(
       xs.slice(0, half).every((x) => x === cols[0]),
       `${width}: nửa đầu menu nằm cột 1`,

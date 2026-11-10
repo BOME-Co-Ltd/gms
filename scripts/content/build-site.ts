@@ -40,12 +40,16 @@ export function escHtml(s: string): string {
 const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 // Bản chép tối thiểu của app cho `next build`: mã nguồn + cấu hình chép, node_modules chép kiểu clone.
-function prepareIsolatedRoot(dir: string): string {
+function prepareIsolatedRoot(dir: string, cwd: string): string {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   for (const name of ['src', 'public', 'contracts']) {
     if (existsSync(join(APP_ROOT, name))) cpSync(join(APP_ROOT, name), join(dir, name), { recursive: true });
   }
+  // public/ của thư mục gọi (bản chép của test, vd _redirects hay tệp đường cũ) ghi đè lên public/ của app:
+  // không có bước này, tệp đặt ở public/ của cwd bị bỏ qua và kiểm RETIRED_* không thấy gì để bắt.
+  const cwdPublic = join(cwd, 'public');
+  if (existsSync(cwdPublic)) cpSync(cwdPublic, join(dir, 'public'), { recursive: true, force: true });
   for (const name of ['next.config.ts', 'tsconfig.json', 'package.json', 'postcss.config.mjs', 'next-env.d.ts']) {
     if (existsSync(join(APP_ROOT, name))) cpSync(join(APP_ROOT, name), join(dir, name));
   }
@@ -100,7 +104,7 @@ export async function runBuildSite(options?: {
   // Gọi từ thư mục khác APP_ROOT (test song song): build trong bản chép riêng (.next + out riêng) để không dẫm lên
   // .next/out của repo thật. Gọi từ APP_ROOT (`bun run build`): giữ nguyên hành vi cũ.
   const isolated = resolve(cwd) !== APP_ROOT;
-  const buildRoot = isolated ? prepareIsolatedRoot(join(cwd, '.gms-next-build')) : APP_ROOT;
+  const buildRoot = isolated ? prepareIsolatedRoot(join(cwd, '.gms-next-build'), cwd) : APP_ROOT;
   const nextOut = join(buildRoot, 'out');
   rmSync(nextOut, { recursive: true, force: true });
   const run = spawnSync(
