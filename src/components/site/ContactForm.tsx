@@ -2,7 +2,7 @@
 // Form liên hệ (U11, ux-spec §5.3 trạng thái F1–F5, §6.4–6.5 microcopy). Request/response: contracts/api.ts.
 // Giữ chữ người dùng đã nhập khi báo lỗi; khoá nút khi đang gửi; Turnstile (interaction-only) chỉ nạp khi người dùng chạm vào form.
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import type { Locale } from '../../content/loader.ts';
 import { Icon } from './icons.tsx';
 
@@ -81,6 +81,7 @@ const TEXT = {
     off: 'Form liên hệ tạm thời chưa mở. Bạn có thể liên hệ GMS qua các kênh dưới đây.',
     chPhone: 'Điện thoại',
     chZalo: 'Nhắn Zalo',
+    chMessenger: 'Nhắn Messenger',
     urgentCall: 'gọi ',
     urgentZalo: 'nhắn ',
     urgentLead: 'Nếu cần gấp, hãy ',
@@ -130,6 +131,7 @@ const TEXT = {
     off: 'The contact form is temporarily unavailable. You can reach GMS through the channels below.',
     chPhone: 'Phone',
     chZalo: 'Message on Zalo',
+    chMessenger: 'Message on Messenger',
     urgentCall: 'call ',
     urgentZalo: 'message us on ',
     urgentLead: 'If urgent, ',
@@ -155,6 +157,8 @@ export interface ContactFormProps {
   phoneRaw: string;
   phoneShown: string;
   zaloRaw: string;
+  /** V37: Messenger không phụ thuộc số điện thoại; có địa chỉ thì hiện ngay sau Zalo ở danh sách kênh dự phòng. */
+  messengerHref?: string;
   siteKey: string;
   homeHref: string;
   privacyHref: string;
@@ -213,6 +217,24 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
     setFocusSeq((n) => n + 1);
   };
 
+  // Chữ khách gõ vào HTML máy chủ trước khi React hydrate nằm trong DOM nhưng state còn rỗng:
+  // đọc lại một lần lúc mount để lần render kế tiếp không xoá chữ và Gửi không báo thiếu.
+  useEffect(() => {
+    const str = (k: Exclude<FieldKey, 'consent'>) =>
+      (document.getElementById(IDS[k]) as HTMLInputElement | HTMLTextAreaElement | null)?.value ?? '';
+    const found: Values = {
+      fullName: str('fullName'),
+      email: str('email'),
+      phone: str('phone'),
+      company: str('company'),
+      message: str('message'),
+      consent: (document.getElementById(IDS.consent) as HTMLInputElement | null)?.checked ?? false,
+    };
+    if (ORDER.some((k) => found[k] !== EMPTY[k])) {
+      valuesRef.current = found;
+      setValuesState(found);
+    }
+  }, []);
   useEffect(() => {
     if (focusSeq > 0) boxRef.current?.focus();
   }, [focusSeq]);
@@ -334,26 +356,33 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
           </a>
         </span>,
       );
+    if (p.messengerHref)
+      parts.push(
+        <span key="m">
+          {T.urgentZalo}
+          <a href={p.messengerHref} target="_blank" rel="noopener noreferrer">
+            Messenger
+          </a>
+        </span>,
+      );
     if (!parts.length) return null;
     return (
       <>
         {' '}
         {T.urgentLead}
-        {parts.length === 2 ? (
-          <>
-            {parts[0]}
-            {T.urgentOr}
-            {parts[1]}
-          </>
-        ) : (
-          parts[0]
-        )}
+        {parts.map((part, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: danh sách kênh cố định, không đổi thứ tự
+          <Fragment key={i}>
+            {i === 0 ? null : i === parts.length - 1 ? T.urgentOr : ', '}
+            {part}
+          </Fragment>
+        ))}
         .
       </>
     );
   };
   const channelsList = (): React.ReactNode =>
-    p.phoneRaw || p.zaloRaw ? (
+    p.phoneRaw || p.zaloRaw || p.messengerHref ? (
       <ul>
         {p.phoneRaw ? (
           <li>
@@ -364,6 +393,13 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
           <li>
             <a href={p.zaloRaw} rel="noopener noreferrer">
               {T.chZalo}
+            </a>
+          </li>
+        ) : null}
+        {p.messengerHref ? (
+          <li>
+            <a href={p.messengerHref} target="_blank" rel="noopener noreferrer">
+              {T.chMessenger}
             </a>
           </li>
         ) : null}
@@ -614,7 +650,8 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
               tabIndex={-1}
               ref={boxRef}
             >
-              {feedback.body}
+              <Icon name={feedback.tone === 'info' ? 'info' : 'circle-alert'} size={20} />
+              <div className="box-body">{feedback.body}</div>
             </div>
           ) : null}
           {feedback?.type === 'fields' ? (
@@ -627,24 +664,27 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
               tabIndex={-1}
               ref={boxRef}
             >
-              <p style={{ margin: '0 0 6px' }}>
-                <strong>{T.sum(summaryItems.length)}</strong>
-              </p>
-              <ul>
-                {summaryItems.map((k) => (
-                  <li key={k}>
-                    <a
-                      href={`#${IDS[k]}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        document.getElementById(IDS[k])?.focus();
-                      }}
-                    >
-                      {errs[k]}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <Icon name="circle-alert" size={20} />
+              <div className="box-body">
+                <p style={{ margin: '0 0 6px' }}>
+                  <strong>{T.sum(summaryItems.length)}</strong>
+                </p>
+                <ul>
+                  {summaryItems.map((k) => (
+                    <li key={k}>
+                      <a
+                        href={`#${IDS[k]}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          document.getElementById(IDS[k])?.focus();
+                        }}
+                      >
+                        {errs[k]}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           ) : null}
           {done ? (
@@ -656,14 +696,17 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
               tabIndex={-1}
               ref={boxRef}
             >
-              <h2 style={{ margin: '0 0 6px', fontSize: '1.1rem' }}>{T.okTitle}</h2>
-              <p style={{ margin: '0 0 10px' }}>{T.ok}</p>
-              <p style={{ margin: 0 }}>
-                <button type="button" className="btn btn-secondary" id="contact-again" onClick={again}>
-                  {T.again}
-                </button>{' '}
-                <a href={p.homeHref}>{T.home}</a>
-              </p>
+              <Icon name="circle-check" size={20} />
+              <div className="box-body">
+                <h2 style={{ margin: '0 0 8px', fontSize: 'var(--h3)' }}>{T.okTitle}</h2>
+                <p style={{ margin: '0 0 12px' }}>{T.ok}</p>
+                <p style={{ margin: 0 }}>
+                  <button type="button" className="btn btn-secondary" id="contact-again" onClick={again}>
+                    {T.again}
+                  </button>{' '}
+                  <a href={p.homeHref}>{T.home}</a>
+                </p>
+              </div>
             </div>
           ) : null}
         </div>
@@ -765,7 +808,7 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
             <label
               htmlFor={IDS.consent}
               data-testid="contact-consent-label"
-              style={{ display: 'flex', gap: 14, alignItems: 'flex-start', fontWeight: 400, cursor: 'pointer' }}
+              style={{ display: 'flex', gap: 12, alignItems: 'flex-start', fontWeight: 400, cursor: 'pointer' }}
             >
               <input
                 {...fieldProps('consent')}
@@ -780,7 +823,12 @@ export function ContactForm(p: ContactFormProps): React.ReactElement {
                 {T.consentPre}
                 {p.legalName}
                 {T.consentMid}
-                <a href={p.privacyHref} tabIndex={-1} {...(policyChanged ? { target: '_blank', rel: 'noopener' } : {})}>
+                <a
+                  href={p.privacyHref}
+                  className="consent-link"
+                  tabIndex={-1}
+                  {...(policyChanged ? { target: '_blank', rel: 'noopener' } : {})}
+                >
                   {T.privacy}
                 </a>
                 .

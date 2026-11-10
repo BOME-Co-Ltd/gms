@@ -3,11 +3,28 @@
 // viên trượt đổi ngôn ngữ. Không gọi mạng. Đứng sau markup đã prerender nên trang vẫn đọc/bấm được khi chưa có JS.
 import { useEffect } from 'react';
 
+// Chờ tối đa bằng này trước khi chuyển trang để viên trượt kịp nhích (trước đây 320 ms). Giảm chuyển động ⇒ đi ngay.
+const LANG_NAV_DELAY_MS = 100;
+
+const samePath = (p: string) => p.replace(/(\/index)?(\.html)?\/?$/, '') || '/';
+
+/** Cú bấm thường (không phím bổ trợ) vào liên kết tới đúng trang đang xem, không có # và không phải nút ngôn ngữ. */
+function isSelfLinkClick(e: MouseEvent): boolean {
+  if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return false;
+  const a = (e.target as HTMLElement).closest?.('a');
+  if (!a || a.target || a.hasAttribute('download') || a.closest('nav.lang')) return false;
+  const u = new URL(a.href, location.href);
+  if (u.origin !== location.origin || u.hash || u.search !== location.search) return false;
+  return samePath(u.pathname) === samePath(location.pathname);
+}
+
 export function ShellBehavior(): null {
   useEffect(() => {
     const d = document;
     d.documentElement.classList.add('js');
     const cleanups: Array<() => void> = [];
+    // Script inline (menu-early.ts) đã bật menu trước hydrate: gỡ listener của nó để không có hai bộ (mở rồi đóng ngay).
+    const earlyOpen = (window as unknown as { __gmsMenu?: { off: () => boolean } }).__gmsMenu?.off() ?? false;
 
     const btn = d.getElementById('menu-btn');
     const dr = d.getElementById('drawer');
@@ -65,6 +82,7 @@ export function ShellBehavior(): null {
       const onPanel = (e: Event) => {
         if ((e.target as HTMLElement).closest('a')) close(false);
       };
+      if (earlyOpen) d.addEventListener('keydown', onKey); // đã mở trước hydrate: nối tiếp Esc/Tab
       btn.addEventListener('click', onOpen);
       closeB.addEventListener('click', onClose);
       bg.addEventListener('click', onClose);
@@ -103,7 +121,8 @@ export function ShellBehavior(): null {
 
     // Sơ đồ dòng chảy (.board): vẽ đường nối + hiện nhãn khi cuộn tới (như wireframe). Không IO ⇒ hiện luôn.
     for (const board of d.querySelectorAll<HTMLElement>('.board')) {
-      if (!('IntersectionObserver' in window)) {
+      // V26/V28: giảm chuyển động ⇒ hiện tĩnh ngay, không chờ cuộn.
+      if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) {
         board.classList.add('live');
         continue;
       }
@@ -118,6 +137,34 @@ export function ShellBehavior(): null {
       );
       io.observe(board);
       cleanups.push(() => io.disconnect());
+    }
+
+    // V21: khối dưới màn hình đầu mờ + dịch 12px, hiện dần khi cuộn tới. Không IO hoặc giảm chuyển động ⇒ không gắn .reveal (hiện sẵn).
+    if ('IntersectionObserver' in window && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const targets = Array.from(d.querySelectorAll<HTMLElement>('main section ~ section, main article')).filter(
+        (el) => el.getBoundingClientRect().top > window.innerHeight,
+      );
+      if (targets.length > 0) {
+        const io = new IntersectionObserver(
+          (es) => {
+            for (const e of es) {
+              if (e.isIntersecting) {
+                e.target.classList.add('in');
+                io.unobserve(e.target);
+              }
+            }
+          },
+          { threshold: 0.05 },
+        );
+        for (const el of targets) {
+          el.classList.add('reveal');
+          io.observe(el);
+        }
+        cleanups.push(() => {
+          io.disconnect();
+          for (const el of targets) el.classList.remove('reveal', 'in');
+        });
+      }
     }
 
     const nav = d.querySelector<HTMLElement>('nav.lang');
@@ -141,19 +188,51 @@ export function ShellBehavior(): null {
       }
       const onLang = (e: MouseEvent) => {
         const a = (e.target as HTMLElement).closest('a');
-        if (!a || a === cur() || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+        if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
         e.preventDefault();
+        // Ngôn ngữ đang chọn: không tải lại trang.
+        if (a === cur()) return;
         const href = a.href;
         put(a);
         if (matchMedia('(prefers-reduced-motion: reduce)').matches) location.href = href;
         else
           setTimeout(() => {
             location.href = href;
-          }, 320);
+          }, LANG_NAV_DELAY_MS);
+      };
+      // Tải sẵn trang ngôn ngữ kia khi trỏ/chạm/focus vào nút (một lần mỗi đích).
+      const prefetched = new Set<string>();
+      const onHint = (e: Event) => {
+        const a = (e.target as HTMLElement).closest?.('a');
+        if (!a || a === cur() || prefetched.has(a.href)) return;
+        prefetched.add(a.href);
+        const l = d.createElement('link');
+        l.rel = 'prefetch';
+        l.href = a.href;
+        d.head.appendChild(l);
       };
       nav.addEventListener('click', onLang);
-      cleanups.push(() => nav.removeEventListener('click', onLang));
+      nav.addEventListener('pointerover', onHint);
+      nav.addEventListener('touchstart', onHint, { passive: true });
+      nav.addEventListener('focusin', onHint);
+      cleanups.push(() => {
+        nav.removeEventListener('click', onLang);
+        nav.removeEventListener('pointerover', onHint);
+        nav.removeEventListener('touchstart', onHint);
+        nav.removeEventListener('focusin', onHint);
+      });
     }
+    // Bấm liên kết tới chính trang đang xem (menu, logo, chân trang; không có #) ⇒ không tải lại:
+    // đóng ngăn kéo nếu đang mở rồi cuộn về đầu trang. Phím bổ trợ/chuột giữa ⇒ để trình duyệt xử lý.
+    const onSelf = (e: MouseEvent) => {
+      if (!isSelfLinkClick(e)) return;
+      e.preventDefault();
+      if (dr && !dr.hidden) closeB?.click();
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+    };
+    d.addEventListener('click', onSelf);
+    cleanups.push(() => d.removeEventListener('click', onSelf));
     return () => {
       for (const fn of cleanups) fn();
     };

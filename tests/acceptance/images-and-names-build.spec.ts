@@ -263,6 +263,12 @@ const frameWindow = (html: string) => {
   const at = html.indexOf('tech-drawing');
   return at < 0 ? '' : html.slice(at, at + 4000);
 };
+// Một hàm giải mã thực thể HTML cho cả XQ-44a và XQ-44b (nháy: &#x27; &#39; &apos;), để hai ca không bất đối xứng.
+const decodeEntities = (s: string) =>
+  s
+    .replace(/&#x27;|&#39;|&apos;/gi, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&');
 const firstImgSrc = (html: string) => /<img\b[^>]*?\ssrc="([^"]+)"/i.exec(html)?.[1] ?? '';
 
 for (const locale of ['vi', 'en'] as Locale[]) {
@@ -278,7 +284,7 @@ for (const locale of ['vi', 'en'] as Locale[]) {
     expect(frame, 'khung tech-drawing phải hiện khi có ô ảnh .png').not.toBe('');
     const src = firstImgSrc(frame);
     expect(src.split(/[?#]/)[0], `src ảnh trong khung: "${src}"`).toMatch(/\.png$/i);
-    expect(frame, 'nhãn nhìn thấy trong khung, không chỉ trong alt').toContain(LABEL[locale]);
+    expect(decodeEntities(frame), 'nhãn nhìn thấy trong khung, không chỉ trong alt').toContain(LABEL[locale]);
   });
 
   test(`XQ-44b (${locale}) Ô gms-sorting-line.webp kind "anh-that": khung hiện, src đuôi .webp, KHÔNG có nhãn phối cảnh`, () => {
@@ -291,7 +297,7 @@ for (const locale of ['vi', 'en'] as Locale[]) {
     const frame = frameWindow(html);
     expect(frame, 'khung tech-drawing phải hiện khi có ô ảnh .webp').not.toBe('');
     expect(firstImgSrc(frame).split(/[?#]/)[0]).toMatch(/\.webp$/i);
-    expect(html, 'ảnh thật không có nhãn phối cảnh').not.toContain(LABEL[locale]);
+    expect(decodeEntities(html), 'ảnh thật không có nhãn phối cảnh').not.toContain(LABEL[locale]);
   });
 
   test(`XQ-44c (${locale}) Không có ô gms-sorting-line: khung tech-drawing ẩn, không ô giữ chỗ`, () => {

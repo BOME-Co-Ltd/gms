@@ -255,12 +255,18 @@ export function CtaSection({
   locale,
   id = 'h-cta',
   sectionId,
+  contactTestId = !sectionId,
+  from,
   photo = 'scada',
 }: {
   content: LoadedSiteContent;
   locale: Locale;
   id?: string;
   sectionId?: string;
+  /** Gắn data-testid="cta-contact" (trang chủ đã có nút riêng mang testid này ⇒ tắt ở đó). */
+  contactTestId?: boolean;
+  /** Khoá trang nguồn (ROUTES) ⇒ ?from=… để thư báo ghi "Trang nơi gửi" (mail-builder resolvePageLabelVi). */
+  from?: string;
   photo?: PhotoKey;
 }): React.ReactElement {
   const phoneRaw = content.company.phone?.trim() ?? '';
@@ -282,8 +288,8 @@ export function CtaSection({
         <div className="cta-act">
           <a
             className="btn btn-light"
-            href={ROUTES.contact[locale]}
-            data-testid={sectionId ? undefined : 'cta-contact'}
+            href={from ? `${ROUTES.contact[locale]}?from=${from}` : ROUTES.contact[locale]}
+            data-testid={contactTestId ? 'cta-contact' : undefined}
           >
             {pick(locale, 'Liên hệ hợp tác', 'Partner with us')}
             <Icon name="arrow-right" className="ico" />
@@ -345,8 +351,8 @@ export function BoardFigure({
   );
   const ariaText = pick(
     locale,
-    'Sơ đồ: chất thải đầu vào chia hai nhánh. Sàng tuyển ra nilon, mùn hữu cơ, RDF. Công nghệ VPD ra syngas, than hoạt tính, dầu tái chế.',
-    'Diagram: incoming waste splits into two branches. Sorting yields plastic film, organic humus and RDF. VPD technology yields syngas, activated carbon and recycled oil.',
+    'Sơ đồ: chất thải đầu vào qua sàng tuyển, ra nilon, mùn hữu cơ, RDF; một phần chuyển tiếp sang công nghệ VPD, ra syngas, than hoạt tính, dầu tái chế.',
+    'Diagram: incoming waste goes to sorting, which yields plastic film, organic humus and RDF; part of it continues to VPD technology, which yields syngas, activated carbon and recycled oil.',
   );
   const down = (href: string, text: string) =>
     anchors ? (
@@ -355,7 +361,9 @@ export function BoardFigure({
         <Icon name="arrow-down" className="ico" />
       </a>
     ) : null;
-  const railsA = ['M0 316C40 316 40 150 80 150', 'M0 316C40 316 40 482 80 482'];
+  const railsA = ['M0 316C40 316 40 150 80 150'];
+  // Sàng tuyển (đáy b1, y=182) trỏ xuống VPD (đỉnh b2, y=450).
+  const railV = 'M6 182V444';
   const railsB = [
     'M0 150C48 150 48 46 96 46',
     'M0 150H96',
@@ -366,9 +374,10 @@ export function BoardFigure({
   ];
   return (
     <figure>
-      <div className="board" data-testid={outputsId}>
+      {/* biome-ignore lint/a11y/useSemanticElements: nhóm sơ đồ, không phải nhóm trường form nên không dùng fieldset */}
+      <div className="board" data-testid={outputsId} role="group" aria-label={ariaText}>
         <div className="dg" data-testid={branchesId} role="img" aria-label={ariaText}>
-          <div className="node n-in">
+          <div className="node n-in" data-stage="input">
             <strong>{pick(locale, 'Chất thải rắn đầu vào', 'Incoming solid waste')}</strong>
             <span>{pick(locale, 'Tiếp nhận và phân loại', 'Reception and classification')}</span>
           </div>
@@ -386,15 +395,26 @@ export function BoardFigure({
               <path key={`f${d}`} className="flow soft" d={d} />
             ))}
           </svg>
+          <svg
+            className="dg-conn conn-v"
+            viewBox="0 0 12 632"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path className="rail" pathLength={1} d={railV} />
+            <path className="flow soft" d={railV} />
+            <path className="arrow" d="M1 442L6 450L11 442Z" />
+          </svg>
           <div className="grp grp1">
-            <div className="node n-br b1">
+            <div className="node n-br b1" data-branch="screening" data-stage="screening">
               <span>{pick(locale, 'Nhánh 1', 'Branch 1')}</span>
               <strong>{pick(locale, 'Sàng tuyển', 'Sorting')}</strong>
             </div>
             <ul className="o-list o1">{content.outputLines.filter((o) => o.group === 'sang-tuyen').map(outputItem)}</ul>
           </div>
           <div className="grp grp2">
-            <div className="node n-br b2">
+            <div className="node n-br b2" data-branch="vpd" data-stage="vpd">
               <span>{pick(locale, 'Nhánh 2', 'Branch 2')}</span>
               <strong>{pick(locale, 'Công nghệ VPD', 'VPD technology')}</strong>
             </div>

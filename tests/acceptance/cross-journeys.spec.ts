@@ -4,7 +4,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildSite, type Files, htmlOf, newsFiles } from '../support/build';
+import { buildSite, buildSiteFresh, type Files, htmlOf, newsFiles } from '../support/build';
 import { control, pollUntil } from '../support/control';
 import { DEPLOY_PRODUCTION_CMD } from '../support/env';
 import { figure, figuresFile } from '../support/fixtures';
@@ -76,7 +76,7 @@ test('X-03 Có tuyên bố phải qua kiểm lúc build rồi văn bản xác nh
       unit: { vi: 'ha', en: 'ha' },
     }),
   ]);
-  const built = buildSite(files, { SITE_ENV: 'production' });
+  const built = buildSiteFresh(files, { SITE_ENV: 'production' }); // ghi content/approvals vào thư mục build ⇒ không dùng memo
   expect(built.ok, 'bản build xanh khi chưa có văn bản xác nhận (build ≠ deploy)').toBe(true);
   expect(DEPLOY_PRODUCTION_CMD, 'Chưa có lệnh deploy production (XQ-21)').not.toBe('');
   const deploy = (outDir: string) =>
@@ -104,9 +104,14 @@ test('X-03 Có tuyên bố phải qua kiểm lúc build rồi văn bản xác nh
   expect(home).toMatch(/5\s*ha/);
 });
 
-test('X-03b Trang chủ ở bản đang chạy hiện "5 ha" với nhãn "Diện tích nhà máy" (@S33)', async ({ page }) => {
+// prd N14/N29/N30: v1 tạm ẩn dải số liệu (content/figures.yaml public:false). Trường hợp CÓ số liệu ("5 ha" / "Diện tích nhà máy")
+// được kiểm ở FIG-01 (ca build, nội dung giả có 1 Số liệu hợp lệ); ca này kiểm hành vi v1 ở bản đang chạy: dải ẩn, không lộ số.
+test('X-03b Trang chủ ở bản đang chạy (v1) không có dải số liệu, không hiện "5 ha" hay nhãn "Diện tích nhà máy" (@S33)', async ({
+  page,
+}) => {
   await open(page, 'home', 'vi');
+  await expect(tid(page, 'figures-strip')).toHaveCount(0);
   const t = await bodyText(page);
-  expect(t).toContain('Diện tích nhà máy');
-  expect(t).toMatch(/5\s*ha/);
+  expect(t).not.toContain('Diện tích nhà máy');
+  expect(t).not.toMatch(/5\s*ha\b/);
 });

@@ -1,6 +1,7 @@
 // Giải pháp khép kín — trước là trang riêng M3 (/giai-phap); từ 08/11/2026 là một section trong trang Công nghệ.
 // /giai-phap và /en/solutions chuyển hướng 301 về #giai-phap / #solutions (public/_redirects).
 import type React from 'react';
+import { ROUTES } from '../../../../contracts/routes.ts';
 import type { LoadedSiteContent, Locale } from '../../../content/loader.ts';
 import { Html, PhotoFigure, type PhotoKey, pick } from '../parts.tsx';
 
@@ -49,6 +50,13 @@ export function SolutionsSection({
                       {item.title}
                     </h3>
                     <Html html={item.bodyHtml} />
+                    {/* S9: mỗi việc có lời mời liên hệ */}
+                    <p className="step-cta">
+                      <a href={ROUTES.contact[locale]}>
+                        {L('Trao đổi về việc này', 'Talk to us about this')}
+                        <span className="sr-only">: {item.title}</span>
+                      </a>
+                    </p>
                   </div>
                 </article>
               </li>

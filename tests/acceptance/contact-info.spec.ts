@@ -9,7 +9,7 @@ import { open, tid } from '../support/ui';
 
 const text = (html: string) =>
   html
-    .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
+    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ');
@@ -43,22 +43,37 @@ test('INFO-02 Ô trống thì phần tương ứng ẩn hẳn, số thật khôn
   expect(text(allHtml(r))).not.toMatch(/098\s?799\s?83\s?70|\+84\s?98\s?799\s?83\s?70|0987998370/);
 });
 
-test('INFO-03 Bản đồ không tải trước khi người đọc yêu cầu (@S24 @cho-khach:N28)', async ({ page }) => {
-  // Bản build mặc định có "điểm bản đồ" (XQ-21).
-  const scripts: string[] = [];
-  page.on('request', (rq) => {
-    if (rq.resourceType() === 'script') scripts.push(rq.url());
-  });
+test('INFO-03 Cuộn tới khối bản đồ thì bản đồ tự hiện đúng điểm nhà máy, không có nút bật/hiện bản đồ (@S24 @cho-khach:N28)', async ({
+  page,
+}) => {
+  // contact-info.feature v0.6: không bấm gì. Không ép "chưa cuộn thì chưa tải" (do trình duyệt quyết, feature ghi rõ).
   await open(page, 'contact', 'vi');
-  await page.waitForLoadState('networkidle');
-  const self = new URL(page.url()).origin;
-  expect(
-    scripts.filter((u) => new URL(u).origin !== self),
-    'JS bên thứ ba trước khi chọn bản đồ',
-  ).toEqual([]);
-  await tid(page, 'map-open').click();
-  await expect(tid(page, 'map-view')).toBeVisible();
-  await expect(tid(page, 'map-view')).toHaveAttribute('data-point', /\d+\.\d+.*\d+\.\d+/);
+  expect(await tid(page, 'map-open').count(), 'không còn data-testid="map-open"').toBe(0);
+  await expect(page.getByRole('button', { name: /hiện bản đồ|show .*map|interactive map/i })).toHaveCount(0);
+  const block = tid(page, 'map-block');
+  await block.scrollIntoViewIfNeeded();
+  await expect(block).toBeVisible();
+  const ifr = block.locator('iframe').first();
+  await expect(ifr, 'khung bản đồ hiện, không cần bấm').toBeVisible();
+  const src = (await ifr.getAttribute('src')) ?? '';
+  expect(src, 'ghim vĩ độ nhà máy').toContain('20.930031');
+  expect(src, 'ghim kinh độ nhà máy').toContain('106.065651');
+});
+
+test('INFO-03b Có liên kết mở bản đồ đúng điểm nhà máy, chữ đúng ngôn ngữ, ở cả vi và en (@S24)', async ({ page }) => {
+  for (const [locale, label] of [
+    ['vi', /Mở bản đồ/i],
+    ['en', /Open .*map/i],
+  ] as Array<[Locale, RegExp]>) {
+    await open(page, 'contact', locale);
+    const link = page.locator('main a[href]').filter({ hasText: label }).first();
+    await expect(link, `${locale}: có liên kết mở bản đồ`).toHaveCount(1);
+    const href = (await link.getAttribute('href')) ?? '';
+    expect(decodeURIComponent(href).replace(/\s/g, ''), `${locale}: toạ độ trong liên kết`).toContain(
+      '20.930031,106.065651',
+    );
+    await expect(link, `${locale}: chữ liên kết`).toHaveText(label);
+  }
 });
 
 test('INFO-04 Địa chỉ có bản tiếng Anh (@S24 @cho-khach:N9 @kiem-luc-build)', () => {
@@ -103,7 +118,9 @@ test('INFO-06 Thiếu mã số thuế thì build xanh, chân trang chỉ hiện 
 // (không đổi được từ test) ⇒ kiểm hai tầng: (1) build với đúng điểm này có tọa độ trong bản build (HTML hoặc JS); (2) bản đang chạy: chọn xem
 // ⇒ khối bản đồ hiện tại cùng điểm (data-point, hoặc nguồn khung bản đồ nếu không có thuộc tính).
 const FACTORY_POINT = { lat: 20.930031, lng: 106.065651 };
-test('INFO-07 Chọn xem bản đồ thì bản đồ hiện đúng điểm nhà máy (@S24 @cho-khach:N28)', async ({ page }) => {
+test('INFO-07 Cuộn tới khối bản đồ thì bản đồ hiện đúng điểm nhà máy, không cần bấm (@S24 @cho-khach:N28)', async ({
+  page,
+}) => {
   const r = buildSite(companyFile({ mapPoint: '20.930031, 106.065651' }));
   expect(r.ok, r.log).toBe(true);
   // Spec/contract không nói điểm nằm ở HTML hay ở mã chạy phía trình duyệt (khối bản đồ chỉ hiện sau khi chọn xem) ⇒ tìm trong MỌI tệp văn bản của bản build.
@@ -116,11 +133,11 @@ test('INFO-07 Chọn xem bản đồ thì bản đồ hiện đúng điểm nhà
   expect(built, 'bản build có tọa độ kinh độ').toContain('106.065651');
 
   await open(page, 'contact', 'vi');
-  await tid(page, 'map-open').click();
-  const view = tid(page, 'map-view');
+  const block = tid(page, 'map-block');
+  await block.scrollIntoViewIfNeeded();
+  const view = block.locator('iframe').first();
   await expect(view).toBeVisible();
-  const point =
-    (await view.getAttribute('data-point')) ?? (await view.locator('iframe').first().getAttribute('src')) ?? '';
+  const point = (await view.getAttribute('src')) ?? '';
   const nums = (point.match(/-?\d+\.\d+/g) ?? []).map(Number);
   expect(nums.length, `không thấy tọa độ trong "${point}"`).toBeGreaterThanOrEqual(2);
   expect(

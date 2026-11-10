@@ -32,9 +32,31 @@ test('LAY-01 Khung trang đúng ngôn ngữ đang xem (@S1)', async ({ page }) =
   await open(page, 'about', 'en');
   expect(await htmlLang(page)).toBe('en');
   const links = tid(page, 'nav-main').locator('a');
-  expect(await links.count()).toBe(11); // prd.md §4 S1: menu 11 trang
+  // 11 trang (prd S1) chia theo ux-spec §2b (V26): menu chính 7 mục; Tuyển dụng · FAQ · Liên hệ · Chính sách ở menu phụ/ngăn kéo.
+  const MAIN = NAV_MENU_ORDER.slice(0, 7);
+  expect(await links.count()).toBe(MAIN.length);
   const hrefs = await links.evaluateAll((as) => as.map((a) => new URL((a as HTMLAnchorElement).href).pathname));
-  expect(hrefs).toEqual(NAV_MENU_ORDER.map((k) => path(k, 'en')));
+  expect(hrefs).toEqual(MAIN.map((k) => path(k, 'en')));
+  // Menu phụ chỉ tính trong thanh trên (.top) hoặc ngăn kéo (#drawer), không tính liên kết cùng testid ở nơi khác (ux-spec §2b).
+  const subScope = page.locator('.top, #drawer');
+  for (const k of NAV_MENU_ORDER.slice(7))
+    expect(
+      await subScope.locator(`[data-testid="nav-menu"][href="${path(k, 'en')}"]`).count(),
+      `menu phụ (thanh trên/ngăn kéo, ux-spec §2b) có ${k}`,
+    ).toBeGreaterThan(0);
+  // ≥1200px: ít nhất một liên kết menu phụ nhìn thấy (mở ngăn kéo trước nếu thiết kế đòi).
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const subLinks = subScope.locator(
+    NAV_MENU_ORDER.slice(7)
+      .map((k) => `[data-testid="nav-menu"][href="${path(k, 'en')}"]`)
+      .join(', '),
+  );
+  const menuBtn = page.locator('#menu-btn');
+  if ((await subLinks.locator('visible=true').count()) === 0 && (await menuBtn.isVisible())) await menuBtn.click();
+  expect(
+    await subLinks.locator('visible=true').count(),
+    'ở ≥1200px có ít nhất một liên kết menu phụ nhìn thấy',
+  ).toBeGreaterThan(0);
   for (const t of await links.allInnerTexts()) expect(t, 'menu EN chứa chữ Việt').not.toMatch(VN_DIACRITIC);
   await expect(tid(page, 'footer').locator(`a[href="${path('privacy', 'en')}"]`)).toHaveCount(1);
 });
@@ -78,9 +100,9 @@ for (const [label, key, from, to] of SWITCH) {
   });
 }
 
-// Feature: bộ chọn ghi tên ngôn ngữ bằng chính ngôn ngữ đó, KHÔNG dùng cờ (ảnh, svg, emoji cờ quốc gia).
+// Feature: tên truy cập bằng chính ngôn ngữ đó; hình là cờ (V26/V34 admin 06/11 thay luật "không cờ").
 const FLAG_EMOJI = /[\u{1F1E6}-\u{1F1FF}]|🏴|🏳/u;
-test('LAY-04 Bộ chọn ngôn ngữ ghi "Tiếng Việt"/"English", không có hình cờ (@S2)', async ({ page }) => {
+test('LAY-04 Bộ chọn ngôn ngữ: cờ có tên truy cập "Tiếng Việt"/"English" (@S2, V26, V34)', async ({ page }) => {
   for (const [pageKey, locale] of [
     ['home', 'vi'],
     ['about', 'en'],
@@ -91,9 +113,10 @@ test('LAY-04 Bộ chọn ngôn ngữ ghi "Tiếng Việt"/"English", không có 
     const enLink = sw.locator('a[hreflang="en"]');
     await expect(viLink).toBeVisible();
     await expect(enLink).toBeVisible();
-    await expect(viLink).toHaveText(/Tiếng Việt/);
-    await expect(enLink).toHaveText(/English/);
-    await expect(sw.locator('img, svg, picture, [class*="flag" i], [data-testid*="flag" i]')).toHaveCount(0);
+    // V26/V34 (admin 06/11): cờ không chữ; tên truy cập viết bằng chính ngôn ngữ đó (prd S2).
+    await expect(viLink).toHaveAttribute('aria-label', 'Tiếng Việt');
+    await expect(enLink).toHaveAttribute('aria-label', 'English');
+    await expect(sw.locator('svg.flag')).toHaveCount(2); // V26/V34 thay luật "không cờ" của S2 cũ
     expect(await sw.innerText(), 'emoji cờ trong bộ chọn').not.toMatch(FLAG_EMOJI);
     const label = [await viLink.getAttribute('aria-label'), await enLink.getAttribute('aria-label')].join(' ');
     expect(label, 'aria-label chứa emoji cờ').not.toMatch(FLAG_EMOJI);

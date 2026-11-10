@@ -28,5 +28,29 @@
     "SITE_ORIGIN": "https://gmshungyen.vn",
     "MAIL_FROM": "thongbao@thongbao.gmshungyen.vn",
     "ALERT_TO": "kythuat@gmshungyen.vn"
+  },
+  // Staging trên workers.dev khi chưa có tên miền: không có send_email nên form đóng, không Cron gửi thư.
+  "env": {
+    "staging": {
+      "workers_dev": true,
+      "triggers": {
+        "crons": []
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "gms_contact_staging",
+          "database_id": "ac1ec737-a517-4eca-b822-c3e51847a51c"
+        }
+      ],
+      "vars": {
+        "FORM_ENABLED": "false",
+        "CONTACT_MAIL_READY": "false",
+        "POLICY_VERSION": "1.0",
+        "SITE_ORIGIN": "https://gms-contact-staging.bongmedia-web.workers.dev",
+        "MAIL_FROM": "thongbao@thongbao.gmshungyen.vn",
+        "ALERT_TO": "kythuat@gmshungyen.vn"
+      }
+    }
   }
 }

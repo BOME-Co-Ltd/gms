@@ -1,4 +1,6 @@
 # Biến mật cục bộ cho `wrangler dev --local` (sao chép sang `.dev.vars`, KHÔNG commit `.dev.vars`)
-TURNSTILE_SECRET=1x0000000000000000000000000000000AA
-IP_HMAC_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+# Dien secret thu "luon qua" cua Cloudflare Turnstile (xem tai lieu Turnstile, muc testing).
+TURNSTILE_SECRET=
+# Dien chuoi ngau nhien bat ky khi chay local.
+IP_HMAC_KEY=
 CONTACT_RECIPIENT=lienhe@vi-du.test

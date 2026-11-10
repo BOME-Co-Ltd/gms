@@ -33,7 +33,9 @@ export function ContactPage({
   // Zalo hiển thị bằng số điện thoại (đuôi số của liên kết zalo.me/<số>), không bao giờ hiện URL thô.
   const zaloDigits = /(\d{9,11})\/?$/.exec(zaloRaw)?.[1] ?? '';
   const zaloShown = zaloDigits ? formatPublicPhone(zaloDigits, locale) : '';
-  const fb = fbName(company);
+  // V37: Messenger là kênh cố định m.me/gmshungyen, không phụ thuộc số điện thoại hay mục Facebook trong company.yaml.
+  // shortcut: tên Page mặc định theo ux-spec V37 [giả định chưa kiểm Fanpage bật nhắn tin]; nâng cấp khi khách xác nhận.
+  const fb = fbName(company) ?? 'gmshungyen';
   // shortcut: sitekey công khai đọc từ môi trường lúc build; thiếu ⇒ sitekey thử của Cloudflare (luôn qua, chỉ dùng cho local/staging).
   // Bản deploy_prod phải đặt TURNSTILE_SITE_KEY thật (XQ cho architect/devops: contract chưa nêu nguồn sitekey).
   const siteKey = process.env.TURNSTILE_SITE_KEY?.trim() || '1x00000000000000000000AA';
@@ -45,7 +47,11 @@ export function ContactPage({
 
   return (
     <>
-      <section className="hero hero-sub on-dark has-photo" aria-labelledby="h1">
+      <section
+        className="hero hero-sub on-dark has-photo"
+        aria-labelledby="h1"
+        style={{ '--after-hero': 'var(--mist)' } as React.CSSProperties}
+      >
         <PhotoBg photo="plant" locale={locale} priority />
         <Streaks variant="sub" />
         <div className="wrap">
@@ -106,6 +112,7 @@ export function ContactPage({
                   phoneRaw={phoneRaw}
                   phoneShown={phoneShown}
                   zaloRaw={zaloRaw}
+                  messengerHref={`https://m.me/${fb}`}
                   siteKey={siteKey}
                   homeHref={ROUTES.home[locale]}
                   privacyHref={ROUTES.privacy[locale]}
@@ -122,7 +129,7 @@ export function ContactPage({
                       )}
                     </span>
                   </p>
-                  {phoneRaw || zaloRaw ? (
+                  {phoneRaw || zaloRaw || fb ? (
                     <ul className="f-alt-l">
                       {phoneRaw ? (
                         <li>
@@ -137,6 +144,14 @@ export function ContactPage({
                           <a className="btn-sec" href={zaloRaw} rel="noopener noreferrer">
                             <ZaloMark size={20} className="il-zalo" />
                             Zalo
+                          </a>
+                        </li>
+                      ) : null}
+                      {fb ? (
+                        <li>
+                          <a className="btn-sec" href={`https://m.me/${fb}`} target="_blank" rel="noopener noreferrer">
+                            <MessengerBadge />
+                            Messenger
                           </a>
                         </li>
                       ) : null}
@@ -164,13 +179,16 @@ export function ContactPage({
                   ) : null}
                   {zaloRaw ? (
                     <li>
-                      <a className="ch" href={zaloRaw} rel="noopener noreferrer">
+                      <a className="ch" href={zaloRaw} target="_blank" rel="noopener noreferrer">
                         <span className="ch-ico">
-                          <ZaloMark size={24} className="il-zalo" />
+                          <ZaloMark size={24} className="zalo-mark il-zalo" />
                         </span>
                         <span className="ch-txt">
                           <span className="ch-lbl">{L('Nhắn Zalo', 'Message on Zalo')}</span>
-                          <span className="ch-val">{zaloShown ? `Zalo ${zaloShown}` : 'Zalo'}</span>
+                          <span className="ch-val">
+                            {zaloShown ? `Zalo ${zaloShown}` : 'Zalo'}
+                            <span className="sr-only">{newTab}</span>
+                          </span>
                         </span>
                       </a>
                     </li>

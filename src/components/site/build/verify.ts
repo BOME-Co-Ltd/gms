@@ -99,15 +99,39 @@ export function cspFor(urlPath: string, hashes: string[]): string {
   ].join('; ');
 }
 
-/** Khối `_headers` Content-Security-Policy theo từng đường dẫn trang (cả dạng /X và /X/). */
-export function cspHeaderBlocks(pages: PageInfo[]): string {
-  const blocks: string[] = [];
+/** Giới hạn của Cloudflare: tối đa 100 quy tắc (dòng không thụt đầu) trong `_headers` (lỗi code 100324 khi `wrangler deploy`). */
+export const CLOUDFLARE_HEADERS_RULE_LIMIT = 100;
+
+/** Số quy tắc trong nội dung `_headers`: dòng không rỗng và không thụt đầu (dòng thụt là tiêu đề của quy tắc). */
+export function countHeaderRules(headers: string): number {
+  return headers.split('\n').filter((l) => l.trim() !== '' && !/^\s/.test(l)).length;
+}
+
+/** Lỗi `[HEADERS_RULE_LIMIT]` nếu `_headers` vượt trần quy tắc của Cloudflare; ngược lại mảng rỗng. */
+export function headersRuleLimitErrors(headers: string): string[] {
+  const n = countHeaderRules(headers);
+  return n > CLOUDFLARE_HEADERS_RULE_LIMIT
+    ? [`[HEADERS_RULE_LIMIT] _headers có ${n} quy tắc, vượt trần ${CLOUDFLARE_HEADERS_RULE_LIMIT} của Cloudflare`]
+    : [];
+}
+
+/**
+ * Khối `_headers` Content-Security-Policy, mỗi URL một quy tắc. `X.html` và `X/index.html` (bản sao do bước 2) gộp về `/X`
+ * (wrangler `html_handling: drop-trailing-slash` chuyển `/X/` về `/X`); trang chủ giữ `/`. Trang chỉ có dạng `X/index.html` vẫn có quy tắc.
+ * Hai file cùng URL mà CSP khác nhau ⇒ đẩy `[HEADERS_CSP_CONFLICT]` vào `errors` (không chọn bừa; giữ bản đầu).
+ */
+export function cspHeaderBlocks(pages: PageInfo[], errors: string[] = []): string {
+  const byUrl = new Map<string, string>();
   for (const p of pages) {
     if (p.rel.startsWith('/_not-found')) continue; // không phải URL thật; trang 404 phục vụ qua /404
-    const urlPath = p.rel === '/index.html' ? '/' : p.rel.replace(/\/index\.html$/, '/').replace(/\.html$/, '');
-    blocks.push(`${urlPath}\n  Content-Security-Policy: ${cspFor(urlPath, inlineScriptHashes(p.html))}\n`);
+    const raw = p.rel === '/index.html' ? '/' : p.rel.replace(/\/index\.html$/, '').replace(/\.html$/, '');
+    const urlPath = raw === '' ? '/' : raw;
+    const csp = cspFor(urlPath, inlineScriptHashes(p.html));
+    const prev = byUrl.get(urlPath);
+    if (prev === undefined) byUrl.set(urlPath, csp);
+    else if (prev !== csp) errors.push(`[HEADERS_CSP_CONFLICT] ${urlPath}: ${p.rel} có CSP khác bản cùng URL`);
   }
-  return blocks.join('');
+  return [...byUrl].map(([u, csp]) => `${u}\n  Content-Security-Policy: ${csp}\n`).join('');
 }
 
 export async function postBuild(
@@ -187,7 +211,7 @@ ${[...urls].map((u) => `  <url><loc>${escXml(u)}</loc></url>`).join('\n')}
       isStaging
         ? `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Robots-Tag: noindex\n`
         : `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/api/*\n  X-Robots-Tag: noindex\n  # /api/*\n`
-    }${cspHeaderBlocks(pages)}`,
+    }${cspHeaderBlocks(pages, errors)}`,
   );
 
   // 5. kiểm
@@ -225,7 +249,12 @@ ${[...urls].map((u) => `  <url><loc>${escXml(u)}</loc></url>`).join('\n')}
   }
   if (!isStaging && urls.size === 0) errors.push('[SITEMAP_EMPTY] sitemap.xml không có URL nào');
   const hero = pages.find((p) => p.rel === '/index.html');
-  if (hero && existsSync(join(outDir, HERO_IMG_REL)) && /hero-plant\.jpg/i.test(hero.html) && !/srcset="[^"]*hero-plant-512\.jpg/i.test(hero.html)) {
+  if (
+    hero &&
+    existsSync(join(outDir, HERO_IMG_REL)) &&
+    /hero-plant\.jpg/i.test(hero.html) &&
+    !/srcset="[^"]*hero-plant-512\.jpg/i.test(hero.html)
+  ) {
     errors.push('[PERF01_HERO_SRCSET] trang chủ thiếu srcset ảnh hero 512w');
   }
   for (const f of copiedStatic) {
@@ -243,6 +272,7 @@ ${[...urls].map((u) => `  <url><loc>${escXml(u)}</loc></url>`).join('\n')}
   const headers = readFileSync(join(outDir, '_headers'), 'utf8');
   if (!/X-Content-Type-Options:\s*nosniff/.test(headers))
     errors.push('[HEADERS] _headers thiếu X-Content-Type-Options');
+  errors.push(...headersRuleLimitErrors(headers));
   if (typeof formStatus.open !== 'boolean') errors.push('[FORM_STATUS] form-status.json thiếu open');
 
   // Quét đầu ra theo content/denylist.yaml (build.ts §8 luật 6): có tên cấm ⇒ build đỏ. Quét cả _next/.

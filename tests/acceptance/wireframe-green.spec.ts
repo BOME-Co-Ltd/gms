@@ -104,7 +104,7 @@ test('WF-LANG-02 Bấm cờ English ở trang chủ sang /en, bấm cờ Việt 
   await expect(page.locator('html')).toHaveAttribute('lang', 'vi');
 });
 
-test('WF-HERO-01 vi: hero có đúng một h1 hai dòng "Giải pháp thông minh – / Kiến tạo giá trị xanh", hai nút CTA, nhãn "Phối cảnh dự kiến" (V26, S6, S17)', async ({
+test('WF-HERO-01 vi: hero có đúng một h1 hai dòng "Giải pháp thông minh / Kiến tạo giá trị xanh", hai nút CTA, nhãn "Phối cảnh dự kiến" (V26, S6, S17)', async ({
   page,
 }) => {
   await open(page, 'home', 'vi');
@@ -113,7 +113,7 @@ test('WF-HERO-01 vi: hero có đúng một h1 hai dòng "Giải pháp thông min
   const h1 = hero.locator('h1');
   await expect(h1).toHaveCount(1);
   expect(((await h1.textContent()) ?? '').replace(/\s+/g, ' ').trim()).toBe(
-    'Giải pháp thông minh – Kiến tạo giá trị xanh',
+    'Giải pháp thông minh Kiến tạo giá trị xanh',
   );
   const ctas = await hero
     .locator('.hero-cta a')
@@ -157,6 +157,9 @@ for (const locale of LOCALES) {
     await expect(msg).toHaveAttribute('target', '_blank');
     expect(await msg.getAttribute('rel')).toMatch(/\bnoopener\b/);
     await expect(tid(page, 'fab-call')).toHaveAttribute('href', 'tel:+84987998370');
+    // V31: nút về đầu trang chỉ hiện khi cuộn tới chân trang ⇒ cuộn trước khi đo vùng bấm.
+    await tid(page, 'footer').scrollIntoViewIfNeeded();
+    await expect(up).toBeVisible();
     for (const id of ['back-to-top', 'fab-zalo', 'fab-messenger', 'fab-call']) {
       const a = tid(page, id);
       expect((await a.getAttribute('aria-label'))?.trim(), `${id}: tên truy cập`).toBeTruthy();
@@ -167,6 +170,14 @@ for (const locale of LOCALES) {
     expect(order, 'thứ tự nút từ trên xuống').toEqual(['back-to-top', 'fab-zalo', 'fab-messenger', 'fab-call']);
   });
 }
+
+test('WF-FAB-03 Đầu trang nút Về đầu trang ẩn; cuộn tới chân trang thì hiện (V31)', async ({ page }) => {
+  await open(page, 'home', 'vi');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(tid(page, 'back-to-top'), 'đầu trang: nút về đầu ẩn').toBeHidden();
+  await tid(page, 'footer').scrollIntoViewIfNeeded();
+  await expect(tid(page, 'back-to-top'), 'tới chân trang: nút về đầu hiện').toBeVisible();
+});
 
 test('WF-FAB-02 Cụm nút nổi cố định góc phải dưới và còn nằm trong khung nhìn sau khi cuộn (V31)', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 700 });
@@ -231,9 +242,14 @@ test('WF-HOME-02 vi: sơ đồ hai nhánh có 6 đầu ra đều nhãn "Định 
   const outs = page.locator('#hai-nhanh .o');
   await expect(outs).toHaveCount(6);
   for (const t of await outs.locator('.tag').allTextContents()) expect(t.trim()).toBe('Định hướng');
-  const steps = page.locator('#hanh-trinh ol.steps > li');
+  // Markup site: ol.j-steps > li[data-testid=journey-step], data-status theo nhãn hiển thị (V40 "đã xong").
+  const steps = page.locator('#hanh-trinh ol.j-steps > li[data-testid="journey-step"]');
   await expect(steps).toHaveCount(5);
-  for (const li of await steps.all()) await expect(li).toHaveAttribute('data-status', 'done');
+  for (const li of await steps.all()) {
+    await expect(li).toHaveAttribute('data-status', 'đã xong');
+    // Nhãn nhìn thấy phải khớp thuộc tính (V40): thuộc tính đúng mà chữ sai thì không lọt.
+    await expect(li.getByText(/đã xong/i).first(), 'chữ "đã xong" nhìn thấy ở bước').toBeVisible();
+  }
 });
 
 test('WF-HOME-03 vi: số liệu — khi chưa có số công bố thì không có khối số liệu và không có chuỗi giữ chỗ "[cần hỏi khách]" (S7, U15, N14)', async ({

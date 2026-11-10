@@ -15,14 +15,47 @@ export type SiteConfig = {
   dateOverride?: string;
 };
 
+export const DEFAULT_SITE_URL = 'https://gms.example.test';
+
+type OriginEnv = Record<string, string | undefined>;
+
+const withScheme = (host: string): string => (/^https?:\/\//i.test(host) ? host : `https://${host}`);
+
+/** True khi build chạy trên Vercel (biến hệ thống VERCEL=1). */
+export const isVercelBuild = (e: OriginEnv): boolean => Boolean(e.VERCEL);
+
+/**
+ * URL gốc của site: SITE_URL khai tường minh > địa chỉ Vercel (VERCEL_PROJECT_PRODUCTION_URL, rồi VERCEL_URL, thêm https://)
+ * > giá trị mặc định (máy/CI). Bỏ "/" cuối.
+ */
+export function resolveSiteUrl(e: OriginEnv): string {
+  const explicit = e.SITE_URL?.trim();
+  if (explicit) return explicit.replace(/\/$/, '');
+  if (isVercelBuild(e)) {
+    const host = e.VERCEL_PROJECT_PRODUCTION_URL?.trim() || e.VERCEL_URL?.trim();
+    if (host) return withScheme(host).replace(/\/$/, '');
+  }
+  return DEFAULT_SITE_URL;
+}
+
+/**
+ * Môi trường: SITE_ENV khai tường minh được giữ. Không khai mà build trên Vercel không có SITE_URL thật ⇒ 'staging'
+ * (SEO-13: meta robots noindex, robots.txt Disallow /, sitemap rỗng). Còn lại 'test' như cũ.
+ */
+export function resolveSiteEnv(e: OriginEnv): string {
+  if (e.SITE_ENV) return e.SITE_ENV;
+  if (isVercelBuild(e) && !e.SITE_URL?.trim()) return 'staging';
+  return 'test';
+}
+
 export function siteConfigFromEnv(cwd: string = process.cwd()): SiteConfig {
   const contentDir =
     process.env.GMS_CONTENT_DIR ??
     (process.env.CONTENT_DIR ? join(cwd, process.env.CONTENT_DIR) : join(cwd, 'content'));
   return {
     contentDir,
-    siteUrl: (process.env.SITE_URL ?? 'https://gms.example.test').replace(/\/$/, ''),
-    siteEnv: process.env.SITE_ENV ?? 'test',
+    siteUrl: resolveSiteUrl(process.env),
+    siteEnv: resolveSiteEnv(process.env),
     contactRecipient: process.env.CONTACT_RECIPIENT !== undefined ? process.env.CONTACT_RECIPIENT : 'lienhe@vi-du.test',
     dateOverride: process.env.DATE_OVERRIDE || undefined,
   };

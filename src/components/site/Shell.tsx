@@ -7,6 +7,7 @@ import type { LoadedCompany, Locale } from '../../content/loader.ts';
 import { formatPublicPhone } from '../../shared/contact/schema.ts';
 import { BrandMark, GmsLogo, Icon, LogoSprite, ZaloMark } from './icons.tsx';
 import { FOOTER_KEYS, MAIN_KEYS, MENU_LABELS, type StaticPageKey, SUB_KEYS } from './menu.ts';
+import { MENU_EARLY_SCRIPT } from './menu-early.ts';
 import { ShellBehavior } from './ShellBehavior.tsx';
 
 export type ShellCompany = LoadedCompany & { social: Array<{ url: string }> };
@@ -45,7 +46,7 @@ const T = {
     quick: 'Liên hệ nhanh',
     skip: 'Bỏ qua, tới nội dung chính',
     brand: 'GMS Hưng Yên, về trang chủ',
-    slogan: 'Giải pháp thông minh – Kiến tạo giá trị xanh',
+    slogan: 'Giải pháp thông minh, Kiến tạo giá trị xanh',
     logo: 'Logo GMS',
     ft: {
       contact: 'Liên hệ',
@@ -67,7 +68,7 @@ const T = {
     navDrawerMain: 'Main menu (mobile)',
     navDrawerSub: 'Secondary menu (mobile)',
     langLabel: 'Change language. Viewing: ',
-    langVi: 'Vietnamese',
+    langVi: 'Tiếng Việt',
     langEn: 'English',
     openMenu: 'Open menu',
     closeMenu: 'Close menu',
@@ -81,7 +82,7 @@ const T = {
     quick: 'Quick contact',
     skip: 'Skip to main content',
     brand: 'GMS Hung Yen, back to home',
-    slogan: 'Smart solutions – Creating green value',
+    slogan: 'Smart solutions, Creating green value',
     logo: 'GMS logo',
     ft: {
       contact: 'Contact',
@@ -274,6 +275,8 @@ export function SiteHeader({
           ) : null}
         </div>
       </div>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: chuỗi hằng cố định; bật nút menu trước hydrate, hash vào CSP khi build. */}
+      <script dangerouslySetInnerHTML={{ __html: MENU_EARLY_SCRIPT }} />
     </>
   );
 }

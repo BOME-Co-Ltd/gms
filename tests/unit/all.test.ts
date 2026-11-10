@@ -531,7 +531,8 @@ describe('Content Rules & Loader', () => {
 
     const loaded = loadSiteContent(join(process.cwd(), 'content'));
     expect(loaded.errors).toHaveLength(0);
-    expect(loaded.figures.length).toBeGreaterThan(0);
+    // N14: v1 chưa công bố số liệu nào (figures.yaml chỉ có mục chưa duyệt) ⇒ danh sách có thể rỗng.
+    expect(Array.isArray(loaded.figures)).toBe(true);
 
     expect(escHtml('<a&"b">')).toBe('&lt;a&amp;&quot;b&quot;&gt;');
     expect(formatDateLocale('2026-10-30', 'vi')).toBe('30/10/2026');
@@ -949,7 +950,9 @@ describe('Next.js App Router Pages, Sections, UI Components & i18n', () => {
     const homeViHtml = renderToStaticMarkup(React.createElement(HomePage));
     expect(homeViHtml).toContain('Giải pháp thông minh');
     expect(homeViHtml).toContain('Kiến tạo giá trị xanh');
-    expect(homeViHtml).toContain('data-testid="figures-strip"');
+    // N14: dải số liệu chỉ hiện khi có số đã công bố; khớp figures-and-claims.spec.ts.
+    const hasFigures = loadSiteContent(join(process.cwd(), 'content')).figures.length > 0;
+    expect(homeViHtml.includes('data-testid="figures-strip"')).toBe(hasFigures);
 
     const homeEnHtml = renderToStaticMarkup(React.createElement(EnglishHomePage));
     expect(homeEnHtml).toContain('Smart solutions');

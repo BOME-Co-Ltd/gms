@@ -218,7 +218,14 @@ export function TechnologyPage({
 
       <SolutionsSection content={content} locale={locale} />
 
-      <CtaSection content={content} locale={locale} sectionId="hop-tac" photo="control" />
+      <CtaSection
+        content={content}
+        locale={locale}
+        sectionId="hop-tac"
+        photo="control"
+        contactTestId
+        from="technology"
+      />
     </>
   );
 }

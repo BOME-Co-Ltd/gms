@@ -14,8 +14,8 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
   const isVi = locale === 'vi';
   const L = (vi: string, en: string) => pick(locale, vi, en);
   const sloganLines = isVi
-    ? ['Giải pháp thông minh –', 'Kiến tạo giá trị xanh']
-    : ['Smart solutions –', 'Creating green value'];
+    ? ['Giải pháp thông minh', 'Kiến tạo giá trị xanh']
+    : ['Smart solutions', 'Creating green value'];
   const pillars = isVi
     ? ['Công nghệ VPD', 'Sàng tuyển', 'Tái tạo tài nguyên']
     : ['VPD technology', 'Sorting', 'Resource recovery'];
@@ -86,7 +86,7 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
             <h1 id="h1">
               {sloganLines.map((l) => (
                 <span className="ln" key={l}>
-                  <span>{l}</span>
+                  <span>{l}</span>{' '}
                 </span>
               ))}
             </h1>
@@ -217,7 +217,7 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
             <ul className="news-grid">
               {top3News.map((n) => (
                 <li key={n.slug}>
-                  <a className="news" data-testid="news-item" href={`${ROUTES.news[locale]}/${n.slug}`}>
+                  <article className="news" data-testid="news-item">
                     <div className="thumb">
                       {n.heroImage ? (
                         <>
@@ -236,10 +236,12 @@ export function HomePage({ content, locale }: { content: LoadedSiteContent; loca
                       )}
                     </div>
                     <div className="news-body">
-                      <h3>{n.title}</h3>
+                      <h3>
+                        <a href={`${ROUTES.news[locale]}/${n.slug}`}>{n.title}</a>
+                      </h3>
                       <time dateTime={n.date}>{formatDateLocale(n.date, locale)}</time>
                     </div>
-                  </a>
+                  </article>
                 </li>
               ))}
             </ul>

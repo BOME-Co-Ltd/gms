@@ -90,7 +90,7 @@ test('PRIV-07 Thiếu email nhận yêu cầu về dữ liệu thì build xanh, 
     expect(html, `chính sách ${locale} phải có trong bản build`).not.toBeNull();
     expect(html, `${locale}: không liên kết mailto: rỗng`).not.toMatch(/mailto:\s*(["'?#]|$)/);
     const lines = html!
-      .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
+      .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
       .replace(/<\/?(br|p|li|h[1-6]|div|tr|td|dt|dd)\b[^>]*>/gi, '\n')
       .replace(/<[^>]+>/g, ' ')
       .split('\n')
