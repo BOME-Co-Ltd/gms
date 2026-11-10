@@ -172,6 +172,7 @@ export function buildSummaryMail(
   const blocks = records.map((r) => r.bodyB64 || encodeBodyB64(notifyBodyText(r)));
   const bodyB64 = [encodeBodyB64(head), ...blocks].join('\r\n');
   const text = `${head}${records.map((r) => (r.bodyB64 ? '' : notifyBodyText(r))).join('')}`;
+  const plainText = `${head}${records.map((r) => (r.bodyB64 ? decodeBodyB64(r.bodyB64) : notifyBodyText(r))).join('\n')}`;
   const sentAtDate = new Date(nowSec * 1000);
   const replyTo = records.length === 1 && records[0].email ? records[0].email : undefined;
   const rawMime = buildRawMime({
@@ -190,6 +191,7 @@ export function buildSummaryMail(
     replyTo,
     subject: displaySubject,
     text,
+    plainText,
     rawMime,
     sentAtIso: sentAtDate.toISOString(),
   };
@@ -230,6 +232,56 @@ export function buildAlertMail(
     from,
     to,
     subject: displaySubject,
+    text,
+    rawMime,
+    sentAtIso: sentAtDate.toISOString(),
+  };
+}
+
+export const CONFIRM_SUBJECT = 'GMS Hưng Yên đã nhận được liên hệ của quý khách';
+
+/**
+ * Thư xác nhận gửi khách (11/2026). Cố ý KHÔNG chép lại tên/nội dung khách nhập: form có thể bị dùng để gửi thư tới
+ * địa chỉ người khác, nên thư chỉ là câu cảm ơn cố định (không mang chữ do người ngoài đặt). Reply-To = hộp thư chủ site.
+ */
+export function buildConfirmMail(
+  rec: OutboxRecord,
+  from: string,
+  replyTo: string,
+  siteOrigin: string,
+  nowSec: number,
+): MailSendInput {
+  const to = (rec.email ?? '').trim();
+  const site = siteOrigin.replace(/\/$/, '');
+  const text = [
+    'Kính gửi quý khách,',
+    '',
+    `Cảm ơn quý khách đã liên hệ với GMS Hưng Yên${site ? ` qua website ${site}` : ''}. Chúng tôi đã nhận được thông tin và sẽ phản hồi trong thời gian sớm nhất.`,
+    '',
+    'Nếu quý khách không gửi yêu cầu này, vui lòng bỏ qua email.',
+    '',
+    'Trân trọng,',
+    'GMS Hưng Yên',
+    '',
+    '---',
+    'Dear customer, thank you for contacting GMS Hung Yen. We have received your message and will get back to you shortly. If you did not submit this request, please ignore this email.',
+    '',
+  ].join('\n');
+  const sentAtDate = new Date(nowSec * 1000);
+  const rawMime = buildRawMime({
+    from,
+    to,
+    replyTo: replyTo || undefined,
+    subjectHeaderValue: encodeRfc2047B(CONFIRM_SUBJECT),
+    dateUtc: sentAtDate,
+    bodyText: text,
+  });
+  return {
+    kind: 'confirm',
+    from,
+    to,
+    replyTo: replyTo || undefined,
+    subject: CONFIRM_SUBJECT,
     text,
     rawMime,
     sentAtIso: sentAtDate.toISOString(),
