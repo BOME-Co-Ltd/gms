@@ -25,30 +25,30 @@ afterEach(() => {
 
 describe('CO-01 trang đã gỡ trên out/ tạm', () => {
   it('đối chứng: đủ 4 dòng, không tệp cũ ⇒ không lỗi', () => {
-    const d = out({ '_redirects': `${LINES.join('\n')}\n`, 'index.html': '<p>x</p>' });
+    const d = out({ _redirects: `${LINES.join('\n')}\n`, 'index.html': '<p>x</p>' });
     expect(retiredRedirectErrors(d)).toEqual([]);
     expect(retiredPathErrors(d)).toEqual([]);
   });
 
   it('SEO-19 thiếu một dòng 301 ⇒ RETIRED_REDIRECT_MISSING', () => {
-    const d = out({ '_redirects': `${LINES.slice(1).join('\n')}\n` });
+    const d = out({ _redirects: `${LINES.slice(1).join('\n')}\n` });
     expect(retiredRedirectErrors(d).some((s) => s.includes(RETIRED_ERR.redirectMissing))).toBe(true);
   });
 
   it('SEO-19 _redirects chỉ có dòng không liên quan ⇒ RETIRED_REDIRECT_MISSING', () => {
-    const d = out({ '_redirects': '# không có dòng nào của Giải pháp\n' });
+    const d = out({ _redirects: '# không có dòng nào của Giải pháp\n' });
     expect(retiredRedirectErrors(d).some((s) => s.includes(RETIRED_ERR.redirectMissing))).toBe(true);
   });
 
   for (const f of ['giai-phap.html', 'giai-phap/index.html', 'en/solutions.html', 'en/solutions/index.html']) {
     it(`SEO-20 có out/${f} ⇒ RETIRED_PATH_IN_OUTPUT`, () => {
-      const d = out({ '_redirects': `${LINES.join('\n')}\n`, [f]: '<!doctype html><title>cũ</title>' });
+      const d = out({ _redirects: `${LINES.join('\n')}\n`, [f]: '<!doctype html><title>cũ</title>' });
       expect(retiredPathErrors(d).some((s) => s.includes(RETIRED_ERR.pathInOutput))).toBe(true);
     });
   }
 
   it('SEO-20 nội dung HTML còn nhắc /giai-phap ⇒ RETIRED_PATH_IN_OUTPUT', () => {
-    const d = out({ '_redirects': `${LINES.join('\n')}\n`, 'a.html': '<a href="/giai-phap">x</a>' });
+    const d = out({ _redirects: `${LINES.join('\n')}\n`, 'a.html': '<a href="/giai-phap">x</a>' });
     expect(retiredPathErrors(d).some((s) => s.includes(RETIRED_ERR.pathInOutput))).toBe(true);
   });
 });
