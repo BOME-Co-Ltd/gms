@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it, vi } from 'vitest';
+import { copyPhotoAssets } from '../../../src/components/site/build/photo-assets.test-support.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const FIXTURE = join(ROOT, 'tests', 'fixtures', 'site-root');
@@ -26,6 +27,7 @@ function newWork(): string {
     mkdirSync(dirname(to), { recursive: true });
     writeFileSync(to, data);
   }
+  copyPhotoAssets(ROOT, work);
   return work;
 }
 

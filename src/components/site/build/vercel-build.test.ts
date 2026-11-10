@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
+import { copyPhotoAssets } from './photo-assets.test-support.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const FIXTURE = join(ROOT, 'tests', 'fixtures', 'site-root');
@@ -29,6 +30,7 @@ function newWork(): string {
     mkdirSync(dirname(to), { recursive: true });
     writeFileSync(to, data);
   }
+  copyPhotoAssets(ROOT, work);
   works.push(work);
   return work;
 }
@@ -69,7 +71,7 @@ describe('build trên Vercel', () => {
     expect(html).toContain('name="robots" content="noindex, nofollow"');
     expect(html).toContain('href="https://gms-hungyen-web-roan.vercel.app/"');
     expect(html).not.toContain('example.test');
-  }, 120_000);
+  }, 300_000); // next build thật + nén ảnh PHOTOS, chạy song song cả bộ có thể quá 120s (như all.test.ts)
 
   it('có SITE_URL tường minh: dùng SITE_URL, vẫn index, follow, sitemap có địa chỉ', async () => {
     const work = newWork();
@@ -79,5 +81,5 @@ describe('build trên Vercel', () => {
     expect(out('robots.txt')).toContain('Sitemap: https://gms.vn/sitemap.xml');
     expect(out('sitemap.xml')).toContain('<loc>https://gms.vn/');
     expect(out('index.html')).toContain('name="robots" content="index, follow"');
-  }, 120_000);
+  }, 300_000); // next build thật + nén ảnh PHOTOS, chạy song song cả bộ có thể quá 120s (như all.test.ts)
 });
