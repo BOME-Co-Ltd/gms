@@ -1,3 +1,5 @@
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from '@playwright/test';
 import base from './playwright.config';
 
@@ -34,10 +36,25 @@ const SHARED = [
 const perf = (base.projects ?? []).find((p) => p.name === 'perf');
 if (!perf) throw new Error('Config gốc không còn project perf');
 
+// webServer: dựng out-e2e MỘT lần (không mỗi worker: nhiều `next build` chung `.next` từng gây 37 ca đỏ) rồi bật
+// `wrangler dev --local` cổng 8787. Đã có server ở cổng thì dùng lại (không build lại). BASE_URL đặt ngoài ⇒ không tự dựng.
+const webServer = process.env.BASE_URL
+  ? undefined
+  : {
+      command: 'bun run build:e2e && bun x wrangler dev --local --config wrangler.test.jsonc --port 8787',
+      cwd: resolve(dirname(fileURLToPath(import.meta.url)), '..'),
+      url: 'http://localhost:8787',
+      reuseExistingServer: true,
+      timeout: 600_000,
+      stdout: 'pipe' as const,
+      stderr: 'pipe' as const,
+    };
+
 export default defineConfig({
   ...base,
   fullyParallel: false,
   workers,
+  webServer,
   projects: [
     {
       name: 'acceptance-shared',
