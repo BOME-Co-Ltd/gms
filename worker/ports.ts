@@ -78,12 +78,15 @@ export interface RateCounter {
 }
 
 export type MailSendInput = {
-  kind: 'notify' | 'summary' | 'alert';
+  /** confirm = thư xác nhận gửi khách (chỉ qua SMTP; binding send_email chỉ tới địa chỉ đã xác minh). */
+  kind: 'notify' | 'summary' | 'alert' | 'confirm';
   from: string;
   to: string;
   replyTo?: string;
   subject: string;
   text: string;
+  /** Thân chữ đầy đủ cho kênh SMTP khi `text` bỏ trống phần đã nằm sẵn trong body_b64 (thư tóm tắt). */
+  plainText?: string;
   rawMime: string;
   sentAtIso: string;
 };
@@ -129,6 +132,8 @@ export type WorkerConfig = {
   humanSecretValid?: boolean;
   /** Hostname được phép trong siteverify (= hostname của SITE_ORIGIN). */
   allowedHostnames?: string[];
+  /** Gửi thư xác nhận tới email khách sau khi thư báo chủ site đi thành công (CONFIRM_TO_CUSTOMER ≠ "false"). */
+  confirmToCustomer?: boolean;
 };
 
 export interface D1PreparedStatement {

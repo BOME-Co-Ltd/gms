@@ -1,0 +1,36 @@
+{
+  // Worker chỉ xử lý form liên hệ khi site chạy trên Vercel (11/2026): Vercel phục vụ trang tĩnh và chuyển /api/*
+  // sang đây (scripts/deploy/vercel-output.ts, GMS_API_ORIGIN). Không phục vụ trang ⇒ không có `assets`.
+  // Gửi thư qua SMTP Zoho như www.bongmedia.vn (secret SMTP_*), Cron mỗi phút gửi hàng đợi.
+  // Triển khai: .github/workflows/contact-worker.yml (secret ở GitHub). wrangler.jsonc giữ nguyên cho bản chạy toàn bộ trên Cloudflare.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gms-contact",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gms_contact",
+      "database_id": "6aed4fd4-5932-4a5b-b3ad-ae3dfb99e919"
+    }
+  ],
+  "vars": {
+    "FORM_ENABLED": "true",
+    "POLICY_VERSION": "1.0",
+    "SITE_ORIGIN": "https://gms.bongmedia.vn",
+    "MAIL_FROM": "marketing@bongmedia.vn",
+    "MAIL_FROM_NAME": "GMS Hưng Yên",
+    "CONTACT_RECIPIENT": "golliverdesign@gmail.com",
+    "ALERT_TO": "golliverdesign@gmail.com",
+    "CONFIRM_TO_CUSTOMER": "true"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

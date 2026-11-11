@@ -2,6 +2,8 @@
 // đúng như Worker Cloudflare: file tĩnh nguyên trạng, header (CSP từng trang) lấy từ out/_headers,
 // bỏ dấu "/" cuối URL (html_handling: drop-trailing-slash), URL không đuôi → .html, trang 404 riêng.
 // Chạy: `bun run build && bun run scripts/deploy/vercel-output.ts` (buildCommand trong vercel.json).
+// Form liên hệ: có GMS_API_ORIGIN (vd https://gms-contact.<tên>.workers.dev) ⇒ /api/* chuyển sang Worker Cloudflare,
+// gắn header x-gms-proxy = GMS_PROXY_SECRET (Vercel ghi đè, khách không tự đặt được; Worker dùng để tin IP khách).
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -59,10 +61,29 @@ export function parseRedirectsFile(text: string): Route[] {
   return routes;
 }
 
-export function buildVercelConfig(headersText: string, redirectsText = ''): { version: 3; routes: Route[] } {
+export type ApiProxy = { origin: string; secret?: string };
+
+/** /api/* → Worker. Đặt đầu bảng route để không dính chuyển hướng "/" cuối hay header CSP của trang. */
+export function apiProxyRoutes(api?: ApiProxy): Route[] {
+  const origin = api?.origin?.trim().replace(/\/+$/, '');
+  if (!origin) return [];
+  if (!/^https:\/\/[^/\s]+$/.test(origin)) throw new Error(`GMS_API_ORIGIN không hợp lệ: ${origin}`);
+  const route: Route = { src: '^/api/(.*)$', dest: `${origin}/api/$1` };
+  if (api?.secret) {
+    route.transforms = [{ type: 'request.headers', op: 'set', target: { key: 'x-gms-proxy' }, args: api.secret }];
+  }
+  return [route];
+}
+
+export function buildVercelConfig(
+  headersText: string,
+  redirectsText = '',
+  api?: ApiProxy,
+): { version: 3; routes: Route[] } {
   return {
     version: 3,
     routes: [
+      ...apiProxyRoutes(api),
       ...parseRedirectsFile(redirectsText),
       // drop-trailing-slash: /a/ → /a (giữ "/" gốc).
       { src: '^/(.+)/$', status: 308, headers: { Location: '/$1' } },
@@ -76,7 +97,7 @@ export function buildVercelConfig(headersText: string, redirectsText = ''): { ve
   };
 }
 
-export function writeVercelOutput(outDir: string, targetDir: string): void {
+export function writeVercelOutput(outDir: string, targetDir: string, api?: ApiProxy): void {
   if (!existsSync(join(outDir, 'index.html')))
     throw new Error(`Không thấy ${outDir}/index.html — chạy \`bun run build\` trước.`);
   const headersPath = join(outDir, '_headers');
@@ -90,12 +111,15 @@ export function writeVercelOutput(outDir: string, targetDir: string): void {
   // _headers/_redirects chỉ Cloudflare đọc; ở Vercel đã chuyển vào config.json.
   rmSync(join(staticDir, '_headers'), { force: true });
   rmSync(join(staticDir, '_redirects'), { force: true });
-  const config = buildVercelConfig(headersText, redirectsText);
+  const config = buildVercelConfig(headersText, redirectsText, api);
   writeFileSync(join(targetDir, 'config.json'), `${JSON.stringify(config, null, 2)}\n`);
   console.log(`vercel-output: ${config.routes.length} route → ${targetDir}`);
 }
 
 if (import.meta.main) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-  writeVercelOutput(join(root, 'out'), join(root, '.vercel', 'output'));
+  writeVercelOutput(join(root, 'out'), join(root, '.vercel', 'output'), {
+    origin: process.env.GMS_API_ORIGIN ?? '',
+    secret: process.env.GMS_PROXY_SECRET || undefined,
+  });
 }

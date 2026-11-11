@@ -53,8 +53,21 @@ export class WebCryptoIpKey implements IpKey {
   }
 }
 
+/** Header Vercel gắn khi chuyển /api/* sang Worker (scripts/deploy/vercel-output.ts); giá trị = secret PROXY_SECRET. */
+export const PROXY_SECRET_HEADER = 'x-gms-proxy';
+
 export class CfClientIp implements ClientIp {
+  private proxySecret: string;
+  constructor(proxySecret = '') {
+    this.proxySecret = proxySecret;
+  }
   fromRequest(req: Request): string {
+    // Qua Vercel: CF-Connecting-IP là IP của Vercel. Vercel ghi đè X-Forwarded-For bằng IP khách (khách không tự đặt
+    // được), Cloudflare nối IP Vercel vào sau ⇒ lấy phần tử đầu — chỉ khi kèm đúng secret proxy.
+    if (this.proxySecret && req.headers.get(PROXY_SECRET_HEADER) === this.proxySecret) {
+      const first = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+      if (first) return first;
+    }
     return req.headers.get(CLIENT_IP_HEADER)?.trim() || '127.0.0.1';
   }
 }

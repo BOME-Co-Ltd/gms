@@ -14,7 +14,7 @@ import type { AppLogger, Clock, HumanCheck, Mailer, MailSendInput, MailSendResul
 import { runSeedOutbox } from './testing/seed-outbox.ts';
 
 type CapturedMail = {
-  kind: 'notify' | 'summary' | 'alert';
+  kind: 'notify' | 'summary' | 'alert' | 'confirm';
   to: string;
   from: string;
   replyTo?: string;
@@ -191,6 +191,8 @@ function makeTestDeps(env: Env): {
       contactRecipient: state.contactRecipient ?? '',
       humanSecretValid: isUsableTurnstileSecret(state.turnstileSecret ?? TEST_DEFAULT_TURNSTILE_SECRET),
       allowedHostnames: [siteHost],
+      // Thư xác nhận cho khách (11/2026) tắt mặc định ở môi trường e2e để hộp thư giả giữ đúng hợp đồng cũ.
+      confirmToCustomer: env.CONFIRM_TO_CUSTOMER === 'true',
     }),
   };
   return { deps, queue, rate, ipKey };
